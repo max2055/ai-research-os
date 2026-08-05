@@ -82,6 +82,49 @@ def parse_args() -> argparse.Namespace:
     report.add_argument("--period-end", required=True)
     report.add_argument("--thesis-ids", default="")
     report.add_argument("--evidence-ids", required=True)
+
+    entity = subparsers.add_parser(
+        "new-entity",
+        help="preview or create a v0.3 Sector or Company entity",
+    )
+    # Entities are cross-project Universe primitives (A-005 §2): project_ids
+    # default to empty, NOT PRJ-001. Do not reuse add_common_draft_arguments
+    # (its --project default of PRJ-001 would leak into every entity).
+    entity.add_argument("--title", required=True)
+    entity.add_argument("--slug", required=True)
+    entity.add_argument("--date", default=date.today().isoformat())
+    entity.add_argument("--tags", default="")
+    entity.add_argument("--project", default="")
+    entity.add_argument("--apply", action="store_true")
+    entity.add_argument(
+        "--type",
+        choices=("sector", "company"),
+        required=True,
+        help="entity type (v0.3; schema_version=2)",
+    )
+    entity.add_argument("--definition", default="")
+    entity.add_argument("--in-scope", default="")
+    entity.add_argument("--out-of-scope", default="")
+    entity.add_argument("--value-chain-position", default="")
+    entity.add_argument("--key-inputs", default="")
+    entity.add_argument("--key-outputs", default="")
+    entity.add_argument("--key-metrics", default="")
+    entity.add_argument("--core-company-ids", default="")
+    entity.add_argument("--tracked-company-ids", default="")
+    entity.add_argument("--source-channel-ids", default="")
+    entity.add_argument("--evidence-ids", default="")
+    entity.add_argument("--sector-ids", default="", help="company: SEG-ID references")
+    entity.add_argument("--region-primary", default="", help="company: REG-<region>")
+    entity.add_argument(
+        "--coverage-tier",
+        default="",
+        help="company: core|tracked|discovery",
+    )
+    entity.add_argument("--legal-name", default="", help="company")
+    entity.add_argument("--company-stage", default="", help="company")
+    entity.add_argument("--headquarters", default="", help="company")
+    entity.add_argument("--aliases", default="", help="company")
+
     status = subparsers.add_parser(
         "status",
         help="show the read-only research queue and health",
@@ -999,6 +1042,35 @@ def main() -> int:
                 products=runtime.split_values(args.products),
                 tags=runtime.split_values(args.tags),
                 project_ids=[args.project],
+            )
+            return output_draft(args.root, relative, content, args.apply)
+        if args.command == "new-entity":
+            relative, content = runtime.prepare_entity_draft(
+                args.root.resolve(),
+                entity_type=args.type,
+                slug=args.slug,
+                title=args.title,
+                created_at=args.date,
+                definition=args.definition,
+                in_scope=runtime.split_values(args.in_scope),
+                out_of_scope=runtime.split_values(args.out_of_scope),
+                value_chain_position=args.value_chain_position,
+                key_inputs=runtime.split_values(args.key_inputs),
+                key_outputs=runtime.split_values(args.key_outputs),
+                key_metrics=runtime.split_values(args.key_metrics),
+                core_company_ids=runtime.split_values(args.core_company_ids),
+                tracked_company_ids=runtime.split_values(args.tracked_company_ids),
+                source_channel_ids=runtime.split_values(args.source_channel_ids),
+                evidence_ids=runtime.split_values(args.evidence_ids),
+                sector_ids=runtime.split_values(args.sector_ids),
+                region_primary=args.region_primary or None,
+                coverage_tier=args.coverage_tier or None,
+                legal_name=args.legal_name or None,
+                company_stage=args.company_stage or None,
+                headquarters=args.headquarters or None,
+                aliases=runtime.split_values(args.aliases),
+                tags=runtime.split_values(args.tags),
+                project_ids=runtime.split_values(getattr(args, "project", "")),
             )
             return output_draft(args.root, relative, content, args.apply)
         if args.command == "new-event":

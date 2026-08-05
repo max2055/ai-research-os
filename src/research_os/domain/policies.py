@@ -18,6 +18,13 @@ ID_PATTERNS = {
     "review": re.compile(r"^REV-\d{8}-\d{3}$"),
     "action": re.compile(r"^ACT-\d{8}-\d{3}$"),
     "job": re.compile(r"^JOB-\d{14}-\d{3}$"),
+    # v0.3 entities (RCP-v03-003, WP-102 registered schemas; this whitelist is
+    # the validation counterpart of registry.SCHEMAS — both must stay in sync).
+    "sector": re.compile(r"^SEG-[a-z0-9]+(?:-[a-z0-9]+)*$"),
+    "security": re.compile(r"^INS-[A-Z]{2,6}-[A-Z0-9][A-Z0-9.\-]*$"),
+    "product": re.compile(r"^PRD-[a-z0-9]+(?:-[a-z0-9]+)*$"),
+    "technology": re.compile(r"^TEC-[a-z0-9]+(?:-[a-z0-9]+)*$"),
+    "metric": re.compile(r"^MET-[a-z0-9]+(?:-[a-z0-9]+)*$"),
 }
 REQUIRED_HEADINGS = {
     "event": {

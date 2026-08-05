@@ -178,6 +178,295 @@ TODO: record source limitations, incentives and missing context.
 """
 
 
+ENTITY_TYPES = frozenset({"sector", "company"})
+
+# v0.3 extension fields (RCP-v03-003) on a Company; Sector shares the core
+# set. All optional; pending by default. No backfill (R1) — these are set
+# per-object by humans (WP-120) or by this draft flow.
+_COMPANY_EXTRA_FIELDS = (
+    "legal_name",
+    "company_stage",
+    "headquarters",
+    "region_primary",
+    "coverage_tier",
+)
+
+
+def prepare_entity_draft(
+    root: Path,
+    *,
+    entity_type: str,
+    slug: str,
+    title: str,
+    created_at: str,
+    definition: str = "",
+    in_scope: list[str] | None = None,
+    out_of_scope: list[str] | None = None,
+    value_chain_position: str = "",
+    key_inputs: list[str] | None = None,
+    key_outputs: list[str] | None = None,
+    key_metrics: list[str] | None = None,
+    core_company_ids: list[str] | None = None,
+    tracked_company_ids: list[str] | None = None,
+    source_channel_ids: list[str] | None = None,
+    evidence_ids: list[str] | None = None,
+    sector_ids: list[str] | None = None,
+    region_primary: str | None = None,
+    coverage_tier: str | None = None,
+    legal_name: str | None = None,
+    company_stage: str | None = None,
+    headquarters: str | None = None,
+    aliases: list[str] | None = None,
+    tags: list[str] | None = None,
+    project_ids: list[str] | None = None,
+) -> tuple[Path, str]:
+    """Prepare a v0.3 Sector or Company draft (dry-run preview; --apply writes).
+
+    Entity IDs are slug-based (SEG-<slug> / COM-<slug>), permanent and
+    unique. A slug already in use is rejected — IDs are never reused
+    (RCP-v03-003). project_ids default to []: Sectors and Companies are
+    cross-project Universe primitives.
+    """
+    if entity_type not in ENTITY_TYPES:
+        raise ValueError(f"entity_type must be one of {sorted(ENTITY_TYPES)}")
+    validate_slug(slug)
+    if not is_iso_date(created_at):
+        raise ValueError("created_at must be YYYY-MM-DD")
+    objects, findings = validate_repository(root)
+    if any(finding.level == "error" for finding in findings):
+        raise ValueError("repository validation must pass before creating an entity")
+    by_id = {obj.object_id: obj for obj in objects}
+    prefix = "SEG" if entity_type == "sector" else "COM"
+    object_id = f"{prefix}-{slug}"
+    if object_id in by_id:
+        raise ValueError(f"entity ID already exists: {object_id}")
+    # Reference-integrity check (WP-103 owns cross-object existence) is NOT
+    # enforced here for sector_ids etc. — the empty-Universe phase must not
+    # block creating Companies before Sectors exist. Only format is checked
+    # by the schema at validate time.
+    project_ids = project_ids or []
+    tags = tags or []
+    aliases = aliases or []
+    if entity_type == "sector":
+        relative = Path("02_Knowledge/Sectors") / f"{object_id}.md"
+        return relative, render_entity_draft(
+            object_id=object_id,
+            entity_type="sector",
+            title=title,
+            created_at=created_at,
+            definition=definition,
+            in_scope=in_scope or [],
+            out_of_scope=out_of_scope or [],
+            value_chain_position=value_chain_position,
+            key_inputs=key_inputs or [],
+            key_outputs=key_outputs or [],
+            key_metrics=key_metrics or [],
+            core_company_ids=core_company_ids or [],
+            tracked_company_ids=tracked_company_ids or [],
+            source_channel_ids=source_channel_ids or [],
+            evidence_ids=evidence_ids or [],
+            sector_ids=[],
+            region_primary=region_primary,
+            coverage_tier=coverage_tier,
+            legal_name=legal_name,
+            company_stage=company_stage,
+            headquarters=headquarters,
+            aliases=aliases,
+            tags=tags,
+            project_ids=project_ids,
+        )
+    relative = Path("02_Knowledge/Companies") / f"{object_id}.md"
+    return relative, render_entity_draft(
+        object_id=object_id,
+        entity_type="company",
+        title=title,
+        created_at=created_at,
+        definition=definition,
+        in_scope=in_scope or [],
+        out_of_scope=out_of_scope or [],
+        value_chain_position=value_chain_position,
+        key_inputs=key_inputs or [],
+        key_outputs=key_outputs or [],
+        key_metrics=key_metrics or [],
+        core_company_ids=core_company_ids or [],
+        tracked_company_ids=tracked_company_ids or [],
+        source_channel_ids=source_channel_ids or [],
+        evidence_ids=evidence_ids or [],
+        sector_ids=sector_ids or [],
+        region_primary=region_primary,
+        coverage_tier=coverage_tier,
+        legal_name=legal_name,
+        company_stage=company_stage,
+        headquarters=headquarters,
+        aliases=aliases,
+        tags=tags,
+        project_ids=project_ids,
+    )
+
+
+def render_entity_draft(
+    *,
+    object_id: str,
+    entity_type: str,
+    title: str,
+    created_at: str,
+    definition: str,
+    in_scope: list[str],
+    out_of_scope: list[str],
+    value_chain_position: str,
+    key_inputs: list[str],
+    key_outputs: list[str],
+    key_metrics: list[str],
+    core_company_ids: list[str],
+    tracked_company_ids: list[str],
+    source_channel_ids: list[str],
+    evidence_ids: list[str],
+    sector_ids: list[str],
+    region_primary: str | None,
+    coverage_tier: str | None,
+    legal_name: str | None,
+    company_stage: str | None,
+    headquarters: str | None,
+    aliases: list[str],
+    tags: list[str],
+    project_ids: list[str],
+) -> str:
+    if entity_type == "sector":
+        extra = (
+            f"definition: {yaml_scalar(definition)}\n"
+            f"in_scope: {yaml_list(in_scope)}\n"
+            f"out_of_scope: {yaml_list(out_of_scope)}\n"
+            f"value_chain_position: {yaml_scalar(value_chain_position)}\n"
+            f"key_inputs: {yaml_list(key_inputs)}\n"
+            f"key_outputs: {yaml_list(key_outputs)}\n"
+            f"key_metrics: {yaml_list(key_metrics)}\n"
+            f"core_company_ids: {yaml_list(core_company_ids)}\n"
+            f"tracked_company_ids: {yaml_list(tracked_company_ids)}\n"
+            f"source_channel_ids: {yaml_list(source_channel_ids)}\n"
+            f"evidence_ids: {yaml_list(evidence_ids)}\n"
+        )
+        body = f"""# Sector
+
+## Definition
+
+{definition}
+
+## Value chain position
+
+{value_chain_position}
+
+## In scope
+
+- TODO
+
+## Out of scope
+
+- TODO
+
+## Key inputs / outputs
+
+- Inputs: {", ".join(key_inputs) if key_inputs else "TBD"}
+- Outputs: {", ".join(key_outputs) if key_outputs else "TBD"}
+
+## Key metrics
+
+- TODO
+
+## Core companies
+
+- TODO
+
+## Tracked companies
+
+- TODO
+
+## Evidence
+
+- TODO
+"""
+    else:
+        extra = (
+            f"aliases: {yaml_list(aliases)}\n"
+            f"sector_ids: {yaml_list(sector_ids)}\n"
+            f"region_primary: {region_primary if region_primary else ''}\n"
+            f"coverage_tier: {coverage_tier if coverage_tier else ''}\n"
+            f"legal_name: {yaml_scalar(legal_name) if legal_name else ''}\n"
+            f"company_stage: {company_stage if company_stage else ''}\n"
+            f"headquarters: {yaml_scalar(headquarters) if headquarters else ''}\n"
+            f"key_metric_ids: {yaml_list(key_metrics)}\n"
+            f"source_channel_ids: {yaml_list(source_channel_ids)}\n"
+            f"evidence_ids: {yaml_list(evidence_ids)}\n"
+        )
+        body = f"""# Company Profile
+
+## Company role in the value chain
+
+{definition}
+
+## Products
+
+TODO: register product entities (WP-120+).
+
+## Customers and distribution
+
+TODO
+
+## Business model
+
+TODO
+
+## Revenue and profitability
+
+TODO
+
+## Technology strategy
+
+TODO
+
+## Competitive advantages
+
+TODO (label as hypotheses until reviewed)
+
+## Management
+
+TODO
+
+## Risks
+
+TODO
+
+## Valuation context
+
+TODO
+
+## Catalysts
+
+TODO
+
+## Related Thesis
+
+TODO
+
+## Evidence timeline
+
+{evidence_ids if evidence_ids else "None yet"}
+"""
+    return f"""---
+id: {object_id}
+type: {entity_type}
+title: {yaml_scalar(title)}
+created_at: {created_at}
+updated_at: {created_at}
+schema_version: 2
+project_ids: {yaml_list(project_ids)}
+status: active
+review_status: pending
+tags: {yaml_list(tags)}
+{extra}---
+
+{body}"""
+
+
 def render_event_draft(
     *,
     object_id: str,
