@@ -42,7 +42,7 @@ class SchemaTests(unittest.TestCase):
                 "action": 12,
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 31,
-                "ontology_assertion": 253,  # RelWP: Compute Chain value-chain relations
+                "ontology_assertion": 248,  # RelWP: value-chain relations
                 "project": 2,
                 "report": 2,
                 "review": 73,  # WP-120: +9 entity approval decisions
