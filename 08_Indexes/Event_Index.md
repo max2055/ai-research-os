@@ -37,6 +37,7 @@
 | EVT-20260722-010 | 2026-07-22 | ServiceNow 披露 AI ACV 超过十亿美元及 Agentic 部署增长 | THS-002, THS-004, THS-005 | 0.90 | reviewed |
 | EVT-20260723-011 | 2026-07-23 | SAP 云业务增长但未独立披露 Agent 收入 | THS-004 | 0.90 | reviewed |
 | EVT-20260725-035 | 2026-07-25 | SK hynix and NVIDIA establish long-term AI memory (HBM) partnership |  | 0.80 | reviewed |
+| EVT-20260728-036 | 2026-07-28 | SK hynix reports record 2Q26 on AI memory demand; HBM4 mass shipments begin |  | 0.80 | reviewed |
 | EVT-20260729-012 | 2026-07-29 | Agentforce 同时采用 Action、Conversation 和用户席位定价 | THS-003 | 0.95 | reviewed |
 | EVT-20260729-013 | 2026-07-29 | ServiceNow 以 Agent Fabric、Control Tower 和 Otto 争夺控制层 | THS-002, THS-005 | 0.85 | reviewed |
 | EVT-20260729-014 | 2026-07-29 | Palantir Foundry Agents 通过 Ontology 与范围化权限读写企业环境 | THS-002, THS-005 | 0.85 | reviewed |

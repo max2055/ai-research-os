@@ -49,3 +49,5 @@
 | SRC-20260805-041 | TSMC 20-F annual report 2025 (filed 2026-04-16) | earnings | TAIWAN SEMICONDUCTOR MFG (SEC EDGAR) | A | processed | reviewed |
 | SRC-20260805-042 | ASML 20-F annual report 2025 (filed 2026-02-25) | earnings | ASML HOLDING NV (SEC EDGAR) | A | processed | reviewed |
 | SRC-20260805-043 | SK Group and NVIDIA Expand Strategic Partnership Across AI Factories and Next-Generation Memory | other | SK hynix IR | B | processed | reviewed |
+| SRC-20260805-044 | SK hynix Announces 2Q26 Financial Results | earnings | SK hynix IR | B | processed | reviewed |
+| SRC-20260805-046 | SK hynix Unveils First HBF Standard Specifications with Sandisk, Presenting AI Memory Solutions at FMS 2026 | other | SK hynix IR | B | processed | reviewed |
