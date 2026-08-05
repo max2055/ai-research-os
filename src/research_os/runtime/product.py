@@ -9,6 +9,7 @@ from research_os.services.actions import (
 from research_os.services.benchmark import run_scale_benchmark
 from research_os.services.drafts import (
     apply_event_draft,
+    prepare_assertion_draft,
     prepare_entity_draft,
     prepare_event_draft,
     prepare_report_draft,
@@ -93,6 +94,7 @@ __all__ = [
     "ontology_jsonl",
     "objects_for_project",
     "prepare_action_draft",
+    "prepare_assertion_draft",
     "prepare_company_update_proposal",
     "prepare_entity_draft",
     "prepare_event_draft",

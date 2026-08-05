@@ -125,6 +125,22 @@ def parse_args() -> argparse.Namespace:
     entity.add_argument("--headquarters", default="", help="company")
     entity.add_argument("--aliases", default="", help="company")
 
+    assertion = subparsers.add_parser(
+        "new-assertion",
+        help="preview or create an Ontology Assertion (REL-*)",
+    )
+    assertion.add_argument("--subject", required=True)
+    assertion.add_argument("--predicate", required=True)
+    assertion.add_argument("--object", dest="object_id", required=True)
+    assertion.add_argument("--date", default=date.today().isoformat())
+    assertion.add_argument("--valid-from", default=date.today().isoformat())
+    assertion.add_argument("--as-of", default=date.today().isoformat())
+    assertion.add_argument("--title", default="")
+    assertion.add_argument("--scope", default="")
+    assertion.add_argument("--confidence", type=float, default=0.5)
+    assertion.add_argument("--project", default="")
+    assertion.add_argument("--apply", action="store_true")
+
     status = subparsers.add_parser(
         "status",
         help="show the read-only research queue and health",
@@ -1071,6 +1087,21 @@ def main() -> int:
                 aliases=runtime.split_values(args.aliases),
                 tags=runtime.split_values(args.tags),
                 project_ids=runtime.split_values(getattr(args, "project", "")),
+            )
+            return output_draft(args.root, relative, content, args.apply)
+        if args.command == "new-assertion":
+            relative, content = runtime.prepare_assertion_draft(
+                args.root.resolve(),
+                subject_id=args.subject,
+                predicate=args.predicate,
+                object_id=args.object_id,
+                created_at=args.date,
+                valid_from=args.valid_from,
+                as_of=args.as_of,
+                title=args.title,
+                scope=args.scope,
+                confidence=args.confidence,
+                project_ids=runtime.split_values(args.project),
             )
             return output_draft(args.root, relative, content, args.apply)
         if args.command == "new-event":

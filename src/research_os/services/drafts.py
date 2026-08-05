@@ -9,6 +9,7 @@ from pathlib import Path
 
 from research_os.domain.models import ResearchObject
 from research_os.domain.policies import (
+    ONTOLOGY_PREDICATES,
     checklist_item_checked,
     is_iso_date,
 )
@@ -54,11 +55,13 @@ def next_object_id(
     object_type: str,
     object_date: str,
 ) -> str:
-    if object_type not in {"source", "event"}:
-        raise ValueError("next_object_id supports source and event")
+    if object_type not in {"source", "event", "ontology_assertion"}:
+        raise ValueError("next_object_id supports source, event and ontology_assertion")
     if not is_iso_date(object_date):
         raise ValueError("object_date must be YYYY-MM-DD")
-    prefix = "SRC" if object_type == "source" else "EVT"
+    prefix = {"source": "SRC", "event": "EVT", "ontology_assertion": "REL"}[
+        object_type
+    ]
     suffixes: list[int] = []
     for obj in objects:
         if obj.object_type != object_type:
@@ -465,6 +468,137 @@ tags: {yaml_list(tags)}
 {extra}---
 
 {body}"""
+
+
+def prepare_assertion_draft(
+    root: Path,
+    *,
+    subject_id: str,
+    predicate: str,
+    object_id: str,
+    created_at: str,
+    valid_from: str,
+    as_of: str,
+    title: str = "",
+    scope: str = "",
+    confidence: float = 0.5,
+    qualifiers: dict[str, str] | None = None,
+    project_ids: list[str] | None = None,
+) -> tuple[Path, str]:
+    """Prepare an Ontology Assertion (REL-YYYYMMDD-NNN) draft.
+
+    Dry-run preview; --apply writes via output_draft. All assertions are
+    created review_status: pending — approving one without reviewed Evidence
+    would trip REF003/REF004 (WP-103 rule), so human approval happens only
+    after the evidence WP lands.
+    """
+    if not is_iso_date(created_at):
+        raise ValueError("created_at must be YYYY-MM-DD")
+    if not is_iso_date(valid_from):
+        raise ValueError("valid_from must be YYYY-MM-DD")
+    if not is_iso_date(as_of):
+        raise ValueError("as_of must be YYYY-MM-DD")
+    if predicate not in ONTOLOGY_PREDICATES:
+        raise ValueError(f"predicate must be one of {sorted(ONTOLOGY_PREDICATES)}")
+    if not (0.0 <= confidence <= 1.0):
+        raise ValueError("confidence must be between 0 and 1")
+    objects, findings = validate_repository(root)
+    if any(finding.level == "error" for finding in findings):
+        raise ValueError("repository validation must pass before creating an assertion")
+    by_id = {obj.object_id: obj for obj in objects}
+    if subject_id not in by_id:
+        raise ValueError(f"subject {subject_id!r} does not exist")
+    if object_id not in by_id:
+        raise ValueError(f"object {object_id!r} does not exist")
+    object_id_full = next_object_id(objects, "ontology_assertion", created_at)
+    project_ids = project_ids or []
+    relative = Path("05_Research/Assertions") / f"{object_id_full}.md"
+    return relative, render_assertion_draft(
+        object_id=object_id_full,
+        subject_id=subject_id,
+        predicate=predicate,
+        object_id_target=object_id,
+        created_at=created_at,
+        valid_from=valid_from,
+        as_of=as_of,
+        title=title or f"{subject_id} {predicate} {object_id}",
+        scope=scope,
+        confidence=confidence,
+        qualifiers=qualifiers or {},
+        project_ids=project_ids,
+    )
+
+
+def render_assertion_draft(
+    *,
+    object_id: str,
+    subject_id: str,
+    predicate: str,
+    object_id_target: str,
+    created_at: str,
+    valid_from: str,
+    as_of: str,
+    title: str,
+    scope: str,
+    confidence: float,
+    qualifiers: dict[str, str],
+    project_ids: list[str],
+) -> str:
+    if qualifiers:
+        qualifier_lines = "".join(
+            f"    {key}: {yaml_scalar(value)}\n"
+            for key, value in sorted(qualifiers.items())
+        )
+        qualifiers_block = f"qualifiers:\n{qualifier_lines}"
+    else:
+        qualifiers_block = "qualifiers: {}"
+    return f"""---
+id: {object_id}
+type: ontology_assertion
+title: {yaml_scalar(title)}
+created_at: {created_at}
+updated_at: {created_at}
+schema_version: 2
+project_ids: {yaml_list(project_ids)}
+status: active
+review_status: pending
+subject_id: {subject_id}
+predicate: {predicate}
+object_id: {object_id_target}
+valid_from: {valid_from}
+as_of: {as_of}
+evidence_ids: []
+source_ids: []
+confidence: {confidence}
+scope: {yaml_scalar(scope)}
+{qualifiers_block}
+tags: []
+---
+
+# Ontology Assertion
+
+## Assertion
+
+- Subject: {subject_id}
+- Predicate: {predicate}
+- Object: {object_id_target}
+- Valid from: {valid_from}
+- As of: {as_of}
+- Confidence: {confidence}
+- Scope: {scope}
+
+## Evidence
+
+Pending — no Evidence yet. Human approval (review apply --decision approve)
+is deferred until the Compute Chain evidence WP lands (reviewed assertions
+require >=1 reviewed Evidence, REF003/REF004).
+
+## Notes
+
+- Relation direction is explicit; symmetric predicates (COMPETES_WITH,
+  SUBSTITUTES, COMPLEMENTS, PARTNERS_WITH) get reverse edges derived in the
+  export layer, not duplicated as authoritative objects (Phase 0-1 §5).
+"""
 
 
 def render_event_draft(
