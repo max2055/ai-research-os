@@ -32,7 +32,7 @@
 - [ ] D5 Candidate store 使用 SQLite
 - [ ] D6 Sector ID 前缀
 - [ ] D7 Recommendation 最高权威等级
-- [ ] D8 批准 RCP-v03-001
+- [x] D8 批准 RCP-v03-001（2026-08-05，reviewer：max；状态 approved，详见 `05_Research/Reviews/Proposals/RCP-v03-001_...md`）
 - [ ] D9 其余 RCP 指定 reviewer 和计划日期
 
 ## 说明

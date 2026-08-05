@@ -2,7 +2,7 @@
 
 Proposal ID：RCP-v03-001
 
-状态：proposed
+状态：approved（2026-08-05，reviewer：max）
 
 创建日期：2026-08-05
 
@@ -75,14 +75,17 @@ Proposal ID：RCP-v03-001
 
 ## Human decision
 
-- Decision：（待填）
-- Reviewer：（待填）
-- Date：（待填）
-- Reason：（待填）
+- Decision：批准（accept RCP-v03-001 as drafted）
+- Reviewer：max
+- Date：2026-08-05
+- Reason：研究者在交接后明确批准 05_Research/Reviews/Proposals/ 下的
+  RCP-v03-001 草稿。产品重定义、Candidate/Source 权威边界、权威分层、
+  投资/研究边界、新增正式对象与永久 ID 提案整体接受；`SEG` vs `SEC` 等
+  具体前缀与各 RCP 排期仍按 WP-011 决策清单逐项拍板。
 
 ## Implementation record
 
-- Changed files：批准后记录
-- Test result：批准后记录
-- Validation result：批准后记录
-- Effective date：批准后记录
+- Changed files：本文件（状态 proposed → approved）；未变更任何 Schema/代码/事实源
+- Test result：not run（本 RCP 为纯治理边界批准，无代码变更）
+- Validation result：`research-os validate` 0 errors / 0 warnings（批准前后一致）
+- Effective date：2026-08-05（批准即生效；实施需后续对应 RCP 批准）
