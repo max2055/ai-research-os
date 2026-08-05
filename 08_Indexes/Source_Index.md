@@ -53,3 +53,4 @@
 | SRC-20260805-046 | SK hynix Unveils First HBF Standard Specifications with Sandisk, Presenting AI Memory Solutions at FMS 2026 | other | SK hynix IR | B | processed | reviewed |
 | SRC-20260805-047 | TSMC 2Q26 Earnings Press Release (with guidance) | earnings | TSMC (SEC EDGAR exhibit) | A | processed | reviewed |
 | SRC-20260805-048 | NVIDIA FY27 Q1 CFO Commentary | earnings | NVIDIA CORP (SEC EDGAR exhibit) | A | processed | reviewed |
+| SRC-20260805-049 | Microsoft 10-Q FY26 Q3 (filed 2026-04-29) | earnings | MICROSOFT CORP (SEC EDGAR) | A | processed | reviewed |

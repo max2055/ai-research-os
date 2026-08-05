@@ -23,6 +23,7 @@
 | EVT-20260416-033 | 2026-04-16 | TSMC discloses advanced 2nm process and CoWoS packaging for AI accelerators |  | 0.70 | reviewed |
 | EVT-20260429-004 | 2026-04-29 | Microsoft 披露 AI 业务年度收入运行率超过 370 亿美元 | THS-004 | 0.90 | reviewed |
 | EVT-20260429-031 | 2026-04-29 | Microsoft separates agent seats, usage, credits, managed objects and one product revenue metric | THS-003, THS-004, THS-005 | 0.86 | reviewed |
+| EVT-20260429-039 | 2026-04-29 | Microsoft FY26 Q3: Azure growth with continued AI infrastructure investment |  | 0.75 | reviewed |
 | EVT-20260506-025 | 2026-05-06 | Palantir Q1 2026 10-Q establishes AIP product and financial baseline | THS-002, THS-004 | 0.78 | reviewed |
 | EVT-20260513-029 | 2026-05-13 | Sinch survey reports widespread production-agent rollbacks alongside continued investment | THS-001, THS-005 | 0.63 | reviewed |
 | EVT-20260514-005 | 2026-05-14 | Anthropic 与 PwC 扩大企业 Agent 部署合作 | THS-004, THS-005 | 0.65 | reviewed |

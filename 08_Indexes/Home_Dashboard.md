@@ -144,10 +144,6 @@
 | [[REL-20260805-138]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-139]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-140]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-141]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-142]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-143]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-144]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-145]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-146]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-147]] | ontology_assertion | 2026-08-05 |
