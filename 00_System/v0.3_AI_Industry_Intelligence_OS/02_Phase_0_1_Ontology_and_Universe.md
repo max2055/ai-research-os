@@ -199,6 +199,23 @@ review_status: pending
 
 Pilot Core 建议 30–50 家，上限未经人工批准不得扩大。
 
+### 6.1 地区优先级（范围约束，reviewer：max，2026-08-05）
+
+研究对象以**中国、美国的 AI 企业为主**，其他地区（欧洲、日韩、东南亚、中东等）
+的重点企业为辅。
+
+落点：
+
+- **Core 席位优先给中美企业**；其他地区企业进入 Core 需对价值链或投资研究有明确
+  区分度（如关键卡位、稀缺供给、不可替代关系），否则归 Tracked/Discovery。
+- **REG- 地区维度**（RCP-v03-002 已批）记录每个 Core/Tracked 企业的地区归属与
+  监管敞口；中美企业按国别细分（REG-cn / REG-us），其他地区归 Country/Region 级。
+- 不等于排除其他地区：当某非中美企业在价值链中是关键节点（如 ASML、TSMC、SK
+  hynix 控制 HBM/Foundry Card）时，仍进入 Core，理由写入 Sector `core_company_ids`。
+- 不改变 Schema/Taxonomy/ID 语义；`REG-` 前缀已承载该维度，无需新 RCP。
+- 该约束在 Phase 0-1 Pick Lobby 选取与 WP-120 Universe 建设时执行；D10（扩
+  Universe Gate）复核时一并评估地区覆盖平衡。
+
 ## 7. 工作包
 
 | ID | 任务 | 建议修改路径 | 交付与验收 |

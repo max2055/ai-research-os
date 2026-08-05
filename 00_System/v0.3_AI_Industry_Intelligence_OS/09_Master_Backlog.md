@@ -299,3 +299,18 @@ Revisit trigger/date:
 - Reviewer: max
 - Revisit trigger/date: 与 WP-101 Sector Schema 核对；任一扇区边界实施遇阻时提修改 RCP。
 
+#### 地区优先级范围约束（2026-08-05）
+
+- Decision ID: D-REGION-SCOPE
+- Date: 2026-08-05
+- Question: Universe 研究对象的地区范围？（上下文：在 RCP-v03-002 批准后，开 WP-101 前）
+- Options considered: 仅中美 / 中美为主其他为辅 / 全球无优先级。
+- Decision: 研究对象以中国、美国 AI 企业为主，其他地区的重点企业为辅。
+- Reason: 研究者明确范围；中美当前是 AI 产业最具区分度的市场，其他地区保留关键节点（卡位/稀缺供给）。
+- Evidence/benchmark: 研究者陈述（2026-08-05）；`02_Phase_0_1_...md` §6.1。
+- Consequences: Core 席位优先中美；非中美企业进 Core 须写明价值链区分度理由（如 ASML/TSMC/SK hynix）。`REG-` 地区维度按国别细分中美、其他归 Country/Region 级。D10（扩 Universe Gate）复核地区覆盖平衡。
+- Migration: 无；`REG-` 前缀已由 RCP-v03-002 批准承载该维度。
+- Rollback: 不适用（范围约束，可在 D10 Gate 重新评估）。
+- Reviewer: max
+- Revisit trigger/date: WP-120 Universe 建设时；D10 扩 Universe Gate 时评估地区平衡。
+
