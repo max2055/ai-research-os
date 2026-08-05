@@ -80,16 +80,15 @@ Phase 0-1 §3 列出但 v0.1 无 ID，v2 需定：
 | 周期属性 | 周期/逆周期/成长 | CYC- |
 | 监管敏感度 | 监管暴露 | RGT- |
 
-> 前缀待 RCP-v03-002 确认，避免与既有前缀冲突（REG 与 RGT 易混，可改）。
+> 前缀已定（reviewer：max，2026-08-05）：REG-/SUP-/CAP-/CYC-/RGT-，5 个全加。
+> REG（地区）与 RGT（监管敏感度）易混，Taxonomy 文档须明确备注区分。
 
-## 4. APP-CODING 升格处理（待解项 R1）
+## 4. APP-CODING 处理（已定 R1，reviewer：max，2026-08-05）
 
-`APP-CODING`（30 次使用，PRJ-002 主线）v0.1 放在 "知识工作" 子类。v2 两个方案（RCP 定）：
+`APP-CODING`（30 次使用，PRJ-002 主线）v0.1 放在 "知识工作" 子类。v2 决定：
 
-- **A. keep 为 tag**，归 Enterprise Applications 下 "AI Developer Tooling" 子域；
-- **B. 升格为子扇区** SEG-ai-developer-tooling，因为它既是应用层又是开发栈跨层。
-
-建议 A（作 tag），保持 v0.1 历史 tag 不变；若 PRJ-002 扩展成独立 Pilot 再升级。
+- **keep 为 tag（方案 A）**，归 Enterprise Applications 下 "AI Developer Tooling" 子域；
+- v0.1 历史 tag 不变；若 PRJ-002 后续扩展成独立 Pilot 再考虑升级为子扇区。
 
 ## 5. 迁移策略（不自动执行，RCP 批准后由 WP-123 落实）
 
@@ -99,23 +98,27 @@ Phase 0-1 §3 列出但 v0.1 无 ID，v2 需定：
 4. **回填选项**：是否对历史对象补 Sector 关系，由人工逐批批（Phase 0-1 §11 回滚要求），不自动改。
 5. **兼容窗口**：infrastructure 层退役 tag 在至少一个版本周期保留 mapping 兼容（Phase 0-1 §11）。
 
-## 6. 冲突项（留给 RCP-v03-002，对应 Mapping §5）
+## 6. 边界项决定（reviewer：max，2026-08-05；原 Mapping §5 待解项）
 
-1. INF-CLOUD-AI 与 Models / Data & AI Development 的边界。
-2. APP-CODING 升格 vs 保留（§4 方案 A/B）。
-3. MOD-FOUNDATION keep-as-tag vs map-to-entity。
-4. SRV-DATA-LABELING 与 Data & AI Development 的归属。
-5. INF 父类（INF-COMPUTE/MEMORY/NETWORK/DATACENTER）deprecate 后历史对象回填策略。
-6. 横向维度新前缀 REG/RGT/SUP/CAP/CYC 命名冲突复核。
+| # | 问题 | 决定 | 备注 |
+|---|---|---|---|
+| R1 | APP-CODING 升格 vs 保留 | **keep 为 tag**（方案 A），归 Enterprise Applications 下 AI Developer Tooling 子域 | 见 §4 |
+| R2 | MOD-FOUNDATION / MOD-* keep vs map | **全 map 到 Models 扇区下的 Technology 实体**（foundation/reasoning/multimodal/small/embedding） | 与 INF-* 一致走"产业细分由实体表达" |
+| R3 | INF-CLOUD-AI 边界 | **归 Sector=Cloud & AI Infrastructure**；边界 = 云端模型平台/推理服务；与 Models（模型本身）、Data & AI Development（训练/评测/Agent 运行时）不重叠 | 唯一在用的 INF 标签 |
+| R4 | 横向维度新前缀 | **5 个全加**：REG-(地区)、SUP-(供应风险)、CAP-(资本强度)、CYC-(周期属性)、RGT-(监管敏感度) | REG 与 RGT 易混，在 Taxonomy 文档中明确区分 |
+| R5 | INF 父类 deprecate 后历史对象回填 | **不回填，保留旧 tag**；mapping 表提供语义映射；需补 SEG 关系时由人工逐批核（Taxonomy §5 + Phase 0-1 §11） | 不自动改写历史对象 tag |
+| R6 | SRV-DATA-LABELING 归属 | （留 RCP-v03-002 现场定，默认归 Services；若与 Data & AI Development 重叠明显再调） | 本轮未触发 |
 
 ## 7. 验收（RCP-v03-002 批准门槛）
 
-- [ ] 13 个 L1 扇区 SEG-ID 与定义/边界/示例齐备
-- [ ] v0.1 每个 keep/map/deprecate 决定有理由
-- [ ] 横向维度扩展前缀不与既有冲突
-- [ ] APP-CODING、MOD-FOUNDATION、INF-CLOUD-AI 三个边界争议有人工决定
-- [ ] 历史对象 tag 回填策略被人工批准
-- [ ] 与 `Metadata_Schema_v0.3_Proposal`（A-005/WP-101）的 Sector 实体 Schema 一致
+- [x] 13 个 L1 扇区 SEG-ID 与定义/边界/示例齐备
+- [x] v0.1 每个 keep/map/deprecate 决定有理由
+- [x] 横向维度扩展前缀不与既有冲突（REG/SUP/CAP/CYC/RGT，REG 与 RGT 已备注区分）
+- [x] APP-CODING、MOD-FOUNDATION、INF-CLOUD-AI 三个边界争议有人工决定（R1/R2/R3）
+- [x] 历史对象 tag 回填策略被人工批准（R5：不回填，保留旧 tag）
+- [ ] 与 `Metadata_Schema_v0.3_Proposal`（A-005/WP-101）的 Sector 实体 Schema 一致（待 WP-101 提案后核对）
+- [ ] SRV-DATA-LABELING 归属（R6）现场定
+- [ ] RCP-v03-002 最终人工批准（草案已备齐，待 max 审批生效）
 
 ## 8. 不做的事
 

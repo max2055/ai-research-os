@@ -159,7 +159,7 @@ SQLite/PostgreSQL/graph/vector index 均为派生查询层，不接受绕过 Mar
 | RCP | 目标 | 必须在何时批准 | 状态 |
 |---|---|---|---|
 | RCP-v03-001 | 产品定位、Candidate/Source 权威边界 | 任何 v0.3 编码前 | **approved**（2026-08-05, max） |
-| RCP-v03-002 | Taxonomy v2 与稳定板块 ID | Phase 1 migration 前 | proposed（reviewer=max, Wave 1） |
+| RCP-v03-002 | Taxonomy v2 与稳定板块 ID | Phase 1 migration 前 | proposed（草案备齐，R1–R5 已定 by max；待最终批准，详见 `05_Research/Reviews/Proposals/RCP-v03-002_...md`） |
 | RCP-v03-003 | 新实体 Schema 和永久 ID | Phase 1 写对象前 | proposed（reviewer=max, Wave 1） |
 | RCP-v03-004 | Candidate SQLite 与 retention | Phase 2 写数据库前 | proposed（reviewer=max, Wave 2） |
 | RCP-v03-005 | Source Channel、scheduler 和许可边界 | Phase 2 自动运行前 | proposed（reviewer=max, Wave 2） |

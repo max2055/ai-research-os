@@ -132,13 +132,18 @@ frontmatter**。它是 v0.3 新增前缀（Analysis Mode），属"已规划待 R
 - 13 个 L1 扇区作为 **Sector 实体**（SEG-ID），而非 tag：Semiconductor Materials & Equipment、Foundry Packaging & Test、Compute Silicon、Memory & Storage、Server Network & Interconnect、Datacenter Infrastructure、Cloud & AI Infrastructure、Models、Data & AI Development、Enterprise Applications、Consumer Applications、Services、Physical AI。
 - 横向维度扩展项：地区、供应风险、资本强度、周期属性、监管敏感度（Phase 0-1 §3 列出但 v0.1 未定义 ID）。
 
-## 5. 冲突与待解项（留给 RCP-v03-002 / 人工）
+## 5. 边界项决定（reviewer：max，2026-08-05）
 
-1. **tag 退役 vs 历史对象**：map 决定意味着 INF-GPU 等不再作为 tag，但 v0.2 历史对象（如 COM-microsoft 的 `INF-CLOUD-AI`）仍带旧 tag。按 Taxonomy §5"改变历史对象使用的标签需人工审核"，**是否回填历史对象的 tag 必须人工批**；默认保留旧 tag + 映射表，不自动改写。
-2. **APP-CODING 扇区归属**：归 Enterprise Applications 还是单列 "AI Developer Tooling"？PRJ-002 全靠它，需人工定。
-3. **MOD-* keep/map 取舍**：MOD-FOUNDATION 有 4 次使用，是 keep 为 tag 还是 map 到 Technology 实体，需 RCP 定。
-4. **INF-CLOUD-AI 边界**：与 Models / Data & AI Development 的重叠点需 RCP-v03-002 给明确边界。
-5. **父类聚合 tag（INF-COMPUTE 等）deprecate 后**，若历史对象用了父类，迁移策略需人工批。
+| # | 问题 | 决定 | 备注 |
+|---|---|---|---|
+| R1 | tag 退役 vs 历史对象回填 | **不回填，保留旧 tag**；mapping 表提供语义映射；需补 SEG 关系时人工逐批核 | Taxonomy §5 要求人审；Phase 0-1 §11 回滚要求 |
+| R2 | APP-CODING 扇区归属 | **keep 为 tag**，归 Enterprise Applications 下 "AI Developer Tooling" 子域 | PRJ-002 主线 30 次使用；后续独立 Pilot 再升级 |
+| R3 | MOD-* keep/map 取舍 | **全 map 到 Models 扇区下 Technology 实体** | 与 INF-* 一致 |
+| R4 | INF-CLOUD-AI 边界 | **归 Cloud & AI Infrastructure**；边界 = 云端模型平台/推理服务；不与 Models/Data & AI Dev 重叠 | 唯一在用的 INF 标签 |
+| R5 | 父类聚合 tag deprecate 后迁移 | **父类沿用 R1：不回填，保留旧 tag** | INF-COMPUTE/MEMORY/NETWORK/DATACENTER |
+| R6 | SRV-DATA-LABELING 归属 | 默认归 Services；RCP-v03-002 现场定；若与 Data & AI Dev 重叠明显再调 | 本轮未触发 |
+
+> 决定已写入 `Taxonomy_v2_Proposal.md` §6，并落进 RCP-v03-002 草案。RCP 待 max 最终批准生效。
 
 ## 6. 不做的事
 

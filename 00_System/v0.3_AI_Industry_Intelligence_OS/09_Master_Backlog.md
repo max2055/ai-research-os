@@ -268,3 +268,23 @@ Revisit trigger/date:
 - Reviewer: max
 - Revisit trigger/date: 任一 Wave 开始前排当个 RCP 并记录日期。
 
+#### R1-R5 Taxonomy v2 边界项（2026-08-05，ref: RCP-v03-002）
+- Decision ID: WP-100-R1..R5
+- Date: 2026-08-05
+- Question: Taxonomy v2 的 5 个边界争议（见 A-002 §5）。
+- Options considered: per item（Mapping §5 / Proposal §6）。
+- Decision:
+  - R1 历史 tag 不回填，保留旧 tag；mapping 表提供映射；补 SEG 关系时人工逐批核。
+  - R2 APP-CODING keep 为 tag，归 Enterprise Applications 下 AI Developer Tooling 子域。
+  - R3 MOD-* 6 个全 map 到 Models 扇区下 Technology 实体。
+  - R4 INF-CLOUD-AI 归 Cloud & AI Infrastructure；边界=云端模型平台/推理服务。
+  - R5 INF 父类聚合 tag deprecate，历史沿用 R1 不回填。
+  - R6 SRV-DATA-LABELING 默认归 Services，RCP-v03-002 现场定。
+- Reason: 见 A-002 审计（usage 41/93、INF 层近废）与 Phase 0-1 §3 扇区草案；保持"产业细分由实体表达"+"不自动改写历史"。
+- Evidence/benchmark: `Taxonomy_v2_Mapping.md`、`Taxonomy_v2_Proposal.md`、`research-os validate` 0 error。
+- Consequences: RCP-v03-002 草案备齐待 max 批准；WP-101 Schema 须与 Taxonomy v2 一致。
+- Migration: 不回填（R1）；新对象用 SEG-ID；WP-123 落实。
+- Rollback: 保留 v0.1 Taxonomy 与兼容窗口（Phase 0-1 §11）。
+- Reviewer: max
+- Revisit trigger/date: RCP-v03-002 最终审批时；与 WP-101 Sector Schema 核对时。
+
