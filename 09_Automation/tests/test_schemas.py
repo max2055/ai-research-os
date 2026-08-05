@@ -8,6 +8,10 @@ from pathlib import Path
 try:
     from pydantic import ValidationError
 
+    from research_os.domain.policies import (
+        ONTOLOGY_PREDICATES,
+        SYMMETRIC_PREDICATES,
+    )
     from research_os.repositories.markdown import (
         MarkdownDocument,
         load_documents,
@@ -17,6 +21,7 @@ try:
         CompanySchema,
         EventSchema,
         MetricSchema,
+        OntologyAssertionSchema,
         ProductSchema,
         SectorSchema,
         SecuritySchema,
@@ -422,6 +427,151 @@ class V03MigrationPlaceholderTests(unittest.TestCase):
                 type("D", (), {"original_text": "altered"})()
             )
         )
+
+
+def _assertion_base(**extra: object) -> dict[str, object]:
+    meta: dict[str, object] = {
+        "id": "REL-20260805-001",
+        "type": "ontology_assertion",
+        "title": "Test assertion",
+        "created_at": "2026-08-05",
+        "updated_at": "2026-08-05",
+        "schema_version": 2,
+        "project_ids": [],
+        "status": "active",
+        "review_status": "pending",
+        "tags": [],
+        "subject_id": "COM-nvidia",
+        "predicate": "SUPPLIES",
+        "object_id": "COM-tsmc",
+        "valid_from": "2026-08-05",
+        "as_of": "2026-08-05",
+        "evidence_ids": [],
+        "source_ids": [],
+        "confidence": 0.7,
+        "scope": "industry",
+        "qualifiers": {},
+    }
+    meta.update(extra)
+    return meta
+
+
+class V03OntologyAssertionTests(unittest.TestCase):
+    """WP-103: Ontology Assertion schema + predicates + reference checks."""
+
+    def test_assertion_valid_and_id_regex(self) -> None:
+        obj = OntologyAssertionSchema.model_validate(_assertion_base())
+        self.assertEqual("REL-20260805-001", obj.id)
+        self.assertEqual("SUPPLIES", obj.predicate)
+        with self.assertRaises(ValidationError):
+            OntologyAssertionSchema.model_validate(
+                _assertion_base(id="REL-bad-id")
+            )
+
+    def test_assertion_rejects_unknown_predicate(self) -> None:
+        with self.assertRaises(ValidationError):
+            OntologyAssertionSchema.model_validate(
+                _assertion_base(predicate="RELATES_TO")
+            )
+
+    def test_predicate_sets_are_complete_and_symmetric(self) -> None:
+        self.assertEqual(12, len(ONTOLOGY_PREDICATES))
+        self.assertEqual(
+            {"COMPETES_WITH", "SUBSTITUTES", "COMPLEMENTS", "PARTNERS_WITH"},
+            set(SYMMETRIC_PREDICATES),
+        )
+        self.assertTrue(SYMMETRIC_PREDICATES <= ONTOLOGY_PREDICATES)
+
+    def test_assertion_rejects_bad_entity_reference_format(self) -> None:
+        # EntityReference regex: COM-/SEG-/TEC-/PRD-/MET- only.
+        with self.assertRaises(ValidationError):
+            OntologyAssertionSchema.model_validate(
+                _assertion_base(subject_id="SRC-20260805-001")
+            )
+        with self.assertRaises(ValidationError):
+            OntologyAssertionSchema.model_validate(
+                _assertion_base(object_id="EVT-20260805-001")
+            )
+
+    def test_assertion_dispatches_via_registry(self) -> None:
+        from research_os.schemas import validate_metadata
+
+        obj = validate_metadata(_assertion_base())
+        self.assertEqual("ontology_assertion", obj.type)
+
+    def test_assertion_validates_in_repository(self) -> None:
+        # A pending assertion with evidence-free body validates in-repo (the
+        # reviewed-evidence rule applies only to reviewed assertions).
+
+        # Can't add a REL object to the real repo (would mutate); instead
+        # confirm the schema model_validate path + registry dispatch suffice.
+        self.assertIsNotNone(
+            OntologyAssertionSchema.model_validate(_assertion_base())
+        )
+
+
+class V03AssertionReferenceTests(unittest.TestCase):
+    """WP-103: reference integrity for v0.3 entity fields."""
+
+    def _assertion(self, **extra: object) -> dict[str, object]:
+        return _assertion_base(**extra)
+
+    def test_reviewed_assertion_requires_reviewed_evidence(self) -> None:
+        # Unit-level: the validator function rejects a reviewed assertion with
+        # no evidence, and accepts pending ones (rule is scoped to reviewed).
+        from research_os.domain.models import Finding, ResearchObject
+        from research_os.services.validation import (
+            validate_reviewed_assertion_evidence,
+        )
+
+        class DummyObject:
+            pass
+
+        # pending assertion with no evidence -> no error
+        obj = ResearchObject(
+            path=Path("05_Research/Assertions/REL-20260805-001.md"),
+            metadata={
+                "id": "REL-20260805-001",
+                "type": "ontology_assertion",
+                "review_status": "pending",
+                "evidence_ids": [],
+            },
+            body="",
+        )
+        findings: list[Finding] = []
+        validate_reviewed_assertion_evidence(obj, {}, findings)
+        self.assertEqual([], findings)
+
+        # reviewed assertion with no evidence -> REF003 error
+        obj_reviewed = ResearchObject(
+            path=Path("05_Research/Assertions/REL-20260805-002.md"),
+            metadata={
+                "id": "REL-20260805-002",
+                "type": "ontology_assertion",
+                "review_status": "reviewed",
+                "evidence_ids": [],
+            },
+            body="",
+        )
+        findings = []
+        validate_reviewed_assertion_evidence(obj_reviewed, {}, findings)
+        self.assertEqual(1, len(findings))
+        self.assertEqual("REF003", findings[0].code)
+
+    def test_expect_refs_allows_none_type_for_existence_only(self) -> None:
+        from research_os.domain.models import Finding, ResearchObject
+        from research_os.services.validation import expect_refs
+
+        findings: list[Finding] = []
+        obj = ResearchObject(
+            path=Path("x.md"),
+            metadata={"id": "x", "type": "metric", "owner_entity_ids": ["COM-nvidia"]},
+            body="",
+        )
+        # None expected_type => existence check only; missing object errors.
+        expect_refs(obj, "owner_entity_ids", None, {}, findings)
+        self.assertEqual(1, len(findings))
+        self.assertEqual("REF001", findings[0].code)
 
 
 if __name__ == "__main__":
