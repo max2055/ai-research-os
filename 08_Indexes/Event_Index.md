@@ -28,6 +28,7 @@
 | EVT-20260514-005 | 2026-05-14 | Anthropic 与 PwC 扩大企业 Agent 部署合作 | THS-004, THS-005 | 0.65 | reviewed |
 | EVT-20260514-026 | 2026-05-14 | Alibaba field experiment finds an agent speed-quality trade-off and timing-dependent human recovery | THS-001, THS-005 | 0.84 | reviewed |
 | EVT-20260520-032 | 2026-05-20 | NVIDIA discloses long lead times and capacity commitments in AI supply chain |  | 0.70 | reviewed |
+| EVT-20260520-038 | 2026-05-20 | NVIDIA FY27 Q1: record Data Center revenue $75.2B, $119B supply commitments |  | 0.80 | reviewed |
 | EVT-20260521-006 | 2026-05-21 | MCP 候选规范扩展长任务、应用和授权能力 | THS-002, THS-005 | 0.80 | reviewed |
 | EVT-20260605-030 | 2026-06-05 | Five Agentforce cases show production agents bounded by data, logic and human controls | THS-001, THS-002, THS-004 | 0.68 | reviewed |
 | EVT-20260607-027 | 2026-06-07 | Nubank reports A/B-tested results for five production customer-support agents | THS-002, THS-004 | 0.82 | reviewed |
