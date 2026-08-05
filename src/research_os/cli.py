@@ -194,7 +194,15 @@ def parse_args() -> argparse.Namespace:
     review_queue.add_argument("--project")
     review_queue.add_argument(
         "--type",
-        choices=("source", "event", "thesis", "company", "report", "sector"),
+        choices=(
+            "source",
+            "event",
+            "thesis",
+            "company",
+            "report",
+            "sector",
+            "ontology_assertion",
+        ),
     )
     review_queue.add_argument(
         "--status",
@@ -276,6 +284,12 @@ def parse_args() -> argparse.Namespace:
         "--user-agent",
         default="",
         help="compliant User-Agent (Name Contact@email); required for sec.gov",
+    )
+    source_add.add_argument(
+        "--max-bytes",
+        type=int,
+        default=None,
+        help="override capture size limit (default 20MiB; SEC 20-F larger)",
     )
     source_add.add_argument("--apply", action="store_true")
 
@@ -537,9 +551,12 @@ def selected_capture_adapter(
     url: str | None,
     file_path: Path | None,
     user_agent: str | None = None,
+    max_bytes: int | None = None,
 ) -> UrlCaptureAdapter | FileCaptureAdapter:
     if url:
-        return UrlCaptureAdapter(url, user_agent=user_agent)
+        if max_bytes is None:
+            return UrlCaptureAdapter(url, user_agent=user_agent)
+        return UrlCaptureAdapter(url, user_agent=user_agent, max_bytes=max_bytes)
     if file_path:
         return FileCaptureAdapter(file_path)
     raise ValueError("URL or file is required")
@@ -746,6 +763,7 @@ def main() -> int:
                     args.url,
                     args.file,
                     args.user_agent or None,
+                    args.max_bytes,
                 )
                 plan = runtime.prepare_new_source_capture(
                     args.root.resolve(),

@@ -15,8 +15,6 @@
 
 | Object | Type | Updated |
 |---|---|---|
-| [[REL-20260805-001]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-002]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-004]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-005]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-006]] | ontology_assertion | 2026-08-05 |
@@ -233,8 +231,6 @@
 | [[REL-20260805-218]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-219]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-220]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-221]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-222]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-223]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-224]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-225]] | ontology_assertion | 2026-08-05 |

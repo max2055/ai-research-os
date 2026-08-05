@@ -17,6 +17,7 @@
 | EVT-20260219-001 | 2026-02-19 | Microsoft Copilot 促销仍以企业席位和覆盖率为购买条件 | THS-003 | 0.80 | reviewed |
 | EVT-20260224-023 | 2026-02-24 | METR says its later developer-productivity experiment has severe selection limits | THS-006, THS-008 | 0.70 | reviewed |
 | EVT-20260225-002 | 2026-02-25 | Salesforce 披露 Agentforce ARR、交易和生产账户增长 | THS-003, THS-004 | 0.90 | reviewed |
+| EVT-20260225-034 | 2026-02-25 | ASML 20-F describes EUV 0.33/0.55 NA lithography platforms |  | 0.70 | reviewed |
 | EVT-20260406-019 | 2026-04-06 | Meta reports context infrastructure reducing coding-agent exploration | THS-007 | 0.55 | reviewed |
 | EVT-20260415-003 | 2026-04-15 | OpenAI Agents SDK 增加计算机环境、沙箱和状态恢复 | THS-005 | 0.85 | reviewed |
 | EVT-20260416-033 | 2026-04-16 | TSMC discloses advanced 2nm process and CoWoS packaging for AI accelerators |  | 0.70 | reviewed |
