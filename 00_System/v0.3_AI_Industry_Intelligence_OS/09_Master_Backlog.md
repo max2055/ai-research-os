@@ -202,3 +202,69 @@ Reviewer:
 Revisit trigger/date:
 ```
 
+### 13.1 已记录决策
+
+#### D1 产品定位（2026-08-05）
+- Decision ID: D1
+- Date: 2026-08-05
+- Question: 是否接受 v0.3 产品定位（AI Industry Intelligence & Decision OS）？
+- Options considered: 接受 / 修改目标闭环 / 拒绝
+- Decision: 接受。在 v0.2 Evidence Kernel 之上建设 Universe/每日情报/Ontology/Impact/Analysis Mode/Forecast/Recommendation，保留 v0.2 全部继承原则。
+- Reason: 现有 single-topic 边界无法承载 AI 全产业链；目标闭环见 Roadmap §1。
+- Evidence/benchmark: WP-000_Baseline_Audit.md（v0.2 基线 166 对象、0 error）。
+- Consequences: 启用 v0.3 全阶段规划；Charter/Schema/ID 推进需逐项 RCP 批准。
+- Migration: 无数据迁移；治理边界变更由 RCP-v03-001 承载。
+- Rollback: 撤销 RCP-v03-001 即回退定位（不影响既有对象）。
+- Reviewer: max
+- Revisit trigger/date: 30-day Pilot Gate / v0.3 发布决定（D12）。
+
+#### D2 cadence 先后（2026-08-05）
+- Decision ID: D2
+- Decision: 并行推进。WP-001（2×Weekly + 1×Monthly + ACT-20260729-009 + 最终发布决定）保持日期阻塞；v0.3 只读/文档型 WP 先行，不争用同一人审时段。
+- Reviewer: max
+- Revisit trigger/date: v0.2 最终发布时或 cadence 出现与 v0.3 争用时。
+
+#### D3 第一 Pilot value chain（2026-08-05）
+- Decision ID: D3
+- Decision: AI Compute Infrastructure Chain（半导体材料与设备 → 制造/封装/测试 → GPU/ASIC → HBM/DRAM/Storage → Server/Network/Optics → Datacenter/Power/Cooling → Cloud AI Infra → Foundation Model Demand）。
+- Reason: 多板块、多公司、多跳关系；原始来源相对丰富；供给/成本/产能/资本开支机制可观察。
+- Consequences: Universe 首批围绕此链建 Core；第二 Pilot 再覆盖 Model-Agent-Enterprise。
+- Reviewer: max
+- Revisit trigger/date: 第一 Pilot Gate 后扩 Universe 时（D10）。
+
+#### D4 Universe Core 上限（2026-08-05）
+- Decision ID: D4
+- Decision: Pilot Core 规模 30–50 家公司；未经批准不得扩大。
+- Reviewer: max
+- Revisit trigger/date: 每个 Pilot Gate 后评估（D10）。
+
+#### D5 Candidate store（2026-08-05）
+- Decision ID: D5
+- Decision: 使用 SQLite 作为可重建 operational store，保存高频候选与调度状态；非事实源。须提供 Schema version、deterministic migration、export/import、backup/snapshot、retention、Candidate 提升为 Source 的永久关联。
+- Reviewer: max
+- Revisit trigger/date: 量化瓶颈出现时评估 PostgreSQL（D11）。
+
+#### D6 Sector ID 前缀（2026-08-05）
+- Decision ID: D6
+- Decision: `SEG-<slug>`。避免与美国 SEC Adapter/披露混淆。
+- Reviewer: max
+- Revisit trigger/date: 引入 Security 对象并需区分监管实体时复核。
+
+#### D7 Recommendation 最高权威等级（2026-08-05）
+- Decision ID: D7
+- Decision: Recommendation 最高为人工批准的个人研究建议；不得自动执行、不自动下单、不按模型置信度自动计算仓位。
+- Reviewer: max
+- Revisit trigger/date: Phase 5（RCP-v03-009）细化等级时。
+
+#### D8 批准 RCP-v03-001（2026-08-05）
+- Decision ID: D8
+- Decision: 批准 RCP-v03-001（proposed → approved）。产品边界 + Candidate/Source 权威边界生效。
+- Reviewer: max
+- Revisit trigger/date: 实施发现边界不可行时提修改 RCP。
+
+#### D9 RCP-v03-002~010 排期（2026-08-05）
+- Decision ID: D9
+- Decision: 按默认 Wave 排期（002/003 Wave1；004/005 Wave2；006 Wave3；007 Wave4；008/009 Wave5；010 Wave6）。reviewer 统一 max；计划日期在对应阶段开始前滚动落定。
+- Reviewer: max
+- Revisit trigger/date: 任一 Wave 开始前排当个 RCP 并记录日期。
+

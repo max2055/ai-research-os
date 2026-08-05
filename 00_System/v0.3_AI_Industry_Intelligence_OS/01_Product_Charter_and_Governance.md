@@ -152,22 +152,22 @@ SQLite/PostgreSQL/graph/vector index 均为派生查询层，不接受绕过 Mar
 | Valuation Snapshot | `VAL-YYYYMMDD-NNN` | 有日期的估值输入和情景 |
 | Recommendation | `REC-YYYYMMDD-NNN` | 研究建议草稿/决定 |
 
-`SEC` 前缀与美国 SEC Adapter 容易混淆，阶段 0 人工决策应优先考虑使用 `SEG`。
+`SEC` 前缀与美国 SEC Adapter 容易混淆。阶段 0 决策已选定 `SEG`（D6，2026-08-05 max），Sector 永久 ID 形式为 `SEG-<slug>`。
 
 ## 8. 建议 RCP 清单
 
-| RCP | 目标 | 必须在何时批准 |
-|---|---|---|
-| RCP-v03-001 | 产品定位、Candidate/Source 权威边界 | 任何 v0.3 编码前 |
-| RCP-v03-002 | Taxonomy v2 与稳定板块 ID | Phase 1 migration 前 |
-| RCP-v03-003 | 新实体 Schema 和永久 ID | Phase 1 写对象前 |
-| RCP-v03-004 | Candidate SQLite 与 retention | Phase 2 写数据库前 |
-| RCP-v03-005 | Source Channel、scheduler 和许可边界 | Phase 2 自动运行前 |
-| RCP-v03-006 | Ontology/Impact 关系语义 | Phase 3 写 assertion 前 |
-| RCP-v03-007 | Analysis Mode 与 Analysis Run 权威边界 | Phase 4 前 |
-| RCP-v03-008 | Forecast、Resolution 和 calibration | Phase 5 前 |
-| RCP-v03-009 | Recommendation 等级与人工批准规则 | Phase 5 前 |
-| RCP-v03-010 | v0.3 数据库、备份和恢复策略 | Phase 6 发布前 |
+| RCP | 目标 | 必须在何时批准 | 状态 |
+|---|---|---|---|
+| RCP-v03-001 | 产品定位、Candidate/Source 权威边界 | 任何 v0.3 编码前 | **approved**（2026-08-05, max） |
+| RCP-v03-002 | Taxonomy v2 与稳定板块 ID | Phase 1 migration 前 | proposed（reviewer=max, Wave 1） |
+| RCP-v03-003 | 新实体 Schema 和永久 ID | Phase 1 写对象前 | proposed（reviewer=max, Wave 1） |
+| RCP-v03-004 | Candidate SQLite 与 retention | Phase 2 写数据库前 | proposed（reviewer=max, Wave 2） |
+| RCP-v03-005 | Source Channel、scheduler 和许可边界 | Phase 2 自动运行前 | proposed（reviewer=max, Wave 2） |
+| RCP-v03-006 | Ontology/Impact 关系语义 | Phase 3 写 assertion 前 | proposed（reviewer=max, Wave 3） |
+| RCP-v03-007 | Analysis Mode 与 Analysis Run 权威边界 | Phase 4 前 | proposed（reviewer=max, Wave 4） |
+| RCP-v03-008 | Forecast、Resolution 和 calibration | Phase 5 前 | proposed（reviewer=max, Wave 5） |
+| RCP-v03-009 | Recommendation 等级与人工批准规则 | Phase 5 前 | proposed（reviewer=max, Wave 5） |
+| RCP-v03-010 | v0.3 数据库、备份和恢复策略 | Phase 6 发布前 | proposed（reviewer=max, Wave 6） |
 
 ## 9. 隐私、许可与合规
 
@@ -181,15 +181,15 @@ SQLite/PostgreSQL/graph/vector index 均为派生查询层，不接受绕过 Mar
 
 ## 10. 章程 Gate
 
-Phase 0 只有在以下人工决定完成后才能关闭：
+Phase 0 只有在以下人工决定完成后才能关闭（reviewer：max，2026-08-05）：
 
-- [ ] 接受或修改产品定位。
-- [ ] 决定 v0.2 cadence 是否与 v0.3 并行完成。
-- [ ] 决定第一个 Pilot value chain。
-- [ ] 决定 Universe Core 规模上限。
-- [ ] 决定 Candidate store 使用 SQLite。
-- [ ] 决定 Sector ID 前缀。
-- [ ] 决定 Recommendation 最高权威等级。
-- [ ] 批准 RCP-v03-001。
-- [ ] 为其余 RCP 指定 reviewer 和计划日期。
+- [x] 接受或修改产品定位。→ D1：接受 AI Industry Intelligence & Decision OS 定位
+- [x] 决定 v0.2 cadence 是否与 v0.3 并行完成。→ D2：并行推进
+- [x] 决定第一个 Pilot value chain。→ D3：AI Compute Infrastructure Chain
+- [x] 决定 Universe Core 规模上限。→ D4：30–50
+- [x] 决定 Candidate store 使用 SQLite。→ D5：使用 SQLite（可重建 operational store，非事实源）
+- [x] 决定 Sector ID 前缀。→ D6：`SEG`（避免与美国 SEC Adapter 混淆）
+- [x] 决定 Recommendation 最高权威等级。→ D7：人工批准、不得自动执行
+- [x] 批准 RCP-v03-001。→ D8：approved（详见 `05_Research/Reviews/Proposals/RCP-v03-001_...md`）
+- [x] 为其余 RCP 指定 reviewer 和计划日期。→ D9：按默认 Wave 排期，reviewer=max（详见 `WP-011_Charter_Decision_Options.md` §RCP 排期）
 
