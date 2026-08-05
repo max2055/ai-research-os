@@ -79,3 +79,7 @@
 | REV-20260805-007 | 2026-08-05 | approve | COM-vertiv, COM-eaton, COM-schneider-electric, COM-catl | max |  |
 | REV-20260805-008 | 2026-08-05 | approve | COM-aws, COM-google-cloud, COM-coreweave, COM-aliyun, COM-bytedance-cloud, COM-baidu-cloud | max |  |
 | REV-20260805-009 | 2026-08-05 | approve | COM-meta, COM-xai, COM-deepseek, COM-zhipu, COM-tongyi, COM-doubao | max |  |
+| REV-20260805-010 | 2026-08-05 | approve | EVT-20260520-032 | max | PRJ-001 |
+| REV-20260805-011 | 2026-08-05 | approve | EVT-20260416-033 | max | PRJ-001 |
+| REV-20260805-012 | 2026-08-05 | approve | SRC-20260805-040 | max | PRJ-001 |
+| REV-20260805-013 | 2026-08-05 | approve | SRC-20260805-041 | max | PRJ-001 |

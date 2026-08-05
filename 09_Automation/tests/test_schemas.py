@@ -41,13 +41,13 @@ class SchemaTests(unittest.TestCase):
             {
                 "action": 12,
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
-                "event": 31,
+                "event": 33,  # EvWP: +2 Compute Chain
                 "ontology_assertion": 248,  # RelWP: value-chain relations
                 "project": 2,
                 "report": 2,
-                "review": 73,  # WP-120: +9 entity approval decisions
+                "review": 77,  # WP-120: +9; EvWP: +4
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
-                "source": 39,
+                "source": 41,  # EvWP: +2 Compute Chain
                 "thesis": 8,
             },
             dict(Counter(document.metadata["type"] for document in documents)),

@@ -272,6 +272,11 @@ def parse_args() -> argparse.Namespace:
     source_add.add_argument("--tags", default="")
     source_add.add_argument("--projects", default="PRJ-001")
     source_add.add_argument("--allow-duplicate", action="store_true")
+    source_add.add_argument(
+        "--user-agent",
+        default="",
+        help="compliant User-Agent (Name Contact@email); required for sec.gov",
+    )
     source_add.add_argument("--apply", action="store_true")
 
     source_fetch = source_commands.add_parser(
@@ -531,9 +536,10 @@ def output_draft(root: Path, relative: Path, content: str, apply: bool) -> int:
 def selected_capture_adapter(
     url: str | None,
     file_path: Path | None,
+    user_agent: str | None = None,
 ) -> UrlCaptureAdapter | FileCaptureAdapter:
     if url:
-        return UrlCaptureAdapter(url)
+        return UrlCaptureAdapter(url, user_agent=user_agent)
     if file_path:
         return FileCaptureAdapter(file_path)
     raise ValueError("URL or file is required")
@@ -736,7 +742,11 @@ def main() -> int:
                 print(candidates_json(discovery_adapter.discover()), end="")
                 return 0
             if args.source_command == "add":
-                adapter = selected_capture_adapter(args.url, args.file)
+                adapter = selected_capture_adapter(
+                    args.url,
+                    args.file,
+                    args.user_agent or None,
+                )
                 plan = runtime.prepare_new_source_capture(
                     args.root.resolve(),
                     adapter,

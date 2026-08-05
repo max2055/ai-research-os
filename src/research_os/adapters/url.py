@@ -104,17 +104,22 @@ class UrlCaptureAdapter:
         timeout: float = 30,
         max_bytes: int = DEFAULT_MAX_BYTES,
         captured_at: str | None = None,
+        user_agent: str | None = None,
     ) -> None:
         self.url = canonicalize_url(url)
         self.timeout = timeout
         self.max_bytes = max_bytes
         self.captured_at = captured_at
+        # SEC EDGAR rejects short UA strings (403); a compliant contact
+        # format "Name Contact@domain" is required. The default stays generic
+        # for non-SEC hosts; callers capturing sec.gov may pass a compliant UA.
+        self.user_agent = user_agent or "AI-Research-OS/0.2 explicit-single-url-capture"
 
     def capture(self) -> CapturedAsset:
         request = Request(
             self.url,
             headers={
-                "User-Agent": "AI-Research-OS/0.2 explicit-single-url-capture",
+                "User-Agent": self.user_agent,
                 "Accept": "text/html,application/pdf,text/plain,*/*;q=0.1",
             },
         )
