@@ -10,6 +10,11 @@ from research_os.schemas.company import CompanySchema
 from research_os.schemas.event import EventSchema
 from research_os.schemas.job import JobSchema
 from research_os.schemas.metric import MetricSchema
+from research_os.schemas.ontology_assertion import (
+    ONTOLOGY_PREDICATES,
+    SYMMETRIC_PREDICATES,
+    OntologyAssertionSchema,
+)
 from research_os.schemas.product import ProductSchema
 from research_os.schemas.project import ProjectSchema
 from research_os.schemas.registry import validate_metadata
@@ -28,12 +33,15 @@ __all__ = [
     "JobSchema",
     "ManagedObjectSchema",
     "MetricSchema",
+    "ONTOLOGY_PREDICATES",
+    "OntologyAssertionSchema",
     "ProductSchema",
     "ProjectSchema",
     "ReportSchema",
     "ResearchObjectSchema",
     "ReviewSchema",
     "ReviewStatus",
+    "SYMMETRIC_PREDICATES",
     "SectorSchema",
     "SecuritySchema",
     "SourceSchema",

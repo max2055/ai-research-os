@@ -25,7 +25,31 @@ ID_PATTERNS = {
     "product": re.compile(r"^PRD-[a-z0-9]+(?:-[a-z0-9]+)*$"),
     "technology": re.compile(r"^TEC-[a-z0-9]+(?:-[a-z0-9]+)*$"),
     "metric": re.compile(r"^MET-[a-z0-9]+(?:-[a-z0-9]+)*$"),
+    "ontology_assertion": re.compile(r"^REL-\d{8}-\d{3}$"),
 }
+
+# Ontology assertion predicates (Phase 0-1 §5). Relation direction is explicit;
+# symmetric predicates (COMPETES_WITH etc.) are derived as reverse edges in the
+# export layer, never duplicated as authoritative objects.
+ONTOLOGY_PREDICATES = frozenset(
+    {
+        "SUPPLIES",
+        "CUSTOMER_OF",
+        "COMPETES_WITH",
+        "SUBSTITUTES",
+        "COMPLEMENTS",
+        "DEPENDS_ON",
+        "ENABLES",
+        "CONSTRAINS",
+        "OWNS",
+        "PARTNERS_WITH",
+        "PRODUCES",
+        "USES",
+    }
+)
+SYMMETRIC_PREDICATES = frozenset(
+    {"COMPETES_WITH", "SUBSTITUTES", "COMPLEMENTS", "PARTNERS_WITH"}
+)
 REQUIRED_HEADINGS = {
     "event": {
         "Facts",

@@ -255,7 +255,7 @@ def validate_taxonomy(
 def expect_refs(
     obj: ResearchObject,
     field: str,
-    expected_type: str,
+    expected_type: str | None,
     by_id: dict[str, ResearchObject],
     findings: list[Finding],
 ) -> None:
@@ -269,7 +269,7 @@ def expect_refs(
                 obj,
                 f"{field} references missing object {value!r}",
             )
-        elif target.object_type != expected_type:
+        elif expected_type is not None and target.object_type != expected_type:
             add(
                 findings,
                 "error",
@@ -282,7 +282,7 @@ def expect_refs(
 def expect_ref(
     obj: ResearchObject,
     field: str,
-    expected_type: str,
+    expected_type: str | None,
     by_id: dict[str, ResearchObject],
     findings: list[Finding],
 ) -> None:
@@ -298,7 +298,7 @@ def expect_ref(
             obj,
             f"{field} references missing object {value!r}",
         )
-    elif target.object_type != expected_type:
+    elif expected_type is not None and target.object_type != expected_type:
         add(
             findings,
             "error",
@@ -371,6 +371,76 @@ def validate_refs(
             by_id,
             findings,
         )
+    # v0.3 entity reference integrity (WP-103). References are format-validated
+    # by the schema (WP-102); existence/type checks live here now that entities
+    # exist in the Universe.
+    if obj.object_type == "company":
+        expect_refs(obj, "sector_ids", "sector", by_id, findings)
+        expect_refs(obj, "product_ids", "product", by_id, findings)
+        expect_refs(obj, "technology_ids", "technology", by_id, findings)
+        expect_refs(obj, "security_ids", "security", by_id, findings)
+        expect_refs(obj, "source_channel_ids", "source_channel", by_id, findings)
+        expect_refs(obj, "key_metric_ids", "metric", by_id, findings)
+    elif obj.object_type == "sector":
+        expect_refs(obj, "core_company_ids", "company", by_id, findings)
+        expect_refs(obj, "tracked_company_ids", "company", by_id, findings)
+        parent_id = obj.metadata.get("parent_id")
+        if parent_id:
+            expect_ref(obj, "parent_id", "sector", by_id, findings)
+    elif obj.object_type == "security":
+        expect_ref(obj, "issuer_company_id", "company", by_id, findings)
+    elif obj.object_type in {"product", "technology"}:
+        expect_refs(obj, "owner_company_ids", "company", by_id, findings)
+        expect_refs(obj, "sector_ids", "sector", by_id, findings)
+        parent_id = obj.metadata.get("parent_id")
+        if parent_id:
+            expect_ref(
+                obj,
+                "parent_id",
+                obj.object_type,
+                by_id,
+                findings,
+            )
+    elif obj.object_type == "metric":
+        expect_refs(obj, "owner_entity_ids", None, by_id, findings)
+    elif obj.object_type == "ontology_assertion":
+        expect_ref(obj, "subject_id", None, by_id, findings)
+        expect_ref(obj, "object_id", None, by_id, findings)
+        expect_refs(obj, "evidence_ids", "event", by_id, findings)
+        expect_refs(obj, "source_ids", "source", by_id, findings)
+
+
+def validate_reviewed_assertion_evidence(
+    obj: ResearchObject,
+    by_id: dict[str, ResearchObject],
+    findings: list[Finding],
+) -> None:
+    """Phase 0-1 §5: a reviewed assertion must have >=1 reviewed Evidence."""
+    if obj.object_type != "ontology_assertion":
+        return
+    if obj.metadata.get("review_status") != "reviewed":
+        return
+    evidence_ids = obj.metadata.get("evidence_ids", []) or []
+    if not evidence_ids:
+        add(
+            findings,
+            "error",
+            "REF003",
+            obj,
+            "reviewed ontology_assertion has no evidence_ids",
+        )
+        return
+    for evidence_id in evidence_ids:
+        target = by_id.get(str(evidence_id))
+        if target is not None and target.metadata.get("review_status") == "reviewed":
+            return
+    add(
+        findings,
+        "error",
+        "REF004",
+        obj,
+        "reviewed ontology_assertion has no reviewed Evidence",
+    )
 
 
 def validate_source_assets(
@@ -730,6 +800,7 @@ def validate_repository(
         validate_generated_event(root, obj, by_id, findings)
         validate_generated_report(obj, by_id, findings)
         validate_report_supersession(obj, by_id, findings)
+        validate_reviewed_assertion_evidence(obj, by_id, findings)
     validate_source_processing(objects, by_id, findings)
     validate_source_assets(root, objects, findings)
     validate_generation_fingerprints(objects, findings)

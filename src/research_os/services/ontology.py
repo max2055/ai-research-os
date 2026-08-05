@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from research_os.domain.models import ResearchObject
+from research_os.domain.policies import SYMMETRIC_PREDICATES
 from research_os.services.validation import count_by_type, validate_repository
 
 ONTOLOGY_SCHEMA_VERSION = 1
@@ -104,6 +105,16 @@ def ontology_graph(
             source_review_id = meta.get("source_review_id")
             if source_review_id:
                 edge(obj.object_id, "ORIGINATES_FROM", str(source_review_id))
+        elif obj.object_type == "ontology_assertion":
+            # Ontology assertion: subject -predicate-> object. The reverse
+            # edge for symmetric predicates is derived below (export layer),
+            # never duplicated as an authoritative object (Phase 0-1 §5).
+            edge(obj.object_id, "ASSERTS", str(meta["subject_id"]))
+            edge(obj.object_id, "ASSERTS", str(meta["object_id"]))
+            relation = str(meta["predicate"])
+            edge(str(meta["subject_id"]), relation, str(meta["object_id"]))
+            if relation in SYMMETRIC_PREDICATES:
+                edge(str(meta["object_id"]), relation, str(meta["subject_id"]))
 
     edges = [
         {

@@ -10,6 +10,7 @@ from research_os.schemas.company import CompanySchema
 from research_os.schemas.event import EventSchema
 from research_os.schemas.job import JobSchema
 from research_os.schemas.metric import MetricSchema
+from research_os.schemas.ontology_assertion import OntologyAssertionSchema
 from research_os.schemas.product import ProductSchema
 from research_os.schemas.project import ProjectSchema
 from research_os.schemas.report import ReportSchema
@@ -42,6 +43,7 @@ SCHEMAS: dict[str, SchemaType] = {
     "product": ProductSchema,
     "technology": TechnologySchema,
     "metric": MetricSchema,
+    "ontology_assertion": OntologyAssertionSchema,
 }
 
 
