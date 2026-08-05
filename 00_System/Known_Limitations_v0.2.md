@@ -86,10 +86,14 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   deferred to a follow-up WP (Phase 0-1 Gate requires 100+ exported + 30
   human-reviewed). Reviewed assertions will require >=1 reviewed Evidence.
 - **253 Ontology Assertions created (2026-08-05, relation WP)**: Compute
-  Chain value-chain relations (SUPPLIES 186, COMPETES_WITH 32 + symmetric
-  reverse, DEPENDS_ON/ENABLES 26, PARTNERS_WITH 4, PRODUCES/OWNS 3). ALL
-  are `review_status: pending` — they carry no Evidence yet, so the 30-relation
-  human-review sub-Gate of Phase 0-1 is deferred until the Compute Chain
-  evidence WP lands (reviewed assertions require >=1 reviewed Evidence,
-  REF003/REF004). Relations are value-chain knowledge drafts subject to max's
-  spot-check.
+  Chain value-chain relations (SUPPLIES 184, COMPETES_WITH 32 + symmetric
+  reverse, DEPENDS_ON 8, ENABLES 18, PARTNERS_WITH 3). 5 problem relations
+  removed in max's spot-check (2 dups, 2 self-refs, 1 wrong semantics).
+- **Evidence WP (2026-08-05)**: 10 real public Sources captured + reviewed
+  (SEC 10-Q/20-F + exhibits, SK hynix/TSMC/Amazon IR) → 10 Events with
+  citation anchors → **22 relations approved** (Gate 30: 22/30). Evidence
+  quality calibrated: AWS-OpenAI $100B contract (direct, conf 0.8),
+  SK hynix-NVIDIA HBM partnership (direct, conf 0.7), SEC-filing indirect
+  (conf 0.3-0.5), weak-inference held pending. **9 relations held
+  evidence-insufficient** (sources do not name counterparty). Remaining 8
+  for Gate 30 need new named-party capture (Samsung/Micron/Alibaba).
