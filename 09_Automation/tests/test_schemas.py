@@ -39,7 +39,7 @@ class SchemaTests(unittest.TestCase):
                 "event": 31,
                 "project": 2,
                 "report": 2,
-                "review": 64,
+                "review": 73,  # WP-120: +9 entity approval decisions
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "source": 39,
                 "thesis": 8,

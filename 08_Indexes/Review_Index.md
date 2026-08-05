@@ -70,3 +70,12 @@
 | REV-20260730-062 | 2026-07-30 | approve | COM-servicenow | max | PRJ-001 |
 | REV-20260730-063 | 2026-07-30 | approve | SRC-20260730-039 | max | PRJ-001 |
 | REV-20260730-064 | 2026-07-30 | approve | RPT-20260730-ai-coding-agent-value-chain-v0-1 | max | PRJ-002 |
+| REV-20260805-001 | 2026-08-05 | approve | SEG-cloud-ai-infrastructure, SEG-compute-silicon, SEG-datacenter-infrastructure, SEG-enterprise-applications, SEG-foundry-packaging-test, SEG-memory-storage, SEG-models, SEG-semiconductor-materials-equipment, SEG-server-network-interconnect | max |  |
+| REV-20260805-002 | 2026-08-05 | approve | COM-asml, COM-lam-research, COM-applied-materials, COM-kla, COM-tokyo-electron, COM-shin-etsu, COM-amec, COM-naura | max |  |
+| REV-20260805-003 | 2026-08-05 | approve | COM-tsmc, COM-samsung-foundry, COM-globalfoundries, COM-smic, COM-jcet, COM-ase, COM-amkor | max |  |
+| REV-20260805-004 | 2026-08-05 | approve | COM-nvidia, COM-amd, COM-intel, COM-broadcom, COM-marvell, COM-cambricon, COM-hygon, COM-huawei-hisilicon | max |  |
+| REV-20260805-005 | 2026-08-05 | approve | COM-sk-hynix, COM-samsung-electronics, COM-micron, COM-ymtc, COM-cxmt | max |  |
+| REV-20260805-006 | 2026-08-05 | approve | COM-supermicro, COM-dell, COM-hpe, COM-arista, COM-cisco, COM-inspur, COM-zhongji-innolight | max |  |
+| REV-20260805-007 | 2026-08-05 | approve | COM-vertiv, COM-eaton, COM-schneider-electric, COM-catl | max |  |
+| REV-20260805-008 | 2026-08-05 | approve | COM-aws, COM-google-cloud, COM-coreweave, COM-aliyun, COM-bytedance-cloud, COM-baidu-cloud | max |  |
+| REV-20260805-009 | 2026-08-05 | approve | COM-meta, COM-xai, COM-deepseek, COM-zhipu, COM-tongyi, COM-doubao | max |  |

@@ -6,62 +6,62 @@
 
 | Company ID | 公司 | Evidence 数量 | Related entities | 审核状态 |
 |---|---|---:|---|---|
-| COM-aliyun | Alibaba Cloud (阿里云) | 0 |  | pending |
-| COM-amd | AMD | 0 |  | pending |
-| COM-amec | AMEC (中微公司) | 0 |  | pending |
-| COM-amkor | Amkor Technology | 0 |  | pending |
+| COM-aliyun | Alibaba Cloud (阿里云) | 0 |  | reviewed |
+| COM-amd | AMD | 0 |  | reviewed |
+| COM-amec | AMEC (中微公司) | 0 |  | reviewed |
+| COM-amkor | Amkor Technology | 0 |  | reviewed |
 | COM-anthropic | Anthropic | 1 | COM-openai | reviewed |
-| COM-applied-materials | Applied Materials | 0 |  | pending |
-| COM-arista | Arista Networks | 0 |  | pending |
-| COM-ase | ASE Technology (日月光) | 0 |  | pending |
-| COM-asml | ASML | 0 |  | pending |
-| COM-aws | AWS | 0 |  | pending |
-| COM-baidu-cloud | Baidu AI Cloud (百度智能云) | 0 |  | pending |
-| COM-broadcom | Broadcom | 0 |  | pending |
-| COM-bytedance-cloud | ByteDance Volcano Engine (字节火山引擎) | 0 |  | pending |
-| COM-cambricon | Cambricon (寒武纪) | 0 |  | pending |
-| COM-catl | CATL (宁德时代) | 0 |  | pending |
-| COM-cisco | Cisco Systems | 0 |  | pending |
-| COM-coreweave | CoreWeave | 0 |  | pending |
-| COM-cxmt | CXMT (长鑫存储) | 0 |  | pending |
-| COM-deepseek | DeepSeek | 0 |  | pending |
-| COM-dell | Dell Technologies | 0 |  | pending |
-| COM-doubao | Doubao (字节豆包) | 0 |  | pending |
-| COM-eaton | Eaton | 0 |  | pending |
-| COM-globalfoundries | GlobalFoundries | 0 |  | pending |
-| COM-google-cloud | Google Cloud | 0 |  | pending |
-| COM-hpe | HPE | 0 |  | pending |
-| COM-huawei-hisilicon | Huawei HiSilicon (华为海思) | 0 |  | pending |
-| COM-hygon | Hygon (海光信息) | 0 |  | pending |
-| COM-inspur | Inspur (浪潮信息) | 0 |  | pending |
-| COM-intel | Intel | 0 |  | pending |
-| COM-jcet | JCET (长电科技) | 0 |  | pending |
-| COM-kla | KLA | 0 |  | pending |
-| COM-lam-research | Lam Research | 0 |  | pending |
-| COM-marvell | Marvell Technology | 0 |  | pending |
-| COM-meta | Meta | 0 |  | pending |
-| COM-micron | Micron Technology | 0 |  | pending |
+| COM-applied-materials | Applied Materials | 0 |  | reviewed |
+| COM-arista | Arista Networks | 0 |  | reviewed |
+| COM-ase | ASE Technology (日月光) | 0 |  | reviewed |
+| COM-asml | ASML | 0 |  | reviewed |
+| COM-aws | AWS | 0 |  | reviewed |
+| COM-baidu-cloud | Baidu AI Cloud (百度智能云) | 0 |  | reviewed |
+| COM-broadcom | Broadcom | 0 |  | reviewed |
+| COM-bytedance-cloud | ByteDance Volcano Engine (字节火山引擎) | 0 |  | reviewed |
+| COM-cambricon | Cambricon (寒武纪) | 0 |  | reviewed |
+| COM-catl | CATL (宁德时代) | 0 |  | reviewed |
+| COM-cisco | Cisco Systems | 0 |  | reviewed |
+| COM-coreweave | CoreWeave | 0 |  | reviewed |
+| COM-cxmt | CXMT (长鑫存储) | 0 |  | reviewed |
+| COM-deepseek | DeepSeek | 0 |  | reviewed |
+| COM-dell | Dell Technologies | 0 |  | reviewed |
+| COM-doubao | Doubao (字节豆包) | 0 |  | reviewed |
+| COM-eaton | Eaton | 0 |  | reviewed |
+| COM-globalfoundries | GlobalFoundries | 0 |  | reviewed |
+| COM-google-cloud | Google Cloud | 0 |  | reviewed |
+| COM-hpe | HPE | 0 |  | reviewed |
+| COM-huawei-hisilicon | Huawei HiSilicon (华为海思) | 0 |  | reviewed |
+| COM-hygon | Hygon (海光信息) | 0 |  | reviewed |
+| COM-inspur | Inspur (浪潮信息) | 0 |  | reviewed |
+| COM-intel | Intel | 0 |  | reviewed |
+| COM-jcet | JCET (长电科技) | 0 |  | reviewed |
+| COM-kla | KLA | 0 |  | reviewed |
+| COM-lam-research | Lam Research | 0 |  | reviewed |
+| COM-marvell | Marvell Technology | 0 |  | reviewed |
+| COM-meta | Meta | 0 |  | reviewed |
+| COM-micron | Micron Technology | 0 |  | reviewed |
 | COM-microsoft | Microsoft | 2 | COM-openai | reviewed |
-| COM-naura | NAURA (北方华创) | 0 |  | pending |
-| COM-nvidia | NVIDIA | 0 |  | pending |
+| COM-naura | NAURA (北方华创) | 0 |  | reviewed |
+| COM-nvidia | NVIDIA | 0 |  | reviewed |
 | COM-openai | OpenAI | 2 | COM-microsoft, COM-anthropic | reviewed |
 | COM-oracle | Oracle | 2 |  | reviewed |
 | COM-palantir | Palantir | 1 |  | reviewed |
 | COM-salesforce | Salesforce | 2 |  | reviewed |
-| COM-samsung-electronics | Samsung Electronics | 0 |  | pending |
-| COM-samsung-foundry | Samsung Foundry | 0 |  | pending |
+| COM-samsung-electronics | Samsung Electronics | 0 |  | reviewed |
+| COM-samsung-foundry | Samsung Foundry | 0 |  | reviewed |
 | COM-sap | SAP | 2 |  | reviewed |
-| COM-schneider-electric | Schneider Electric | 0 |  | pending |
+| COM-schneider-electric | Schneider Electric | 0 |  | reviewed |
 | COM-servicenow | ServiceNow | 2 | COM-anthropic, COM-microsoft | reviewed |
-| COM-shin-etsu | Shin-Etsu Chemical | 0 |  | pending |
-| COM-sk-hynix | SK hynix | 0 |  | pending |
-| COM-smic | SMIC (中芯国际) | 0 |  | pending |
-| COM-supermicro | Supermicro | 0 |  | pending |
-| COM-tokyo-electron | Tokyo Electron | 0 |  | pending |
-| COM-tongyi | Tongyi (阿里通义) | 0 |  | pending |
-| COM-tsmc | TSMC | 0 |  | pending |
-| COM-vertiv | Vertiv Holdings | 0 |  | pending |
-| COM-xai | xAI | 0 |  | pending |
-| COM-ymtc | YMTC (长江存储) | 0 |  | pending |
-| COM-zhipu | Zhipu AI (智谱) | 0 |  | pending |
-| COM-zhongji-innolight | Zhongji Innolight (中际旭创) | 0 |  | pending |
+| COM-shin-etsu | Shin-Etsu Chemical | 0 |  | reviewed |
+| COM-sk-hynix | SK hynix | 0 |  | reviewed |
+| COM-smic | SMIC (中芯国际) | 0 |  | reviewed |
+| COM-supermicro | Supermicro | 0 |  | reviewed |
+| COM-tokyo-electron | Tokyo Electron | 0 |  | reviewed |
+| COM-tongyi | Tongyi (阿里通义) | 0 |  | reviewed |
+| COM-tsmc | TSMC | 0 |  | reviewed |
+| COM-vertiv | Vertiv Holdings | 0 |  | reviewed |
+| COM-xai | xAI | 0 |  | reviewed |
+| COM-ymtc | YMTC (长江存储) | 0 |  | reviewed |
+| COM-zhipu | Zhipu AI (智谱) | 0 |  | reviewed |
+| COM-zhongji-innolight | Zhongji Innolight (中际旭创) | 0 |  | reviewed |
