@@ -11,6 +11,9 @@ related_entities: [COM-openai]
 evidence_ids: [EVT-20260219-001, EVT-20260429-004]
 source_ids: [SRC-20260429-001, SRC-20251209-015]
 tags: [INF-CLOUD-AI, APP-COLLABORATION, APP-CRM, MOAT-DISTRIBUTION]
+sector_ids: [SEG-cloud-ai-infrastructure, SEG-enterprise-applications]
+region_primary: REG-us
+coverage_tier: core
 schema_version: 1
 project_ids:
 - PRJ-001

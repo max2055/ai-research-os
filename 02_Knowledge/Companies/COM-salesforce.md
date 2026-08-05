@@ -11,6 +11,9 @@ related_entities: []
 evidence_ids: [EVT-20260225-002, EVT-20260729-012]
 source_ids: [SRC-20260225-002, SRC-20260729-003]
 tags: [APP-CRM, DEV-AGENT-FRAMEWORK, MOAT-DATA, MOAT-WORKFLOW]
+sector_ids: [SEG-enterprise-applications]
+region_primary: REG-us
+coverage_tier: tracked
 schema_version: 1
 project_ids:
 - PRJ-001

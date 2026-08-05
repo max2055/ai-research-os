@@ -11,6 +11,9 @@ related_entities: [COM-microsoft, COM-anthropic]
 evidence_ids: [EVT-20260415-003, EVT-20260729-015]
 source_ids: [SRC-20260729-013, SRC-20260415-014, SRC-20251209-015]
 tags: [MOD-FOUNDATION, DEV-AGENT-FRAMEWORK, DEV-ORCHESTRATION]
+sector_ids: [SEG-models, SEG-cloud-ai-infrastructure]
+region_primary: REG-us
+coverage_tier: core
 schema_version: 1
 project_ids:
 - PRJ-001

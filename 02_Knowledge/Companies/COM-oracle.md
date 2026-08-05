@@ -11,6 +11,9 @@ related_entities: []
 evidence_ids: [EVT-20260610-007, EVT-20260714-009]
 source_ids: [SRC-20260714-006, SRC-20260729-007]
 tags: [APP-ERP, INF-CLOUD-AI, MOAT-DATA, MOAT-WORKFLOW]
+sector_ids: [SEG-enterprise-applications, SEG-cloud-ai-infrastructure]
+region_primary: REG-us
+coverage_tier: tracked
 schema_version: 1
 project_ids:
 - PRJ-001

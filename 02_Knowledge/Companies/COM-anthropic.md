@@ -11,6 +11,9 @@ related_entities: [COM-openai]
 evidence_ids: [EVT-20260514-005]
 source_ids: [SRC-20251209-015, SRC-20260514-016]
 tags: [MOD-FOUNDATION, DEV-AGENT-FRAMEWORK, DEV-TOOL-PROTOCOL]
+sector_ids: [SEG-models]
+region_primary: REG-us
+coverage_tier: core
 schema_version: 1
 project_ids:
 - PRJ-001

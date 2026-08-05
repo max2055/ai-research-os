@@ -11,6 +11,9 @@ related_entities: []
 evidence_ids: [EVT-20260729-014]
 source_ids: [SRC-20260729-010, SRC-20260729-011, SRC-20260729-012]
 tags: [DEV-DATA, DEV-ORCHESTRATION, MOAT-DATA, MOAT-PERMISSION]
+sector_ids: [SEG-enterprise-applications]
+region_primary: REG-us
+coverage_tier: tracked
 schema_version: 1
 project_ids:
 - PRJ-001

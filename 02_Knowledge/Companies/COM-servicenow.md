@@ -11,6 +11,9 @@ related_entities: [COM-anthropic, COM-microsoft]
 evidence_ids: [EVT-20260722-010, EVT-20260729-013]
 source_ids: [SRC-20260722-004, SRC-20260729-005]
 tags: [APP-ITSM, DEV-ORCHESTRATION, MOAT-WORKFLOW, MOAT-PERMISSION]
+sector_ids: [SEG-enterprise-applications]
+region_primary: REG-us
+coverage_tier: tracked
 schema_version: 1
 project_ids:
 - PRJ-001
