@@ -45,7 +45,7 @@ class SchemaTests(unittest.TestCase):
                 "ontology_assertion": 248,  # RelWP: value-chain relations
                 "project": 2,
                 "report": 2,
-                "review": 99,  # WP-120: +9; EvWP: +26
+                "review": 100,  # WP-120: +9; EvWP: +27
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "source": 49,  # EvWP: +10 (1 hollow 8-K removed)
                 "thesis": 8,
