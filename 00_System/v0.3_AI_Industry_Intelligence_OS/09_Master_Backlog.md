@@ -314,3 +314,14 @@ Revisit trigger/date:
 - Reviewer: max
 - Revisit trigger/date: WP-120 Universe 建设时；D10 扩 Universe Gate 时评估地区平衡。
 
+#### RCP-v03-003 草案起草（2026-08-05，status: proposed）
+
+- Decision ID: RCP-v03-003-drafting
+- Date: 2026-08-05
+- Question: 是否将 A-005/006/007 整理为 RCP-v03-003 草案提交人审？
+- Decision: 起草 RCP-v03-003 `05_Research/Reviews/Proposals/RCP-v03-003_Entity_Schema_and_Permanent_IDs.md`（proposed，待 max 批准）。集中 7 项人审点：schema_version=2 启用、5 实体 Schema 字段、Company v0.3 扩展不回填、14 新前缀+parser 歧义 D1–D7、Company/Security 分离、migration 顺序 MIG-001→002→003、禁用单段 `MOD-`。
+- Reason: A-005/006/007 已齐备且与 Taxonomy v2/R1–R5/地区约束一致，可直接包成 RCP 草案供人审。
+- Effective date: 待 max 批准（MIG-v0.3-001 注册 Schema 起按 WP-102 落地）。
+- Reviewer: max（待最终审批）
+- Revisit trigger/date: max 批准 RCP-v03-003 时转 approved；WP-102 实现遇架构问题提修改。
+
