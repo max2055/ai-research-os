@@ -1,4 +1,9 @@
-# AI 产业分类体系 v0.1
+# AI 产业分类体系 v0.1（已被 Taxonomy v2 取代）
+
+> **状态：superseded**（RCP-v03-002 批准，reviewer：max，2026-08-05）。
+> 本文件保留为历史参考与 v1→v2 兼容映射来源；权威 Taxonomy 见
+> `Taxonomy_v2_Proposal.md`，权威映射见 `Taxonomy_v2_Mapping.md`。
+> v0.2 历史对象的旧 tag 不回填（R1），保留旧 tag + 映射表语义。
 
 ## 1. 使用原则
 

@@ -43,7 +43,7 @@ reviewer 统一：max。计划日期 = 对应阶段开始前（滚动）；此�
 
 | RCP | 主题 | Wave / 阶段 | 何时审批 |
 |---|---|---|---|
-| RCP-v03-002 | Taxonomy v2 与稳定板块 ID | Wave 1（Phase 0-1） | Phase 1 migration 前 |
+| RCP-v03-002 | Taxonomy v2 与稳定板块 ID | Wave 1（Phase 0-1） | Phase 1 migration 前 — **approved 2026-08-05 max** |
 | RCP-v03-003 | 新实体 Schema 与永久 ID | Wave 1（Phase 0-1） | Phase 1 写对象前 |
 | RCP-v03-004 | Candidate SQLite 与 retention | Wave 2（Phase 2） | Phase 2 写数据库前 |
 | RCP-v03-005 | Source Channel、scheduler、许可边界 | Wave 2（Phase 2） | Phase 2 自动运行前 |

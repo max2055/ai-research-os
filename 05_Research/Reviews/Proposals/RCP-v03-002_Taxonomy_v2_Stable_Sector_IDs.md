@@ -2,7 +2,7 @@
 
 Proposal ID：RCP-v03-002
 
-状态：proposed（草案由 Agent 整理，人工批准前不生效；边界项 R1–R5 已由 reviewer max 拍板）
+状态：approved（2026-08-05，reviewer：max）
 
 创建日期：2026-08-05
 
@@ -79,14 +79,18 @@ Proposal ID：RCP-v03-002
 
 ## Human decision
 
-- Decision：（待 max 批准生效）
-- Reviewer：（待填，建议 max）
-- Date：（待填）
-- Reason：（待填）
+- Decision：批准（accept RCP-v03-002 as drafted，含边界项 R1–R5）
+- Reviewer：max
+- Date：2026-08-05
+- Reason：研究者在交接 A-002/A-002 边界项后批准 Taxonomy v2 与稳定板块 ID 体系。
+  13 个 L1 扇区作为 Sector 实体（SEG-ID，依 D6）、5 个横向维度扩展前缀
+  （REG/SUP/CAP/CYC/RGT）、v1→v2 权威映射表、以及 R1–R5 边界决定整体接受。
 
 ## Implementation record
 
-- Changed files：批准后记录（预期涉及 Taxonomy.md 标注、Taxonomy_v2_Proposal 状态转 authoritative）
-- Test result：批准后记录
-- Validation result：`research-os validate` 0 errors（批准前后一致，因无对象变更）
-- Effective date：批准后记录
+- Changed files：本文件（proposed → approved）；`Taxonomy_v2_Proposal.md` 状态转
+  authoritative；`Taxonomy.md`（v0.1）标注被 v2 取代并保留为历史参考；
+  `Taxonomy_v2_Mapping.md` 作为权威映射。
+- Test result：not run（本 RCP 为治理边界批准，无代码/对象变更）
+- Validation result：`research-os validate` 0 errors / 0 warnings（批准前后一致）
+- Effective date：2026-08-05（批准即生效）

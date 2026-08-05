@@ -288,3 +288,14 @@ Revisit trigger/date:
 - Reviewer: max
 - Revisit trigger/date: RCP-v03-002 最终审批时；与 WP-101 Sector Schema 核对时。
 
+#### RCP-v03-002 批准（2026-08-05）
+
+- Decision ID: RCP-v03-002-approval
+- Date: 2026-08-05
+- Decision: 批准 RCP-v03-002（proposed → approved）。Taxonomy v2 与稳定板块 ID 体系生效：13 个 L1 扇区作 Sector 实体（SEG-ID）、5 个横向维度扩展前缀（REG/SUP/CAP/CYC/RGT）、v1→v2 权威映射表、边界项 R1–R5 整体接受。
+- Reason: A-002 审计 + A-003 草案备齐，边界项已由 reviewer max 拍板。
+- Effective date: 2026-08-05。
+- Consequences: Taxonomy v2 成为权威；v0.1 Taxonomy 标注 superseded 但保留为历史参考；v0.2 历史 tag 不回填（R1）；后续 WP-101 Schema 须与 Taxonomy v2 一致。SRV-DATA-LABELING 归属（R6）在 WP-101/Schema 阶段现场定。
+- Reviewer: max
+- Revisit trigger/date: 与 WP-101 Sector Schema 核对；任一扇区边界实施遇阻时提修改 RCP。
+

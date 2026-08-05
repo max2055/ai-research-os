@@ -1,6 +1,6 @@
 # Taxonomy v2 提案（A-003）
 
-状态：`proposed / pending RCP-v03-002 approval`
+状态：`approved / authoritative`（RCP-v03-002 批准，reviewer：max，2026-08-05）
 创建日期：2026-08-05
 工作包：WP-100 / A-003（提案草稿，不修改任何规则或对象）
 依赖：`Taxonomy_v2_Mapping.md`（A-002 审计）、`02_Phase_0_1_Ontology_and_Universe.md` §3
