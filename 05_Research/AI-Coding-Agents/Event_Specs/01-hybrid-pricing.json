@@ -1,0 +1,76 @@
+{
+  "title": "Coding agent commercial plans combine subscriptions with usage meters",
+  "slug": "coding-agent-hybrid-pricing",
+  "created_at": "2026-07-29",
+  "event_date": "2025-08-20",
+  "source_ids": [
+    "SRC-20260729-021",
+    "SRC-20260729-022",
+    "SRC-20260729-024"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-AGENT-FRAMEWORK"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "GitHub announced that a Copilot coding-agent session consumes exactly one premium request.",
+      "source_id": "SRC-20260729-021",
+      "quote": "Starting 19:00 UTC (12pm Pacific / 3pm Eastern) today, July 10th, we’re making our pricing simpler and more predictable. Copilot coding agent will now use exactly one Copilot premium request per session.",
+      "asset_path": null
+    },
+    {
+      "text": "GitHub stated that Actions-minute consumption still varies with task duration even when premium-request consumption is fixed.",
+      "source_id": "SRC-20260729-021",
+      "quote": "Note: The agent runs on GitHub Actions. While premium request usage is now fixed, the GitHub Actions minutes used will still vary depending on how long Copilot needs to complete your task.",
+      "asset_path": null
+    },
+    {
+      "text": "Anthropic said business seats include usage and can add usage at standard API rates subject to administrator-set limits.",
+      "source_id": "SRC-20260729-022",
+      "quote": "Claude seats include enough usage for a typical workday, but for times when your teams need access to more intelligence and additional conversations with Claude–admins can enable extra usage for individual users at standard API rates. Admins have control over the maximum amount a user can spend with extra usage to ensure that users get flexibility and admins get predictable billing.",
+      "asset_path": null
+    },
+    {
+      "text": "Cursor described Pro as including a monthly frontier-model credit pool with additional usage available at cost.",
+      "source_id": "SRC-20260729-024",
+      "quote": "The new Cursor Pro plan gives you:\nUnlimited usage of Tab and models in Auto\n$20 of frontier model usage per month at API pricing\nAn option to purchase more frontier model usage at cost",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "These three vendors expose different billing units, but all preserve a variable-usage component underneath or alongside a subscription.",
+    "Task- or session-level packaging may improve buyer predictability without eliminating model and compute cost sensitivity."
+  ],
+  "research_judgment": "This is evidence that coding-agent monetization is experimenting with hybrid packaging, not evidence that any pricing model has durable margins. Vendor disclosures omit cohort-level gross margin, retention and realized cost-to-serve.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-008",
+      "relationship": "supporting",
+      "explanation": "The observed mix of seats, credits, sessions and infrastructure minutes is consistent with economics being shaped by both packaging and variable compute usage.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "Hybrid pricing may be a transitional response to model-price volatility rather than a stable industry structure.",
+    "Vendors may subsidize usage for adoption, so list-price mechanics may not represent long-run unit economics."
+  ],
+  "unknowns": [
+    "Gross margin and cost-to-serve by task complexity are not disclosed.",
+    "The share of users exceeding included usage and their retention is unknown."
+  ],
+  "follow_up_indicators": [
+    "Track changes in included credits, overage rates and task/session definitions.",
+    "Seek customer-level data on spend expansion, retention and realized engineering output."
+  ],
+  "confidence": 0.65,
+  "tags": [
+    "APP-CODING",
+    "MAT-PRODUCTION",
+    "EV-PRICING"
+  ],
+  "project_ids": [
+    "PRJ-002"
+  ]
+}

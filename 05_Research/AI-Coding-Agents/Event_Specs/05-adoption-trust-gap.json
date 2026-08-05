@@ -1,0 +1,74 @@
+{
+  "title": "Developer survey shows broad AI-tool interest but limited agent use and weak trust",
+  "slug": "developer-ai-agent-adoption-trust-gap",
+  "created_at": "2026-07-29",
+  "event_date": "2025-07-29",
+  "source_ids": [
+    "SRC-20260729-028"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-AGENT-FRAMEWORK"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "Stack Overflow reports more than 49,000 responses from 177 countries in its 2025 survey.",
+      "source_id": "SRC-20260729-028",
+      "quote": "New York City– July 29, 2025 – Stack Overflow today announced the results of its 2025 Developer Survey, its definitive report on the state of software development. In its fifteenth year, Stack Overflow received over 49,000 responses from 177 countries across 62 questions focused on 314 different technologies; including new focus on AI agent tools, LLMs and community platforms. This annual Developer Survey provides a crucial snapshot into the needs of the global developer community, focusing on the tools and technologies they use or want to learn more about.",
+      "asset_path": null
+    },
+    {
+      "text": "The survey reports 84% use or plan to use AI tools, while 46% distrust AI-output accuracy.",
+      "source_id": "SRC-20260729-028",
+      "quote": "For the third year in a row, our survey demonstrated an increase in the number of developers using AI tools year over year, with 84% saying they use or plan to use AI tools in their development process, up from 76% in 2024. However, 46% of developers said they don't trust the accuracy of the output from AI tools, a significant increase from 31% last year.This year’s Developer Survey includes an expanded section dedicated to the growing landscape of artificial intelligence, with 15 new questions to glean insights on top usage and utility questions for AI-enabled technology and AI agent tools, AI's impact on how developers work, and whether developers have engaged in \"vibe coding\" in the last year.",
+      "asset_path": null
+    },
+    {
+      "text": "The survey reports 31% current agent use, 17% planned use and 38% not planning to use agents; 69% of workplace agent users agreed productivity increased.",
+      "source_id": "SRC-20260729-028",
+      "quote": "AI agents are not being used by the majority of developers, with only 31% using them currently, 17% planning to, and 38% of respondents not planning to use AI agents. However, for those developers who have used AI agents at work, 69% agree they have experienced an increase in productivity.",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "Interest in AI development tools is materially broader than current use of agentic workflows.",
+    "Reported productivity among users coexists with a substantial trust and validation problem."
+  ],
+  "research_judgment": "The survey is useful for adoption and perception, not for causal productivity measurement. Self-selection, question wording and the difference between general AI tools and agents limit any inference about realized economic value.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-006",
+      "relationship": "contextual",
+      "explanation": "The data shows an early adoption gap: agent use is not yet a majority behavior despite broad AI-tool interest.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-007",
+      "relationship": "supporting",
+      "explanation": "High distrust of AI-output accuracy is consistent with validation and governance remaining important parts of the product stack.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "Distrust may decline rapidly as models improve and users gain experience.",
+    "Current non-use may reflect availability and procurement timing rather than weak demand."
+  ],
+  "unknowns": [
+    "The press release excerpt does not provide response weighting or nonresponse-bias analysis.",
+    "Self-reported productivity is not linked to objective task, quality or cost metrics."
+  ],
+  "follow_up_indicators": [
+    "Track repeated survey measures of current agent use and trust.",
+    "Compare self-reported productivity with controlled task and production-quality outcomes."
+  ],
+  "confidence": 0.60,
+  "tags": [
+    "APP-CODING",
+    "MAT-PILOT",
+    "EV-CUSTOMER"
+  ],
+  "project_ids": [
+    "PRJ-002"
+  ]
+}

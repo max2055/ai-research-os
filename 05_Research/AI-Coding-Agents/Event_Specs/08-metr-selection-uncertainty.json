@@ -1,0 +1,81 @@
+{
+  "title": "METR says its later developer-productivity experiment has severe selection limits",
+  "slug": "metr-later-productivity-study-selection-limits",
+  "created_at": "2026-07-29",
+  "event_date": "2026-02-24",
+  "source_ids": [
+    "SRC-20260729-031"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-EVALUATION",
+    "DEV-AGENT-FRAMEWORK"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "METR says nonparticipation, pay-rate changes and concurrent-agent measurement make its later experiment an unreliable signal.",
+      "source_id": "SRC-20260729-031",
+      "quote": "Unfortunately, given participant feedback and surveys, we believe that the data from our new experiment gives us an unreliable signal of the current productivity effect of AI tools. The primary reason is that we have observed a significant increase in developers choosing not to participate in the study because they do not wish to work without AI, which likely biases downwards our estimate of AI-assisted speedup. We additionally believe there have been selection effects due to a lower pay rate (we reduced the pay from $150/hr to $50/hr), and that our measurements of time-spent on each task are unreliable for the fraction of developers who use multiple AI agents concurrently.",
+      "asset_path": null
+    },
+    {
+      "text": "METR believes developers are likely more sped up in early 2026 than in early 2025, but calls its evidence on the size of the increase very weak.",
+      "source_id": "SRC-20260729-031",
+      "quote": "Based on conversations with study participants, we believe it is likely that developers are more sped up from AI tools now — in early 2026 — compared to our estimates from early 2025. However, because of the selection effects in our experiment, our data is only very weak evidence for the size of this increase.",
+      "asset_path": null
+    },
+    {
+      "text": "METR reports later point estimates whose confidence intervals include no speedup.",
+      "source_id": "SRC-20260729-031",
+      "quote": "Our raw results show some evidence for speedup. Our early 2025 study found the use of AI causes tasks to take 19% longer, with a confidence interval between +2% and +39%. For the subset of the original developers who participated in the later study, we now estimate a speedup of -18% with a confidence interval between -38% and +9%. Among newly-recruited developers the estimated speedup is -4%, with a confidence interval between -15% and +9%.",
+      "asset_path": null
+    },
+    {
+      "text": "Between 30% and 50% of surveyed developers said they withheld some tasks because they did not want to perform them without AI.",
+      "source_id": "SRC-20260729-031",
+      "quote": "Developers have become more selective in which tasks they submit. When surveyed, 30% to 50% of developers told us that they were choosing not to submit some tasks because they did not want to do them without AI. This implies we are systematically missing tasks which have high expected uplift from AI.",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "As agent use becomes embedded in work, randomized task studies may systematically exclude high-uplift users and tasks.",
+    "The direction of productivity change may be improving, but this source does not reliably quantify its magnitude."
+  ],
+  "research_judgment": "This update is valuable because it weakens both a simple extrapolation of the 2025 slowdown and an aggressive claim of current speedup. The appropriate conclusion is measurement uncertainty and task heterogeneity, not a midpoint estimate.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-006",
+      "relationship": "contextual",
+      "explanation": "The update suggests agentic workflows may be changing task selection while making aggregate productivity harder to estimate.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-008",
+      "relationship": "contextual",
+      "explanation": "Wide intervals and selection effects mean current economic uplift cannot be reliably inferred from this experiment.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "The observed participation problem may reflect the lower pay rate rather than large AI productivity benefits.",
+    "Concurrent agent use may add output beyond task-time measures but may also increase review and coordination costs."
+  ],
+  "unknowns": [
+    "The productivity effect for developers and tasks excluded from the experiment is unobserved.",
+    "Quality-adjusted value and cost across concurrent agents are not measured."
+  ],
+  "follow_up_indicators": [
+    "Track redesigned studies that accommodate task selection and concurrent agents.",
+    "Seek production telemetry linking agent usage, task mix, quality and total labor time."
+  ],
+  "confidence": 0.70,
+  "tags": [
+    "APP-CODING",
+    "MAT-RESEARCH",
+    "EV-TECHNOLOGY"
+  ],
+  "project_ids": [
+    "PRJ-002"
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "title": "Five Agentforce cases show production agents bounded by data, logic and human controls",
+  "slug": "five-agentforce-production-control-patterns",
+  "created_at": "2026-07-30",
+  "event_date": "2026-06-05",
+  "source_ids": [
+    "SRC-20260730-037"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-AGENT-FRAMEWORK",
+    "DEV-EVALUATION",
+    "DEV-ORCHESTRATION"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "Florida Prepaid scoped its voice agent to public Salesforce Knowledge and retained explicit human escalation for sensitive matters.",
+      "source_id": "SRC-20260730-037",
+      "quote": "They scoped the agent to public Salesforce Knowledge articles only and built explicit escalation paths for anything sensitive.",
+      "asset_path": null
+    },
+    {
+      "text": "Salesforce reported that Florida Prepaid's agent handled 75% of business-hours and all after-hours calls.",
+      "source_id": "SRC-20260730-037",
+      "quote": "Agentforce Voice now handles 75% of business-hours calls and 100% of after-hours calls.",
+      "asset_path": null
+    },
+    {
+      "text": "Adecco placed completeness and discrimination checks on job postings before agent prescreening; Salesforce reported prescreening coverage rose from 10% to 100%.",
+      "source_id": "SRC-20260730-037",
+      "quote": "With Agentforce, Adecco’s prescreening coverage went from 10% to 100%.",
+      "asset_path": null
+    },
+    {
+      "text": "Datasite replaced decisions that could not tolerate ambiguity with deterministic conditional logic.",
+      "source_id": "SRC-20260730-037",
+      "quote": "find the decisions that couldn’t tolerate that ambiguity and replace them with conditional logic",
+      "asset_path": null
+    },
+    {
+      "text": "Salesforce reported that Datasite conversation failure fell from roughly 33% to 0.5%, sustained deflection averaged 82%, and CSAT was 4.8 out of 5.",
+      "source_id": "SRC-20260730-037",
+      "quote": "Conversation failure rate dropped from roughly 33% to about 0.5%. Deflection climbed from the low 60s to a sustained average of 82%, running between 81% and 84% week to week. CSAT held at 4.8 out of 5, matching the performance of the live human support team.",
+      "asset_path": null
+    },
+    {
+      "text": "Indeed was reported to operate four production Agentforce use cases.",
+      "source_id": "SRC-20260730-037",
+      "quote": "Indeed runs Agentforce across four production use cases:",
+      "asset_path": null
+    },
+    {
+      "text": "Indeed's engineers were reported to deploy through APIs and a CLI while all agents used a shared preprocessed data layer.",
+      "source_id": "SRC-20260730-037",
+      "quote": "Indeed’s engineers build through APIs and a CLI.",
+      "asset_path": null
+    },
+    {
+      "text": "SharkNinja combined daily frontline stress testing with weekly conversation engineering.",
+      "source_id": "SRC-20260730-037",
+      "quote": "The company also runs weekly conversation engineering meetings and structured learning sessions after every major iteration.",
+      "asset_path": null
+    },
+    {
+      "text": "Salesforce reported SharkNinja's Digital Concierge had handled more than 250,000 conversations.",
+      "source_id": "SRC-20260730-037",
+      "quote": "The Digital Concierge has now handled more than 250,000 conversations.",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "The common production pattern is bounded agency layered on curated data, deterministic controls, human escalation and continuous evaluation.",
+    "Named deployments span customer service, recruiting, M&A, IT and sales, showing breadth without proving an industry-wide success rate.",
+    "Incumbent enterprise platforms can use their data and workflow position to distribute agents, but customers still perform material implementation work."
+  ],
+  "research_judgment": "The cases meet the threshold for named, verifiable customer deployments and provide useful scope and outcome indicators. They do not constitute independent validation of Salesforce because all five were selected and reported by its product marketing team, with incomplete metric definitions. They are suitable as B-grade case evidence and a follow-up list, not as proof of general Agentforce economics.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-001",
+      "relationship": "contextual",
+      "explanation": "Agents took over meaningful task volume, but the cases retained human transfers, curated knowledge, conventional portals, scripts and operational interfaces.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-002",
+      "relationship": "supporting",
+      "explanation": "Data preparation, shared context, deterministic logic and continuous evaluation repeatedly appear as production prerequisites.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-004",
+      "relationship": "contextual",
+      "explanation": "The cases show an incumbent platform distributing agents into existing customer workflows, but do not disclose customer economics or competitive alternatives.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "The reported gains may reflect selection of successful customers and favorable periods.",
+    "Customer implementation practices rather than platform differentiation may drive the outcomes.",
+    "Some reported coverage and deflection may shift complex work to humans rather than reduce total workload."
+  ],
+  "unknowns": [
+    "Measurement windows, sample sizes and consistent metric definitions are not disclosed.",
+    "Customer implementation cost, subscription price and payback are unknown.",
+    "Comparable outcomes on competing platforms are not provided."
+  ],
+  "follow_up_indicators": [
+    "Seek direct customer disclosures from at least two of the five organizations.",
+    "Track total cost per resolved task including human escalation and implementation labor.",
+    "Compare production outcomes across Agentforce and competing control layers."
+  ],
+  "confidence": 0.68,
+  "tags": [
+    "EV-CUSTOMER",
+    "EV-TECHNOLOGY",
+    "MAT-PRODUCTION",
+    "APP-CRM"
+  ],
+  "project_ids": [
+    "PRJ-001"
+  ]
+}

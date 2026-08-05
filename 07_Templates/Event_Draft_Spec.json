@@ -1,0 +1,34 @@
+{
+  "title": "Reviewable Event title",
+  "slug": "reviewable-event-title",
+  "created_at": "YYYY-MM-DD",
+  "event_date": "YYYY-MM-DD",
+  "source_ids": ["SRC-YYYYMMDD-NNN"],
+  "companies": [],
+  "technologies": [],
+  "products": [],
+  "facts": [
+    {
+      "text": "Fact stated without inference.",
+      "source_id": "SRC-YYYYMMDD-NNN",
+      "quote": "Exact quote from processed text",
+      "asset_path": null
+    }
+  ],
+  "inferences": ["Reasoning derived from the anchored Fact."],
+  "research_judgment": "Possible significance, limitations and uncertainty.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-NNN",
+      "relationship": "contextual",
+      "explanation": "Why this relationship is proposed.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": ["A material alternative explanation."],
+  "unknowns": ["Information still unknown."],
+  "follow_up_indicators": ["Observable follow-up indicator."],
+  "confidence": 0.5,
+  "tags": [],
+  "project_ids": ["PRJ-001"]
+}

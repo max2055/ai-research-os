@@ -1,0 +1,75 @@
+{
+  "title": "METR randomized trial finds early-2025 AI tools slowed experienced developers",
+  "slug": "metr-early-2025-developer-rct-slowdown",
+  "created_at": "2026-07-29",
+  "event_date": "2025-07-10",
+  "source_ids": [
+    "SRC-20260729-030"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-EVALUATION",
+    "DEV-AGENT-FRAMEWORK"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "METR ran a randomized controlled trial with 16 experienced open-source developers completing 246 tasks in mature projects.",
+      "source_id": "SRC-20260729-030",
+      "quote": "Despite widespread adoption, the impact of AI tools on software development in\nthe wild remains understudied. We conduct a randomized controlled trial (RCT)\nto understand how AI tools at the February–June 2025 frontier affect the produc-\ntivity of experienced open-source developers. 16 developers with moderate AI\nexperience complete 246 tasks in mature projects on which they have an aver-\nage of 5 years of prior experience. Each task is randomly assigned to allow or\ndisallow usage of early-2025 AI tools.",
+      "asset_path": null
+    },
+    {
+      "text": "Participants primarily used Cursor Pro and Claude 3.5/3.7 Sonnet when AI was allowed.",
+      "source_id": "SRC-20260729-030",
+      "quote": "When AI tools are allowed, developers\nprimarily use Cursor Pro, a popular code editor, and Claude 3.5/3.7 Sonnet.",
+      "asset_path": null
+    },
+    {
+      "text": "METR found that allowing AI increased completion time by 19%, contrary to developer and expert forecasts.",
+      "source_id": "SRC-20260729-030",
+      "quote": "Be-\nfore starting tasks, developers forecast that allowing AI will reduce completion\ntime by 24%. After completing the study, developers estimate that allowing AI\nreduced completion time by 20%. Surprisingly, we find that allowing AI actually\nincreases completion time by 19%—AI tooling slowed developers down. This\nslowdown also contradicts predictions from experts in economics (39% shorter)\nand ML (38% shorter).",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "At least in this early-2025 setting, perceived productivity and forecast productivity materially diverged from measured completion time.",
+    "Agent adoption and subjective satisfaction cannot be treated as sufficient evidence of economic productivity."
+  ],
+  "research_judgment": "This is stronger causal evidence than vendor claims or surveys, but external validity is bounded by 16 experienced maintainers, their own mature repositories and early-2025 tools. It is a direct contradiction to universal productivity claims, not proof that later agents or other task types always slow developers.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-006",
+      "relationship": "contradicting",
+      "explanation": "The result challenges the assumption that moving from assistance to delegated work automatically improves developer productivity.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-008",
+      "relationship": "contradicting",
+      "explanation": "A measured slowdown in a realistic task setting challenges favorable unit-economics assumptions based only on adoption or perceived time saving.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "Later models and agentic tools may perform materially better than the February–June 2025 tool frontier.",
+    "Experienced maintainers in familiar repositories may have less room for AI assistance than other developer cohorts."
+  ],
+  "unknowns": [
+    "The result does not determine effects on code quality, documentation, learning or longer-horizon output.",
+    "The effect for autonomous background agents and greenfield tasks is not established."
+  ],
+  "follow_up_indicators": [
+    "Track replications using current agentic tools and larger developer samples.",
+    "Measure quality-adjusted output and total review/rework time, not completion time alone."
+  ],
+  "confidence": 0.76,
+  "tags": [
+    "APP-CODING",
+    "MAT-RESEARCH",
+    "EV-TECHNOLOGY"
+  ],
+  "project_ids": [
+    "PRJ-002"
+  ]
+}

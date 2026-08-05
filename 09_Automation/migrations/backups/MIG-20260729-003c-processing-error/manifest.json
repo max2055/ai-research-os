@@ -1,0 +1,125 @@
+{
+  "migration_id": "MIG-20260729-003c-processing-error",
+  "changes": [
+    {
+      "path": "01_Inbox/Articles/SRC-20251209-015-anthropic-mcp-aaif.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20251209-015-anthropic-mcp-aaif.md",
+      "before_sha256": "a5d34ffcb8e172ddc074147bfabb0b549273fae61ece548e7fe27f7f5b305f6d",
+      "after_sha256": "7499e1b320d92281217ba2eb167316b42c43245c7419162172bc0ff6cbf4c82f"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260219-019-microsoft-copilot-promotion.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260219-019-microsoft-copilot-promotion.md",
+      "before_sha256": "59495801ba92d27f981bdd1b5438bf40b6e9302dc81e89b50e9c845ee77d5e13",
+      "after_sha256": "a827861557dc4e1ec3761bce005fa255dd4446b80cea2d0ae062445a6c81b858"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260415-014-openai-agents-sdk-evolution.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260415-014-openai-agents-sdk-evolution.md",
+      "before_sha256": "99917a8ae33f14b1e00ed0dfc1ed72cde4725cd2ab9a1424c1a260db7ef02c28",
+      "after_sha256": "63bb81b1ee42017557170274594b8462e67b0d794dba5dd986b281b6dc07a972"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260514-016-anthropic-pwc-enterprise-deployment.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260514-016-anthropic-pwc-enterprise-deployment.md",
+      "before_sha256": "3b62b4eaa484131049caa525e6a82e3075bfcb3089afe4b193208b48909cc356",
+      "after_sha256": "bbc43a28e5b06e889a4fd25d8815491b34d34b52c23bfdf204fbafed3ca18f9f"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260521-020-mcp-2026-release-candidate.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260521-020-mcp-2026-release-candidate.md",
+      "before_sha256": "9b0919a8eba9753e75ca96a3f9727981b8ece42156f587653fbaa887ad170d4b",
+      "after_sha256": "aca7e04b877bc9e3e255661e3961e697300370bd93629dd0d2e0f9ca1835aa1c"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260611-009-sap-joule-for-me.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260611-009-sap-joule-for-me.md",
+      "before_sha256": "fcddf59620eacc3e10ded63b519dd864cd4d4ecee2a90b451e5f21e1ea2019ee",
+      "after_sha256": "53677af8c934a9e6efe20d5b450c6fdf1c1d15a85ad1376da02927ccba46e7be"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260714-006-oracle-fusion-agentic-builder.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260714-006-oracle-fusion-agentic-builder.md",
+      "before_sha256": "98f51c914d4946add2e0efdb307ce088a0117862734932015b62a35f6708b945",
+      "after_sha256": "e8c9343d4b70dd4059610456ff56999988e3a8a063416532f533021103e47563"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-003-salesforce-agentforce-pricing.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260729-003-salesforce-agentforce-pricing.md",
+      "before_sha256": "d260d0a82091e6940a2e1c72e79c29d749f966afad8e9942737af55395f4da2e",
+      "after_sha256": "5249a42f04f7026a91148e8c313e49821eb3684cfd06984cfb26fdd81b3b83bf"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-005-servicenow-ai-agents.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260729-005-servicenow-ai-agents.md",
+      "before_sha256": "e4577eeabcaecde87c096019781a5c49c92afc99d38e0053f53735054019947a",
+      "after_sha256": "950f7df45738609277409bfa910fe3defc570c6fdd9c189afad73d79d36d3d10"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-007-oracle-agent-studio-docs.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260729-007-oracle-agent-studio-docs.md",
+      "before_sha256": "5bb6844c6bec0f16260458623584cb3905d13d0398377107351bdcd26ebb05d8",
+      "after_sha256": "420644b9e838b12c6e57df216de178cc0ddf327df4b824a2639fa7ed64b8533e"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-010-palantir-aip-overview.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260729-010-palantir-aip-overview.md",
+      "before_sha256": "2fca7c4712aeec55f7c2557cd86192c9f3df9252f5b0de9e9678aef1a6a43526",
+      "after_sha256": "8c569313264516d2a903ecd11003c8bbaaf37bb55a078d107031cd96a613c239"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-011-palantir-ontology-system.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260729-011-palantir-ontology-system.md",
+      "before_sha256": "a0de1fe299172be48e073fb7ad825152e37cce305e6ee5ad361d0baa98853d1d",
+      "after_sha256": "ceafacecf0b1c6dc2d052e10ae07cd46cd2fe14f8af22f8eadd667de68811b83"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-012-palantir-agents-beta.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260729-012-palantir-agents-beta.md",
+      "before_sha256": "7dd9c1c5c0b8ed67fc75d36339d15bb41a7d1e6ee146b53a7c4e70767323d64d",
+      "after_sha256": "23cfbbdb5b84b46d4325dfaba86e14eca6ee5593d0466f1446a19fcd4dcc0e9e"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-013-openai-workspace-agents.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Articles/SRC-20260729-013-openai-workspace-agents.md",
+      "before_sha256": "b6cf6b8d6492d5fbeba5aaf8784b151dde85d4733abdefafef9a5a97300fb821",
+      "after_sha256": "2cbc29b5d497aa26d02efe5dccabc7a5100e30e501f4bdffab9b0d054e12bccc"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260225-002-salesforce-fy26-q4-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Earnings/SRC-20260225-002-salesforce-fy26-q4-results.md",
+      "before_sha256": "7dd6b9fdc2ff772bc90427c2c7f66656a0987f1d20210fb365cf60387812ae25",
+      "after_sha256": "3ac86ee7cb9c1c8b92a75b431cb98e6c465ec458faab6c3fcc256561f0b4fc32"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260429-001-microsoft-fy26-q3-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Earnings/SRC-20260429-001-microsoft-fy26-q3-results.md",
+      "before_sha256": "3687640744850c41118b41281eb9c1ca0f7f6cc142f89e7c4e003f2c4f79ae97",
+      "after_sha256": "0c8bc67e165bbd675cffdaf6ab4e2fd430332540ac48e0fa60a652caafcaa32a"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260506-018-palantir-q1-2026-10q.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Earnings/SRC-20260506-018-palantir-q1-2026-10q.md",
+      "before_sha256": "d08d0f3de11ba990dbb651cec1b865ae521a1e5fba2d84ff83ec7ef01b034795",
+      "after_sha256": "f288b44b9792c64296842ba6f9aa50828103c935430229df3b06cbb746782f25"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260610-017-oracle-fy26-q4-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Earnings/SRC-20260610-017-oracle-fy26-q4-results.md",
+      "before_sha256": "f70482e18407d35fb9af492f04f9b92c7a81af759d763ec3dcd67e24b2c97356",
+      "after_sha256": "e84044f89722eb0a304b8ec573e822402c527a6afa8e3b7624ecdfd34ddb3691"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260722-004-servicenow-q2-2026-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Earnings/SRC-20260722-004-servicenow-q2-2026-results.md",
+      "before_sha256": "5117ea8d9e02f4b837525ff1eb750a99998add49746deab15e286023343a6661",
+      "after_sha256": "47adeea0fa695027f7be726b745a54314f28ef0ef8efb417a10195728ef65ab7"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260723-008-sap-q2-2026-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-003c-processing-error/files/01_Inbox/Earnings/SRC-20260723-008-sap-q2-2026-results.md",
+      "before_sha256": "f19a53bc5d93c9263f5e238217bdc1d7158ecee1af80c175801318f0356858ac",
+      "after_sha256": "a893483a7dfd00c3e64aaee33fd86387f58c36bdd4f078c9d079492c9ec44c3a"
+    }
+  ]
+}

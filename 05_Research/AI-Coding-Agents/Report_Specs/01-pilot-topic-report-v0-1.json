@@ -1,0 +1,33 @@
+{
+  "title": "AI Coding Agent Value Chain Pilot Report v0.1",
+  "slug": "ai-coding-agent-value-chain-v0-1",
+  "created_at": "2026-07-30",
+  "period_start": "2025-07-10",
+  "period_end": "2026-07-30",
+  "evidence_ids": [
+    "EVT-20250710-022",
+    "EVT-20250713-024",
+    "EVT-20250729-020",
+    "EVT-20250820-016",
+    "EVT-20250923-021",
+    "EVT-20251002-017",
+    "EVT-20251106-018",
+    "EVT-20260224-023",
+    "EVT-20260406-019"
+  ],
+  "thesis_ids": [
+    "THS-006",
+    "THS-007",
+    "THS-008"
+  ],
+  "report_type": "topic",
+  "version": "v0.1",
+  "supersedes": null,
+  "tags": [
+    "APP-CODING",
+    "MAT-RESEARCH"
+  ],
+  "project_ids": [
+    "PRJ-002"
+  ]
+}

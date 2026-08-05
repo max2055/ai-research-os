@@ -1,0 +1,56 @@
+{
+  "title": "DORA frames AI-assisted development as an organizational amplifier",
+  "slug": "dora-ai-organizational-amplifier",
+  "created_at": "2026-07-29",
+  "event_date": "2025-09-23",
+  "source_ids": [
+    "SRC-20260729-029"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-AGENT-FRAMEWORK"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "DORA's report landing page characterizes AI as amplifying existing organizational strengths and weaknesses.",
+      "source_id": "SRC-20260729-029",
+      "quote": "The State of AI-assisted Software Development report reveals AI’s primary role is as an amplifier, magnifying an organization’s existing strengths and weaknesses. The greatest returns on AI investment come not from the tools themselves, but from a strategic focus on the underlying organizational system.",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "Realized AI-development value may depend on delivery systems, process quality and organizational capability rather than tool access alone.",
+    "A tool-level adoption metric can therefore diverge from enterprise-level value realization."
+  ],
+  "research_judgment": "This is a high-level conclusion from a primary research program, but the captured landing page does not expose the underlying sample, model or effect estimates. It should guide questions, not establish a causal claim by itself.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-007",
+      "relationship": "supporting",
+      "explanation": "The conclusion is consistent with complementary organizational and workflow systems determining value beyond the base coding tool.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "The amplifier framing may aggregate heterogeneous findings and may not isolate coding agents from other AI tools.",
+    "Model capability improvements could reduce dependence on organizational maturity over time."
+  ],
+  "unknowns": [
+    "The captured page does not provide the report's sample, statistical method or measured effect sizes.",
+    "The contribution of specific context, evaluation and sandbox components is not separated."
+  ],
+  "follow_up_indicators": [
+    "Archive and inspect the full DORA report methodology and capability model.",
+    "Track whether deployment outcomes correlate with delivery-system maturity after controlling for tool choice."
+  ],
+  "confidence": 0.42,
+  "tags": [
+    "APP-CODING",
+    "MAT-RESEARCH",
+    "EV-TECHNOLOGY"
+  ],
+  "project_ids": [
+    "PRJ-002"
+  ]
+}

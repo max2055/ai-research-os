@@ -1,0 +1,117 @@
+{
+  "title": "Alibaba field experiment finds an agent speed-quality trade-off and timing-dependent human recovery",
+  "slug": "alibaba-agentic-ai-speed-quality-hitl",
+  "created_at": "2026-07-30",
+  "event_date": "2026-05-14",
+  "source_ids": [
+    "SRC-20260730-033"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-AGENT-FRAMEWORK",
+    "DEV-EVALUATION",
+    "DEV-ORCHESTRATION"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "In the Alibaba experiment, AI-eligible chats represented less than 10% of total chat volume.",
+      "source_id": "SRC-20260730-033",
+      "quote": "At the time of the experiment, AI-eligible chats accounted for less than 10 percent of total chat",
+      "asset_path": null
+    },
+    {
+      "text": "Each AI-eligible chat was assigned to a designated human worker who supervised the interaction and retained responsibility for service completion.",
+      "source_id": "SRC-20260730-033",
+      "quote": "chat was assigned to a designated human worker who supervised the interaction and retained",
+      "asset_path": null
+    },
+    {
+      "text": "Average chat duration in AI-eligible chats declined 16.8% relative to control.",
+      "source_id": "SRC-20260730-033",
+      "quote": "average chat duration declines by 16.8 percent in AI-eligible chats (p < 0.001).",
+      "asset_path": null
+    },
+    {
+      "text": "Customer ratings for AI-eligible chats declined by 0.412 points relative to control workers.",
+      "source_id": "SRC-20260730-033",
+      "quote": "customer ratings decline by 0.412 point s relative to those of control",
+      "asset_path": null
+    },
+    {
+      "text": "For algorithm-triggered technical escalations, chat duration increased 19.1% relative to comparable fully human-handled chats.",
+      "source_id": "SRC-20260730-033",
+      "quote": "chat duration increases by 19.1 percent (p < 0.001). Service quality,",
+      "asset_path": null
+    },
+    {
+      "text": "For the same technical escalations, the estimated retrial-rate and rating effects were statistically indistinguishable from fully human-handled chats.",
+      "source_id": "SRC-20260730-033",
+      "quote": "indistinguishable from those of fully human-handled chats.",
+      "asset_path": null
+    },
+    {
+      "text": "For algorithm-triggered emotional escalations, retrial rates increased by 6 percentage points relative to matched fully human-handled chats.",
+      "source_id": "SRC-20260730-033",
+      "quote": "the retrial rate rises by 6 percentage points (p < 0.01), and customer ratings decline by",
+      "asset_path": null
+    },
+    {
+      "text": "For the same emotional escalations, customer ratings declined by 0.928 points relative to matched fully human-handled chats.",
+      "source_id": "SRC-20260730-033",
+      "quote": "0.928 points (p < 0.001). These results indicate that once emotional deterioration has accumulated,",
+      "asset_path": null
+    },
+    {
+      "text": "The paper reports that early intervention is important for sustaining post-escalation human effort.",
+      "source_id": "SRC-20260730-033",
+      "quote": "early intervention is essential for sustaining high post -escalation intervention effort.",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "The production role tested here is bounded autonomy under continued human responsibility, not removal of the human service interface.",
+    "Aggregate speed gains can coexist with worse subjective experience in the tasks delegated to the agent.",
+    "A handoff mechanism alone is insufficient when the system recognizes emotional deterioration too late."
+  ],
+  "research_judgment": "This is direct counterevidence to a simple interface-replacement or centralized-control-layer narrative. It shows real task execution and efficiency gains, but only within a narrow eligible subset and with material dependence on human supervision, monitoring quality and intervention timing. The evidence does not show that agents cannot become an interface or control layer; it narrows the conditions under which that transition is likely to work.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-001",
+      "relationship": "contradicting",
+      "explanation": "The tested agent handled a small standardized subset while humans retained completion responsibility, and customer ratings fell in AI-eligible chats despite faster service.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-005",
+      "relationship": "contradicting",
+      "explanation": "Reliability and emotional-recovery limits required task classification, algorithmic monitoring and timely human intervention, constraining an autonomous control-layer interpretation.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "Lower ratings may reflect communication style rather than failure to resolve the issue.",
+    "The system was early and limited to less than 10% of chats; later models or better monitoring may improve both coverage and experience.",
+    "Customer service may be unusually sensitive to emotion and may not represent back-office workflows."
+  ],
+  "unknowns": [
+    "The paper does not disclose software revenue, deployment cost or long-run labor demand.",
+    "The persistence of the measured effects after further model and workflow iteration is unknown.",
+    "The interface usage displaced by the agent is not measured."
+  ],
+  "follow_up_indicators": [
+    "Track AI-eligible share, intervention rate and time-to-intervention in later deployments.",
+    "Track customer ratings and retrials separately from speed and containment.",
+    "Seek comparable randomized evidence outside customer service."
+  ],
+  "confidence": 0.84,
+  "tags": [
+    "EV-CUSTOMER",
+    "EV-TECHNOLOGY",
+    "MAT-PRODUCTION",
+    "APP-CRM"
+  ],
+  "project_ids": [
+    "PRJ-001"
+  ]
+}

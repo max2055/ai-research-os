@@ -1,0 +1,116 @@
+{
+  "title": "Microsoft separates agent seats, usage, credits, managed objects and one product revenue metric",
+  "slug": "microsoft-agent-commercial-metrics-separated",
+  "created_at": "2026-07-30",
+  "event_date": "2026-04-29",
+  "source_ids": [
+    "SRC-20260730-038"
+  ],
+  "companies": [
+    "COM-microsoft"
+  ],
+  "technologies": [
+    "DEV-AGENT-FRAMEWORK",
+    "DEV-ORCHESTRATION",
+    "DEV-DATA",
+    "DEV-SECURITY"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "Microsoft said its overall AI business surpassed USD 37 billion ARR, up 123%; the statement did not identify an Agent-only component.",
+      "source_id": "SRC-20260730-038",
+      "quote": "Our AI business surpassed $37 billion ARR, up 123%.",
+      "asset_path": null
+    },
+    {
+      "text": "Microsoft reported more than 20 million paid Microsoft 365 Copilot seats.",
+      "source_id": "SRC-20260730-038",
+      "quote": "now have over 20 million Microsoft 365 Copilot paid seats.",
+      "asset_path": null
+    },
+    {
+      "text": "Microsoft reported monthly active usage of its first-party agents had increased sixfold year to date, without disclosing the absolute active-user or run count.",
+      "source_id": "SRC-20260730-038",
+      "quote": "monthly active usage up 6X year to date.",
+      "asset_path": null
+    },
+    {
+      "text": "Microsoft said its Copilot Credit consumptive offer grew nearly twofold quarter over quarter.",
+      "source_id": "SRC-20260730-038",
+      "quote": "Copilot Credit consumptive offer, up nearly 2X quarter-over-quarter",
+      "asset_path": null
+    },
+    {
+      "text": "Microsoft said nearly 60% of its service customers were purchasing usage-based credits.",
+      "source_id": "SRC-20260730-038",
+      "quote": "nearly 60% of our service customers are already purchasing usage-based credits.",
+      "asset_path": null
+    },
+    {
+      "text": "Microsoft said tens of thousands of companies were managing tens of millions of agents in Agent 365; this is a managed-object count rather than a disclosed active-run count.",
+      "source_id": "SRC-20260730-038",
+      "quote": "Tens of thousands of companies are already managing tens of millions of agents in Agent 365.",
+      "asset_path": null
+    },
+    {
+      "text": "Microsoft reported that LinkedIn Talent Solutions agentic products had surpassed a USD 450 million annualized revenue run rate.",
+      "source_id": "SRC-20260730-038",
+      "quote": "have already surpassed a $450 million annualized revenue run-rate.",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "Microsoft is operating a mixed commercial model comprising seats plus consumption rather than a single Agent price metric.",
+    "Managed-agent inventory, monthly active usage, credit purchasing, seat count and revenue are different measures and cannot be added or substituted for one another.",
+    "The LinkedIn disclosure is a product-specific financial contribution; the USD 37 billion AI ARR is a company-wide AI measure and cannot be attributed to Agents."
+  ],
+  "research_judgment": "The call materially improves commercial measurement by separating five layers: paid seats, relative usage intensity, usage-credit adoption, governance inventory and one product-specific revenue run rate. It still does not disclose total Agent runs, total Copilot Credit revenue, Agent 365 revenue or a consolidated Microsoft Agent revenue figure. The evidence supports a seats-plus-consumption transition while leaving overall Agent unit economics unresolved.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-003",
+      "relationship": "supporting",
+      "explanation": "Microsoft explicitly described customer service moving from traditional seats toward seats plus consumption and disclosed adoption of usage-based credits.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-004",
+      "relationship": "supporting",
+      "explanation": "Microsoft is using its installed seat base, data context, low-code tools and governance products to distribute multiple Agent monetization surfaces.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-005",
+      "relationship": "contextual",
+      "explanation": "Agent 365 is positioned as a governance control plane, but the disclosed tens of millions figure measures managed agents rather than active cross-system execution.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "Credit purchasing growth may reflect packaging changes rather than underlying task volume.",
+    "Seat and usage growth may be concentrated in trials, promotions or a small group of heavy users.",
+    "LinkedIn agentic product revenue may not represent the economics of Copilot Studio or Agent 365."
+  ],
+  "unknowns": [
+    "Absolute first-party Agent monthly active usage and Agent run counts are not disclosed.",
+    "Copilot Credit revenue, realized price per task and gross margin are not disclosed.",
+    "Agent 365 paid customers, revenue and active managed-agent share are not disclosed.",
+    "A consolidated Microsoft Agent revenue contribution is not disclosed."
+  ],
+  "follow_up_indicators": [
+    "Track absolute Agent runs and credits consumed, not only growth rates.",
+    "Track Copilot Credit revenue, price realization and gross margin.",
+    "Track Agent 365 paid adoption separately from managed-object inventory.",
+    "Track additional product-specific Agent revenue disclosures."
+  ],
+  "confidence": 0.86,
+  "tags": [
+    "EV-FINANCIAL",
+    "EV-PRICING",
+    "EV-PRODUCT",
+    "APP-ENTERPRISE"
+  ],
+  "project_ids": [
+    "PRJ-001"
+  ]
+}

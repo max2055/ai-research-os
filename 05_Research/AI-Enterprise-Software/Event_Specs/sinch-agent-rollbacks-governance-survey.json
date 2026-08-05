@@ -1,0 +1,93 @@
+{
+  "title": "Sinch survey reports widespread production-agent rollbacks alongside continued investment",
+  "slug": "sinch-production-agent-rollbacks-survey",
+  "created_at": "2026-07-30",
+  "event_date": "2026-05-13",
+  "source_ids": [
+    "SRC-20260730-036"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-AGENT-FRAMEWORK",
+    "DEV-SECURITY",
+    "DEV-ORCHESTRATION"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "Sinch reported that 74% of surveyed enterprises had rolled back or shut down a deployed customer-communications agent; the reported rate was 81% among organizations with mature guardrails.",
+      "source_id": "SRC-20260730-036",
+      "quote": "revealing that 74% of enterprises have already rolled back or shut down an AI customer communications agent after deployment due to a governance failure. That rate increases to 81% among organizations with fully mature guardrails.",
+      "asset_path": null
+    },
+    {
+      "text": "The same survey reported that 62% had AI agents live in customer communications and 98% were increasing AI communications investment in 2026.",
+      "source_id": "SRC-20260730-036",
+      "quote": "62% already have AI agents live in production but are encountering systemic failures after deployment. At the same time, 98% of enterprises report increasing investment in AI communications in 2026.",
+      "asset_path": null
+    },
+    {
+      "text": "The release reported that 84% of AI engineering teams spent at least half their time on safety infrastructure.",
+      "source_id": "SRC-20260730-036",
+      "quote": "84% of AI engineering teams spend at least half their time on safety infrastructure",
+      "asset_path": null
+    },
+    {
+      "text": "The release reported that 55% had to build custom infrastructure for cross-channel context.",
+      "source_id": "SRC-20260730-036",
+      "quote": "55% have to build custom infrastructure for cross channel context",
+      "asset_path": null
+    },
+    {
+      "text": "The survey covered 2,527 senior decision makers in large enterprises across 10 countries and six industries, recruited through an independent third-party panel.",
+      "source_id": "SRC-20260730-036",
+      "quote": "A total of 2,527 senior decision makers participated across the United States, United Kingdom, Australia, Brazil, Germany, France, India, Singapore, Mexico and Canada.",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "Production deployment and durable production operation are distinct adoption stages.",
+    "Rollback and increased investment can coexist when organizations continue iterating after failures.",
+    "Safety and cross-channel context can absorb substantial engineering effort, limiting near-term control-layer economics."
+  ],
+  "research_judgment": "The survey is material counterevidence to a frictionless agent-control-layer transition, but its headline rollback rate should be treated cautiously because Sinch commissioned the work, markets communications infrastructure, and does not disclose the full questionnaire or weighting. The result is best used as a risk signal requiring independent replication, not as a market-wide failure rate.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-005",
+      "relationship": "contradicting",
+      "explanation": "Reported rollbacks, safety workload and custom cross-channel infrastructure indicate that reliability, governance and context integration may prevent a stable unified control layer.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-001",
+      "relationship": "contradicting",
+      "explanation": "High reported rollback rates after production deployment qualify the expectation that agent interfaces will durably displace existing customer-service interfaces.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "Mature organizations may report more rollbacks because better monitoring detects failures earlier.",
+    "The survey may count partial rollbacks, redesigned agents and full shutdowns together.",
+    "Continued investment may indicate that failures are transitional rather than structural."
+  ],
+  "unknowns": [
+    "The questionnaire, weighting, response-rate and exact rollback definition are not public in the release.",
+    "The underlying organizations and vendor relationships are not disclosed.",
+    "The duration and severity of the reported rollbacks are unknown."
+  ],
+  "follow_up_indicators": [
+    "Obtain the full report and questionnaire when released.",
+    "Seek independent surveys with deployment, rollback and reinvestment definitions.",
+    "Track safety-engineering time, custom-infrastructure spend and permanent shutdown rates."
+  ],
+  "confidence": 0.63,
+  "tags": [
+    "EV-CUSTOMER",
+    "EV-TECHNOLOGY",
+    "MAT-PRODUCTION",
+    "APP-CRM"
+  ],
+  "project_ids": [
+    "PRJ-001"
+  ]
+}

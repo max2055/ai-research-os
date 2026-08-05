@@ -1,0 +1,93 @@
+{
+  "title": "Nubank reports A/B-tested results for five production customer-support agents",
+  "slug": "nubank-five-production-support-agents",
+  "created_at": "2026-07-30",
+  "event_date": "2026-06-07",
+  "source_ids": [
+    "SRC-20260730-034"
+  ],
+  "companies": [],
+  "technologies": [
+    "DEV-AGENT-FRAMEWORK",
+    "DEV-EVALUATION",
+    "DEV-ORCHESTRATION"
+  ],
+  "products": [],
+  "facts": [
+    {
+      "text": "Nubank reports five production agents covering card delivery, debt management, credit-limit support, card management and product explanation.",
+      "source_id": "SRC-20260730-034",
+      "quote": "Figure 3: Online A/B-test gains for five production agents",
+      "asset_path": null
+    },
+    {
+      "text": "For the card-delivery agent, the reported online A/B-test gains were 37 percentage points in AI transactional NPS and 29 percentage points in self-service rate, while AI tNPS remained 10 points below expert human agents.",
+      "source_id": "SRC-20260730-034",
+      "quote": "Card Delivery+37+29−10",
+      "asset_path": null
+    },
+    {
+      "text": "For Product Explainer, the reported tNPS gain was 12.3 percentage points, self-service rate declined 1.5 points and AI tNPS remained 6.2 points below expert humans.",
+      "source_id": "SRC-20260730-034",
+      "quote": "Product Explainer+12.3−1.5 ‡ −6.2",
+      "asset_path": null
+    },
+    {
+      "text": "Four of five deployed agents were reported within approximately 1–10 percentage points of expert human-agent tNPS; debt management remained 23.6 points below.",
+      "source_id": "SRC-20260730-034",
+      "quote": "gap in the hardest domain (debt management,−23.6p.p.).",
+      "asset_path": null
+    },
+    {
+      "text": "The reported automated-evaluation pipeline enforced minimum human-agreement thresholds before trusting automated judgments.",
+      "source_id": "SRC-20260730-034",
+      "quote": "minimum human-agreement thresholds before",
+      "asset_path": null
+    }
+  ],
+  "inferences": [
+    "The case links production impact to an evaluation and context-engineering system, not to model capability alone.",
+    "Outcome variance across domains indicates that the economic and service value of an agent is task-specific.",
+    "Remaining gaps to expert humans and the Product Explainer self-service decline argue for per-workflow release gates."
+  ],
+  "research_judgment": "The paper is a strong named production case with online metrics and explicit human baselines. It supports the importance of evaluation, context and operations as enterprise control points. Because all five deployments are within Nubank and the authors are the deploying team, this is one independent organization case, not five independent customers, and it does not establish product revenue or general market adoption.",
+  "thesis_impacts": [
+    {
+      "thesis_id": "THS-002",
+      "relationship": "supporting",
+      "explanation": "Versioned context, tools, evaluation and online measurement are presented as the reusable production system behind five deployed agents.",
+      "proposed_confidence_change": "0.00, pending human review"
+    },
+    {
+      "thesis_id": "THS-004",
+      "relationship": "contextual",
+      "explanation": "A large incumbent service organization can build and operate agents at scale, but this case does not identify which software vendor captures the value.",
+      "proposed_confidence_change": "0.00, pending human review"
+    }
+  ],
+  "alternative_explanations": [
+    "Improvements may reflect better prompts and workflow engineering relative to weak prior agent variants rather than an enduring moat.",
+    "A/B-test gains within one company may not transfer to other data, languages or service processes.",
+    "Customer-satisfaction improvements may not translate into lower total service cost."
+  ],
+  "unknowns": [
+    "Absolute tNPS, contact volumes, model and infrastructure costs are not fully disclosed.",
+    "Long-run retention, compliance incidents and human staffing effects are unknown.",
+    "The external software vendors and commercial terms behind the stack are not disclosed."
+  ],
+  "follow_up_indicators": [
+    "Track absolute satisfaction, containment, cost per resolution and human escalation by use case.",
+    "Seek a second organization using a comparable evaluation-driven system.",
+    "Identify which platform layers are purchased versus built internally."
+  ],
+  "confidence": 0.82,
+  "tags": [
+    "EV-CUSTOMER",
+    "EV-TECHNOLOGY",
+    "MAT-SCALE",
+    "APP-CRM"
+  ],
+  "project_ids": [
+    "PRJ-001"
+  ]
+}

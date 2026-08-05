@@ -1,0 +1,299 @@
+{
+  "migration_id": "MIG-20260729-001-schema-version",
+  "changes": [
+    {
+      "path": "01_Inbox/Articles/SRC-20251209-015-anthropic-mcp-aaif.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20251209-015-anthropic-mcp-aaif.md",
+      "before_sha256": "984ec9785d53a9692253127d3d1e258f140b01788f14707ebb1094a73ffc5499",
+      "after_sha256": "3c75c2b04e231064069ce83e6b023b5a3a24799596e7f89242d427d5ba821fdd"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260219-019-microsoft-copilot-promotion.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260219-019-microsoft-copilot-promotion.md",
+      "before_sha256": "bb1e31e23773c667a86fd1ce2a0b0285ab145e2602da9d2eecd2b48c6e21829b",
+      "after_sha256": "caa76347a3e801d9d96b377704729c7f61b271bc62c88af7da5cd2c419a9aade"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260415-014-openai-agents-sdk-evolution.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260415-014-openai-agents-sdk-evolution.md",
+      "before_sha256": "1d4ec4dbad12bb69379aee3e3fe92d17a791359282c6a063c4554b9122ca24d8",
+      "after_sha256": "18215009bc68d6916c8debf981f4896c4fbc2d24a954611841d19be2950bf532"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260514-016-anthropic-pwc-enterprise-deployment.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260514-016-anthropic-pwc-enterprise-deployment.md",
+      "before_sha256": "ad57f7fa319cc77aaa82c66291fef38dd5564af6500781ef39db3828923400b9",
+      "after_sha256": "6ccab52d1fdbffd94ad424c8ba174e0faff5190528dcf12df0fe0e115d3bd901"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260521-020-mcp-2026-release-candidate.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260521-020-mcp-2026-release-candidate.md",
+      "before_sha256": "7870d4241c65ed5c7ebbd7407ba3de06c6879d4d6e7db08016df9f4ddb51f32b",
+      "after_sha256": "33471c5c83972e1591b713d451d5f45a855a79cd5bdd794967faa4f151cba027"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260611-009-sap-joule-for-me.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260611-009-sap-joule-for-me.md",
+      "before_sha256": "7c98747562cf7cd24052e2e6a1bff59ad9ccabcbc417d8c62c46054b57d56a50",
+      "after_sha256": "329156311d5f3f1aac46d565d50264748b811afcc3430fdf9325bfcd853131e9"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260714-006-oracle-fusion-agentic-builder.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260714-006-oracle-fusion-agentic-builder.md",
+      "before_sha256": "780a08318e8ec99993b7dfece5c5032ebd732b30bdb0e51562a2c399c1996251",
+      "after_sha256": "f00cb147e575504b34ed47595ba8cd9d400009fb1c114cf130ddc2e280a9a294"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-003-salesforce-agentforce-pricing.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260729-003-salesforce-agentforce-pricing.md",
+      "before_sha256": "afdfee4441629b5c1eef778f15f404ddd487ca91248914a5783786d0eb7873a4",
+      "after_sha256": "8bbf2912a74b19bb72e2d26f1d489dd5f0b905743c86b56198ca9c07bb7f0c6d"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-005-servicenow-ai-agents.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260729-005-servicenow-ai-agents.md",
+      "before_sha256": "be26b5ba9a3c917819ea7f9a1c3e0f746f3b024b07c70036c5791b6b4ebb12da",
+      "after_sha256": "10e5437892cc5c772707d1f28f8ba49540d47368b51c605911699f6bfae6f029"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-007-oracle-agent-studio-docs.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260729-007-oracle-agent-studio-docs.md",
+      "before_sha256": "8328abc4777651179ac06ebfdcdac7a7fb815c962599df89a4961d2d5a8c6567",
+      "after_sha256": "78e34b682650d7b216f55a7c1742438c54d548edfb4b5bbd0e1a5d30cee899e1"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-010-palantir-aip-overview.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260729-010-palantir-aip-overview.md",
+      "before_sha256": "1e0cffeb9aaded5d459214316e6613be010566831d82e31d721219f7a9df20a7",
+      "after_sha256": "09c012336743fb62c67aef2ab88d83ccf6c7a25ef7f73a42efb008517acb7eb1"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-011-palantir-ontology-system.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260729-011-palantir-ontology-system.md",
+      "before_sha256": "773f10410bde1956073045b72936366fe88b7a96016dcccf498c920257bdedcb",
+      "after_sha256": "c33c5d82c67398d9d2f9587c92c61d01b55660717e0ada62dbc3f9746c0ed027"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-012-palantir-agents-beta.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260729-012-palantir-agents-beta.md",
+      "before_sha256": "7321c24ce4fb53295fb3c00f191888666b1349ea345f87d8d4a20327b30f0ec8",
+      "after_sha256": "47cdbcaf7b6a5f3edd94eb41529c3e7a174b2b3eec61aac30cb3abb9b325f764"
+    },
+    {
+      "path": "01_Inbox/Articles/SRC-20260729-013-openai-workspace-agents.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Articles/SRC-20260729-013-openai-workspace-agents.md",
+      "before_sha256": "2ea6ec7c0093484408ab2277b23b65c666e3ba5ccc037999dde7e72596d25bf7",
+      "after_sha256": "2b542dd5994b1c80c5240da2b95a0c5f6b3cbc7edee8c079dbf664ef59db881f"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260225-002-salesforce-fy26-q4-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Earnings/SRC-20260225-002-salesforce-fy26-q4-results.md",
+      "before_sha256": "e99c11fdb2443d9b22fe17168bcf24b7ade66e0392fc20961be4972abbfd5f84",
+      "after_sha256": "43401a096e0bcb1f5640b88fde96706dcc7f38180d8f7b867fbd83dd8c218871"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260429-001-microsoft-fy26-q3-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Earnings/SRC-20260429-001-microsoft-fy26-q3-results.md",
+      "before_sha256": "d2d0b486d9bbfc24087c57f9ec582109bec17c38abe6d0284d5bfb5f8a47df77",
+      "after_sha256": "c0bb447faa5ffb845159ddf21e1ac88052e681661a7ff8d715595ec7ba9102d4"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260506-018-palantir-q1-2026-10q.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Earnings/SRC-20260506-018-palantir-q1-2026-10q.md",
+      "before_sha256": "c218ecd4737a131c097dab2c8d6939e56780af9ad97fb83ca7514498cdbb3c64",
+      "after_sha256": "fa99b442d0ebdd061aee59e8129bf551809583dce0d5715e25edd464757bba2e"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260610-017-oracle-fy26-q4-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Earnings/SRC-20260610-017-oracle-fy26-q4-results.md",
+      "before_sha256": "213b9ee7aa526859aad4bc19e4c89d84eed9849e4f76235d87b25de5c0ebb769",
+      "after_sha256": "e8185633fd33672ffdadae34ad50a611c87a831ed759d54de47ca173a58776e5"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260722-004-servicenow-q2-2026-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Earnings/SRC-20260722-004-servicenow-q2-2026-results.md",
+      "before_sha256": "9d4ea42b8928c52bc6d9139c5c78ba29dfdd7eaca5d8c3ab10c4f89c5f3120ba",
+      "after_sha256": "e4118552e7aacc2644ee77877affd25908cfbfc9898c6d6a5d4c0189874e6244"
+    },
+    {
+      "path": "01_Inbox/Earnings/SRC-20260723-008-sap-q2-2026-results.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/01_Inbox/Earnings/SRC-20260723-008-sap-q2-2026-results.md",
+      "before_sha256": "d29ba9350815da200fee2c08cb2e529cec9f70bfa774633fff4557f63716f478",
+      "after_sha256": "5343aa36a0d0df71706b5611fe90f9060159916e57ea18708fa61e842d302448"
+    },
+    {
+      "path": "02_Knowledge/Companies/COM-anthropic.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/02_Knowledge/Companies/COM-anthropic.md",
+      "before_sha256": "33f4cd3003f22b6c6e6944b20a12b106f69835ae1266e4103a0593c09f3398a7",
+      "after_sha256": "458c676774de436a604123a2b574c60456b7dec44695c76fd8f4ccf555c9969d"
+    },
+    {
+      "path": "02_Knowledge/Companies/COM-microsoft.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/02_Knowledge/Companies/COM-microsoft.md",
+      "before_sha256": "974c2c515216e25fb022e1cde3898dc4c389cde5f30b35b41cfa14ad24324f10",
+      "after_sha256": "6addf63f24991c7f8ecc04826870eb8484cdff80a581e780002cd2648540f64f"
+    },
+    {
+      "path": "02_Knowledge/Companies/COM-openai.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/02_Knowledge/Companies/COM-openai.md",
+      "before_sha256": "8e72b6f3ddfdc0946053e3e400800dc2423dc594248748ad8bef299061d960a0",
+      "after_sha256": "82dfa7b5699892678117ffebd12e18e23fa33491ca7e5d602841cb1ec9c5dd88"
+    },
+    {
+      "path": "02_Knowledge/Companies/COM-oracle.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/02_Knowledge/Companies/COM-oracle.md",
+      "before_sha256": "4bcb355de1d5532ab0787efc8dfb8a05c8e764223a6b0e0785edab3c5e6b47d2",
+      "after_sha256": "50b28aad6270859de7169fc196252cf184524c1f983a259d700c3867c72f5b15"
+    },
+    {
+      "path": "02_Knowledge/Companies/COM-palantir.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/02_Knowledge/Companies/COM-palantir.md",
+      "before_sha256": "3f2eef2428bbed8b469c7839435d93711c667fdf79d234cd3d55946a9c752591",
+      "after_sha256": "50e1002b959b02cca3e7320deb0c15318a2f12db487d076fc8bc494a4287e3b3"
+    },
+    {
+      "path": "02_Knowledge/Companies/COM-salesforce.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/02_Knowledge/Companies/COM-salesforce.md",
+      "before_sha256": "1548ba486834ffea8de21ef6839ff9459971c43d325713d786c16ee45b2a15ed",
+      "after_sha256": "5e44a0e6299372f7eb57855fa4bafabf97e9779b2287e33338121435d1d29a1f"
+    },
+    {
+      "path": "02_Knowledge/Companies/COM-sap.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/02_Knowledge/Companies/COM-sap.md",
+      "before_sha256": "9e59c124f3ccc06e93fba06bdc835e526a340f79704f91d5f29062542a73eb29",
+      "after_sha256": "32f766b5c72b73d9d512c9f1d9634e34212058f72cef31972ad3045723d90095"
+    },
+    {
+      "path": "02_Knowledge/Companies/COM-servicenow.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/02_Knowledge/Companies/COM-servicenow.md",
+      "before_sha256": "b99940c67f5e3039d306595cca42caeea5b1c302d03cb6d30ed1ee5f98201c2d",
+      "after_sha256": "259ebf891704a0eacb945dd94f5458739d7570f3e289210039a81a90dacf3ef9"
+    },
+    {
+      "path": "03_Theses/Active/THS-001-agent-interface-value.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/03_Theses/Active/THS-001-agent-interface-value.md",
+      "before_sha256": "8de19408af93b679c26889b78d1c6ec3e03cb41d540ac64ab0da104a5f662afc",
+      "after_sha256": "44241d7fa80970bc10d1df44fb2342a1f31437bb45beed86d57754e94a0e7d7a"
+    },
+    {
+      "path": "03_Theses/Active/THS-002-enterprise-context-moat.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/03_Theses/Active/THS-002-enterprise-context-moat.md",
+      "before_sha256": "de01c899f637d12a4e9e801d315e9779e94bdd30df7ca8e303cabfcf410681aa",
+      "after_sha256": "42d27d3bb7f12e72461ea7deaf7f51c99db3bb68b76ffaddca13dc7ed0388140"
+    },
+    {
+      "path": "03_Theses/Active/THS-003-pricing-model-shift.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/03_Theses/Active/THS-003-pricing-model-shift.md",
+      "before_sha256": "5e1f51d9ecb9021673597b9064dea4bf11538cf15ece0a23110b3ee7e9352492",
+      "after_sha256": "c716dd3387edcf1b1f594ef0e0ad6afaa61ffc997826ced30fa2924c71a3eeb5"
+    },
+    {
+      "path": "03_Theses/Active/THS-004-incumbent-advantage-and-conflict.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/03_Theses/Active/THS-004-incumbent-advantage-and-conflict.md",
+      "before_sha256": "e6098cde5c5d6fe254699e7af65b0de5d6c072fb16622e13d2a4f3afcb90349d",
+      "after_sha256": "7b9757ebc78629a7965ac614415532dec88d1e991a2e628db54501194621cf66"
+    },
+    {
+      "path": "03_Theses/Active/THS-005-agent-control-layer.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/03_Theses/Active/THS-005-agent-control-layer.md",
+      "before_sha256": "ac8e4d00ff75334f6328358a23bf3bfa1b3a4bbd4fb124c1d86b606ae66f97aa",
+      "after_sha256": "96eae96814467677b3b88c291859d66c3523f34a6177cdea2cfe7c3f46c1c65a"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260219-001-microsoft-copilot-seat-promotion.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260219-001-microsoft-copilot-seat-promotion.md",
+      "before_sha256": "f72cab5c4911877d33288d30c757a9c561429fe15609373ba96d597722744f27",
+      "after_sha256": "59ffbd2b7dd78705d041d0b6603c686d8ba3ba8804611486d13304117691aa43"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260225-002-salesforce-agentforce-commercial-metrics.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260225-002-salesforce-agentforce-commercial-metrics.md",
+      "before_sha256": "a40002bf79a8ac3df83c8b88d5d5a01c8d3127c548bb4026674d93e4841c58e5",
+      "after_sha256": "6cbed8ce8d9e49e8c1fd13f8e9c2b2412dc869b491fb246de2bd895de8465dc4"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260415-003-openai-agents-sdk-computer-environment.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260415-003-openai-agents-sdk-computer-environment.md",
+      "before_sha256": "824a0e51d7f140e657b7240f3aa4a9f8a56b6354fc0f438443782abe03fa6589",
+      "after_sha256": "332fea4093580def32de98aa7d0caceba1b1e796726065951c19becf1f1639d2"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260429-004-microsoft-ai-revenue-run-rate.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260429-004-microsoft-ai-revenue-run-rate.md",
+      "before_sha256": "35d0204e32c5fd019c922caca49ff6bb8e0d6725febab5182103e3c578c5d128",
+      "after_sha256": "d41b67e61a034b47d6a133f4c4f0429f33131f05835b200520bb345c229ef1f2"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260514-005-anthropic-pwc-enterprise-rollout.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260514-005-anthropic-pwc-enterprise-rollout.md",
+      "before_sha256": "8a901de43a45640e8066bddd8130bc50379b882507666dd81ebd464e93b2600b",
+      "after_sha256": "34bc53a6d0da2c6cc2a1b1d7146869c1d21704faabbded669b921db780c3fa8e"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260521-006-mcp-release-candidate-expands-protocol.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260521-006-mcp-release-candidate-expands-protocol.md",
+      "before_sha256": "493cc05b45e883c4d2e88ddbc94c5fd82ad5340febdce4adf015db888c3e75fd",
+      "after_sha256": "1df0533c66fdaf3a4bcd85166fa8d2741bb121697831bc8489f719f52254a74c"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260610-007-oracle-ai-infrastructure-growth-and-capex.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260610-007-oracle-ai-infrastructure-growth-and-capex.md",
+      "before_sha256": "6b42dd60159e8f13d47ca9035b5adaf40d5c1cba8e24e0cb3322f83d3885a33a",
+      "after_sha256": "887bb7b472f57f0592aaf6cdf167c8975c93958bb4cf40f6e293c9c85ae81101"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260611-008-sap-joule-replaces-click-and-search.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260611-008-sap-joule-replaces-click-and-search.md",
+      "before_sha256": "d7a0a74be7a9bc288aef1ec7a8743afac0ade5b23fb7c698e0fb251641602da8",
+      "after_sha256": "4c3f362dfaa0000681cbe885aa2a78c179a72166996a0a93ce8cb296c8335544"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260714-009-oracle-fusion-agentic-runtime.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260714-009-oracle-fusion-agentic-runtime.md",
+      "before_sha256": "d1a85a8fd647a7d49b0155c2184431c0a94b3589cf063cee4dbfd1547b7a0e3e",
+      "after_sha256": "0a9f7eb2b71b18222e41455f25cc45d3bb0e9c19d05883fbc5c7ab96dd3ace43"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260722-010-servicenow-ai-acv-and-deployments.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260722-010-servicenow-ai-acv-and-deployments.md",
+      "before_sha256": "3d77f86d852efea63e4ddd3f94988466104bda712266291f56d5796e456a331a",
+      "after_sha256": "8e07b6cd5dd9ccc33db057979f1781682815f3520e58eddaed7293a2e3ac1180"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260723-011-sap-autonomous-enterprise-financial-baseline.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260723-011-sap-autonomous-enterprise-financial-baseline.md",
+      "before_sha256": "08bee0d57eb96fd1212aaea4177c54a07b6d40cd11bf1cae28b449b48364019c",
+      "after_sha256": "08ac80836ea4c902e5d810ba22aeafcf0f23bdb06df3ba54f9b79118132c1bde"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260729-012-salesforce-agentforce-mixed-pricing.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260729-012-salesforce-agentforce-mixed-pricing.md",
+      "before_sha256": "0e9e55f0748b9bedbbd245fc74ccba1d143e1cd63dcc957bc75f9d0d8dd810cb",
+      "after_sha256": "4a86590d1934d33e19bc12f6415154905a6a7b00e7fd3566a163d1627b121a26"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260729-013-servicenow-agent-fabric-control-layer.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260729-013-servicenow-agent-fabric-control-layer.md",
+      "before_sha256": "31546c9c5062108c7462136f794ab552c6b2de7fedf9ab0dda59e2671721a339",
+      "after_sha256": "656534f41d7ebf917905620579af294bd505d8af82cc0655adbea2dc4c0f73a2"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260729-014-palantir-agents-ontology-permissions.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260729-014-palantir-agents-ontology-permissions.md",
+      "before_sha256": "b7f7dfed991d5d808b51d208f7854ada34ffe0c91f066b76cd9e5b0bfeb58a32",
+      "after_sha256": "b7f830ae05dd8c210757f258637bcf621520e1c92a92b03b4a6822a35e132667"
+    },
+    {
+      "path": "04_Evidence/Events/EVT-20260729-015-openai-workspace-agents-preview.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/04_Evidence/Events/EVT-20260729-015-openai-workspace-agents-preview.md",
+      "before_sha256": "4a871bdecabb0723d5da5a27a4d049f34e19b7d0f86627474ee2086243dd5026",
+      "after_sha256": "3ca16a33d66e13d44396225b8b63cb2c4f707827eeefd1c04e530b8678a43d9a"
+    },
+    {
+      "path": "06_Reports/Topics/RPT-20260729-agent-enterprise-software-v0-1.md",
+      "backup": "09_Automation/migrations/backups/MIG-20260729-001-schema-version/files/06_Reports/Topics/RPT-20260729-agent-enterprise-software-v0-1.md",
+      "before_sha256": "253273e5b494b6de6a731b47dc0980a8a6cc6ac6a05c7840f919d43ce9609c04",
+      "after_sha256": "769be3bab1fb3fcc6f3d847d0bdf72f08d289789895d91b73a1970d842fa30eb"
+    }
+  ]
+}

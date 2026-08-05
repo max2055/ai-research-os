@@ -1,0 +1,120 @@
+{
+  "as_of": "2026-07-29",
+  "evidence_quality": {
+    "average_sources_per_event": 1.2,
+    "event_source_links": 18,
+    "events_without_thesis_links": 0,
+    "review_decisions": {
+      "approve": 15,
+      "reject": 0
+    }
+  },
+  "knowledge_and_reports": {
+    "companies_with_reviewed_evidence": 8,
+    "company_coverage_rate": 1.0,
+    "final_reviewed_reports": 1
+  },
+  "object_counts": {
+    "company": {
+      "pending": 8,
+      "rejected": 0,
+      "reviewed": 0,
+      "superseded": 0,
+      "total": 8
+    },
+    "event": {
+      "pending": 0,
+      "rejected": 0,
+      "reviewed": 15,
+      "superseded": 0,
+      "total": 15
+    },
+    "report": {
+      "pending": 0,
+      "rejected": 0,
+      "reviewed": 1,
+      "superseded": 0,
+      "total": 1
+    },
+    "source": {
+      "pending": 20,
+      "rejected": 0,
+      "reviewed": 0,
+      "superseded": 0,
+      "total": 20
+    },
+    "thesis": {
+      "pending": 0,
+      "rejected": 0,
+      "reviewed": 5,
+      "superseded": 0,
+      "total": 5
+    }
+  },
+  "review_queue_total": 28,
+  "schema_version": 1,
+  "source_quality": {
+    "conversion_rate": 0.9,
+    "grades": {
+      "A": 19,
+      "B": 1,
+      "C": 0,
+      "D": 0
+    },
+    "pending_sources_used_by_reviewed_events": 18,
+    "unused": 2,
+    "used_by_event": 18
+  },
+  "system_health": {
+    "index_drift_files": 0,
+    "validation_errors": 0,
+    "validation_warnings": 18
+  },
+  "thesis_health": {
+    "average_confidence": 0.338,
+    "items": [
+      {
+        "confidence": 0.29,
+        "contradicting": 0,
+        "id": "THS-001",
+        "review_date": "2026-07-29",
+        "review_status": "reviewed",
+        "supporting": 1
+      },
+      {
+        "confidence": 0.4,
+        "contradicting": 1,
+        "id": "THS-002",
+        "review_date": "2026-07-29",
+        "review_status": "reviewed",
+        "supporting": 4
+      },
+      {
+        "confidence": 0.28,
+        "contradicting": 1,
+        "id": "THS-003",
+        "review_date": "2026-07-29",
+        "review_status": "reviewed",
+        "supporting": 1
+      },
+      {
+        "confidence": 0.4,
+        "contradicting": 2,
+        "id": "THS-004",
+        "review_date": "2026-07-29",
+        "review_status": "reviewed",
+        "supporting": 4
+      },
+      {
+        "confidence": 0.32,
+        "contradicting": 0,
+        "id": "THS-005",
+        "review_date": "2026-07-29",
+        "review_status": "reviewed",
+        "supporting": 4
+      }
+    ],
+    "without_contradicting": 2,
+    "without_supporting": 0
+  }
+}

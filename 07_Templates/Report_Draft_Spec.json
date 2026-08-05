@@ -1,0 +1,14 @@
+{
+  "title": "Reviewable Report v0.2",
+  "slug": "reviewable-report-v0-2",
+  "created_at": "YYYY-MM-DD",
+  "period_start": "YYYY-MM-DD",
+  "period_end": "YYYY-MM-DD",
+  "evidence_ids": ["EVT-YYYYMMDD-NNN"],
+  "thesis_ids": ["THS-NNN"],
+  "report_type": "topic",
+  "version": "v0.2",
+  "supersedes": null,
+  "tags": [],
+  "project_ids": ["PRJ-001"]
+}
