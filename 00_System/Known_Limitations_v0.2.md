@@ -81,3 +81,7 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   and CLI commands (`research-os universe ...`) arrive in later WPs.
 - Sector IDs and Company IDs in `core_company_ids` / `sector_ids` are format-
   validated but cross-object reference integrity is enforced in WP-103.
+- Ontology Assertion (REL-*) schema, predicates and reference checks are
+  implemented (WP-103) but **no assertions exist yet** — relation data is
+  deferred to a follow-up WP (Phase 0-1 Gate requires 100+ exported + 30
+  human-reviewed). Reviewed assertions will require >=1 reviewed Evidence.
