@@ -85,3 +85,11 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   implemented (WP-103) but **no assertions exist yet** — relation data is
   deferred to a follow-up WP (Phase 0-1 Gate requires 100+ exported + 30
   human-reviewed). Reviewed assertions will require >=1 reviewed Evidence.
+- **253 Ontology Assertions created (2026-08-05, relation WP)**: Compute
+  Chain value-chain relations (SUPPLIES 186, COMPETES_WITH 32 + symmetric
+  reverse, DEPENDS_ON/ENABLES 26, PARTNERS_WITH 4, PRODUCES/OWNS 3). ALL
+  are `review_status: pending` — they carry no Evidence yet, so the 30-relation
+  human-review sub-Gate of Phase 0-1 is deferred until the Compute Chain
+  evidence WP lands (reviewed assertions require >=1 reviewed Evidence,
+  REF003/REF004). Relations are value-chain knowledge drafts subject to max's
+  spot-check.
