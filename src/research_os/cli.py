@@ -178,7 +178,7 @@ def parse_args() -> argparse.Namespace:
     review_queue.add_argument("--project")
     review_queue.add_argument(
         "--type",
-        choices=("source", "event", "thesis", "company", "report"),
+        choices=("source", "event", "thesis", "company", "report", "sector"),
     )
     review_queue.add_argument(
         "--status",

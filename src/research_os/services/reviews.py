@@ -16,7 +16,9 @@ from research_os.services.drafts import yaml_list
 from research_os.services.projects import objects_for_project
 from research_os.services.validation import validate_repository
 
-REVIEWABLE_TYPES = frozenset({"source", "event", "thesis", "company", "report"})
+REVIEWABLE_TYPES = frozenset(
+    {"source", "event", "thesis", "company", "report", "sector"}
+)
 
 
 def review_queue(
