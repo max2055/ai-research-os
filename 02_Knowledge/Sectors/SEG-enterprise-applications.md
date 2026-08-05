@@ -3,11 +3,11 @@ id: SEG-enterprise-applications
 type: sector
 title: "Enterprise Applications"
 created_at: 2026-08-05
-updated_at: 2026-08-05
+updated_at: '2026-08-05'
 schema_version: 2
 project_ids: []
 status: active
-review_status: pending
+review_status: reviewed
 tags: []
 definition: "CRM, ERP, ITSM, HCM, collaboration, analytics, security, vertical"
 in_scope: [CRM, ERP, ITSM, HCM, collaboration, analytics, security, vertical]

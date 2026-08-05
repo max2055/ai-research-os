@@ -3,11 +3,11 @@ id: SEG-foundry-packaging-test
 type: sector
 title: "Foundry, Packaging & Test"
 created_at: 2026-08-05
-updated_at: 2026-08-05
+updated_at: '2026-08-05'
 schema_version: 2
 project_ids: []
 status: active
-review_status: pending
+review_status: reviewed
 tags: []
 definition: "Wafer foundry, advanced packaging, OSAT, substrate"
 in_scope: [foundry, advanced-packaging, OSAT, substrate]

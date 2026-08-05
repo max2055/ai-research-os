@@ -1,9 +1,10 @@
 # WP-120 Pilot Universe 实体人审包
 
-状态：`pending human review`
-日期：2026-08-05
-目标：max 逐项审核 9 个 Sector + 51 家 Pilot Core Company 实体后，通过
-`research-os review apply --decision approve` 转 `reviewed`。自动测试不能替代本验收。
+状态：`passed`（max 2026-08-05 全部 approve：9 Sector + 51 Company → reviewed）
+
+审核记录：9 个 Sector 一个 REV 决策；51 家 Company 按 8 环节分 8 个 REV 决策。
+所有实体 `review_status: reviewed`，0 pending。REV 决策落盘
+`05_Research/Reviews/Decisions/REV-20260805-001..009`。
 
 ## 使用方法
 

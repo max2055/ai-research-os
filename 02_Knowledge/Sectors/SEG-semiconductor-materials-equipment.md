@@ -3,11 +3,11 @@ id: SEG-semiconductor-materials-equipment
 type: sector
 title: "Semiconductor Materials & Equipment"
 created_at: 2026-08-05
-updated_at: 2026-08-05
+updated_at: '2026-08-05'
 schema_version: 2
 project_ids: []
 status: active
-review_status: pending
+review_status: reviewed
 tags: []
 definition: "Wafer materials, photoresist, gases, EDA, lithography, etch, deposition, inspection equipment"
 in_scope: [wafer, photoresist, gas, EDA, lithography, etch, deposition, inspection]

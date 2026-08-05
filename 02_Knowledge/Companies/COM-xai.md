@@ -3,17 +3,17 @@ id: COM-xai
 type: company
 title: "xAI"
 created_at: 2026-08-05
-updated_at: 2026-08-05
+updated_at: '2026-08-05'
 schema_version: 2
 project_ids: []
 status: active
-review_status: pending
+review_status: reviewed
 tags: []
 aliases: []
 sector_ids: [SEG-models]
 region_primary: REG-us
 coverage_tier: core
-legal_name: 
+legal_name:
 company_stage: private
 headquarters: "San Francisco, CA, USA"
 key_metric_ids: []

@@ -3,11 +3,11 @@ id: SEG-datacenter-infrastructure
 type: sector
 title: "Datacenter Infrastructure"
 created_at: 2026-08-05
-updated_at: 2026-08-05
+updated_at: '2026-08-05'
 schema_version: 2
 project_ids: []
 status: active
-review_status: pending
+review_status: reviewed
 tags: []
 definition: "Power, cooling, UPS, energy, datacenter construction"
 in_scope: [power, cooling, UPS, energy, construction]

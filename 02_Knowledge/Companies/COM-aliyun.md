@@ -3,17 +3,17 @@ id: COM-aliyun
 type: company
 title: "Alibaba Cloud (阿里云)"
 created_at: 2026-08-05
-updated_at: 2026-08-05
+updated_at: '2026-08-05'
 schema_version: 2
 project_ids: []
 status: active
-review_status: pending
+review_status: reviewed
 tags: []
 aliases: []
 sector_ids: [SEG-cloud-ai-infrastructure]
 region_primary: REG-cn
 coverage_tier: core
-legal_name: 
+legal_name:
 company_stage: subsidiary
 headquarters: "Hangzhou, China"
 key_metric_ids: []

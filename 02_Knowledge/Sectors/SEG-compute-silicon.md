@@ -3,11 +3,11 @@ id: SEG-compute-silicon
 type: sector
 title: "Compute Silicon"
 created_at: 2026-08-05
-updated_at: 2026-08-05
+updated_at: '2026-08-05'
 schema_version: 2
 project_ids: []
 status: active
-review_status: pending
+review_status: reviewed
 tags: []
 definition: "GPU, AI ASIC, CPU, edge accelerators"
 in_scope: [GPU, ASIC, CPU, edge-accelerator]
