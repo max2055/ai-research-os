@@ -2,7 +2,7 @@
 
 Proposal ID：RCP-v03-003
 
-状态：proposed（草案由 Agent 整理，人工批准前不生效）
+状态：approved（2026-08-05，reviewer：max）
 
 创建日期：2026-08-05
 
@@ -82,24 +82,25 @@ Proposal ID：RCP-v03-003
 
 ## Human decision
 
-本 RCP 集中以下人审点（每项 default 已在 Evidence/Proposed change 标注，待 max 批准或修改）：
+本 RCP 集中以下 7 项人审点（reviewer：max，2026-08-05，全部采纳默认）：
 
-1. 启用 `schema_version=2`（v0.2 保持 1，无损读取）
-2. 5 个 Phase 0-1 实体 Schema 字段确认（Sector/Security/Product/Technology/Metric）
-3. Company v0.3 扩展 optional + 不回填（R1）
-4. 14 新前缀认定 + parser 歧义处理 D1–D7
-5. Company 与 Security 分离 (`security_ids` 引用)
-6. Migration 顺序 MIG-001→002→003
-7. 禁用单段 `MOD-` 作 Model（防与 `MOD-ANL-` 歧义）
+1. ✅ 启用 `schema_version=2`：新实体用 2，v0.2 对象（含 8 个 Company）保持 1 不强制升级，无损读取
+2. ✅ 5 个 Phase 0-1 实体 Schema 字段全确认（Sector/Security/Product/Technology/Metric，详见 A-005）
+3. ✅ Company v0.3 扩展 optional + 不回填（R1），人工逐对象升级
+4. ✅ 14 新前缀认定 + parser 歧义处理 D1–D7（A-006 §5）
+5. ✅ Company 与 Security 分离，Company 通过 `security_ids` 引用 Security 实体
+6. ✅ Migration 顺序 MIG-001→(WP-102)→002→003
+7. ✅ 禁用单段 `MOD-` 作 Model 前缀，需时另起新前缀（v0.2 无 `MOD-` 对象）
 
-- Decision：（待 max 批准生效）
-- Reviewer：（待填，建议 max）
-- Date：（待填）
-- Reason：（待填）
+- Decision：批准（accept RCP-v03-003 as drafted，7 项人审点全部采纳默认）
+- Reviewer：max
+- Date：2026-08-05
+- Reason：A-005/006/007 齐备且与 Taxonomy v2（RCP-v03-002）/R1–R5/地区范围约束（D-REGION-SCOPE）一致；
+  7 项人审点经 reviewer 逐项确认采纳默认方案。
 
 ## Implementation record
 
-- Changed files：批准后记录（A-005 转 authoritative、A-006/A-007 方案生效、WP-102 起落地）
-- Test result：批准后由 WP-102 实现并运行
-- Validation result：`research-os validate` 0 errors（批准前后一致，因无对象变更）
-- Effective date：批准后记录（MIG-v0.3-001 注册 Schema 起按 WP-102 落地）
+- Changed files：本文件（proposed → approved）；A-005 转 authoritative（建议在 schema 文档头部标注，由后续提交统一改）；生效后由 WP-102 起落地 Pydantic schemas、validator、ID parser、index 接入、migration 代码
+- Test result：not run（本 RCP 为治理边界批准，无代码变更；测试在 WP-102 落地后运行）
+- Validation result：`research-os validate` 0 errors / 0 warnings（批准前后一致，因无对象变更）
+- Effective date：2026-08-05（批准即生效；MIG-v0.3-001 注册 Schema 由 WP-102 起落地）

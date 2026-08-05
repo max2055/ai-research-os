@@ -1,6 +1,6 @@
 # Metadata Schema v0.3 提案（A-005）
 
-状态：`proposed / pending RCP-v03-003 approval`
+状态：`approved / authoritative`（RCP-v03-003 批准，reviewer：max，2026-08-05）
 创建日期：2026-08-05
 工作包：WP-101 / A-005（Schema 提案草稿，不落地代码）
 依赖：`Metadata_Schema.md`（v0.2）、`02_Phase_0_1_Ontology_and_Universe.md` §4、`Taxonomy_v2_Proposal.md`（RCP-v03-002 approved）、地区范围约束（D-REGION-SCOPE）

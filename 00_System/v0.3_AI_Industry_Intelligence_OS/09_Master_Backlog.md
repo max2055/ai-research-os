@@ -325,3 +325,14 @@ Revisit trigger/date:
 - Reviewer: max（待最终审批）
 - Revisit trigger/date: max 批准 RCP-v03-003 时转 approved；WP-102 实现遇架构问题提修改。
 
+#### 批准 RCP-v03-003（2026-08-05）
+
+- Decision ID: RCP-v03-003-approval
+- Date: 2026-08-05
+- Decision: 批准 RCP-v03-003（proposed → approved）。新实体 Schema 与永久 ID 体系生效：5 个 Phase 0-1 实体（Sector/Security/Product/Technology/Metric）Schema 字段、14 新前缀 + parser 歧义处理 D1–D7、schema_version=2 启用（v0.2 保持 1 无损读取）、Company v0.3 扩展 optional 不回填（R1）、Company 与 Security 分离（security_ids 引用）、Migration 顺序 MIG-001→WP-102→002→003、禁用单段 `MOD-` 作 Model 前缀。
+- Reason: 7 项人审点经 max 逐项确认采纳默认；A-005/006/007 与 Taxonomy v2/R1–R5/地区约束一致。
+- Effective date: 2026-08-05（MIG-v0.3-001 注册 Schema 由 WP-102 起落地）。
+- Consequences: Metadata_Schema_v0.3_Proposal 转 authoritative；v0.2 Metadata_Schema 仍存作历史参考；WP-102 起进入代码实现（Pydantic schemas + validator + ID parser + index + migration）。不创建任何实体（实体创建属后续 WP-120，需人工席位审）。
+- Reviewer: max
+- Revisit trigger/date: WP-102 实现遇架构问题；任一新实体 Schema 字段实施遇阻时提修改 RCP。
+
