@@ -37,17 +37,18 @@ v0.3 引入：
 
 ### MIG-v0.3-001：引入 schema_version=2 与新实体 Schema
 
-- **范围**：注册 Sector/Security/Product/Technology/Metric 五个 Schema 到
-  `src/research_os/schemas/` 与 `registry.py`；新增 Pydantic 模型与 ID parser（A-006 §5）。
+- **状态：done**（WP-102，commit 见实施记录；RCP-v03-003 approved 2026-08-05）
+- **范围**：Sector/Security/Product/Technology/Metric 五个 Schema 已注册到
+  `src/research_os/schemas/` 与 `registry.py`；ID parser 歧义 D1–D7 在 schema 层
+  表达（正则/注释）；`ManagedObjectSchema.schema_version` 放宽为 `Literal[1, 2]`
+  （v0.2 对象仍为 1，无损读取；v0.3 实体为 2）。
 - **不创建实体**：只注册 Schema；实体创建由 WP-120 手动 / 工具手动新建。
-- **兼容**：v0.2 reader 继续接受 `schema_version=1`；v0.2 Company 不强制升级。
-- **验证**：v0.2 全部 166 对象仍 validate 通过；98 测试不退化；新增"v0.2 Company
-  round-trip"测试。
-- **dry-run/apply**：`research-os migrate MIG-v0.3-001 --dry-run` 校验依赖；
-  `--apply` 注册 Schema（多数是代码层，不改 Markdown）。
-- **backup**：Git commit baseline + `02_Knowledge` 对象 hash manifest（按 v0.2 实践）。
-- **rollback**：回退 registry 与 schema 文件到 v0.2；新 Schema 已创建的实体（若有）
-  挂为 pending 但不删除——migration 只回退代码，不删数据。
+- **no-op 迁移**：`RegisterV03SchemasMigration`（`MIG-v0.3-001-register-v0.3-schemas`）
+  为文档化 no-op——注册 Schema 是代码级变更，无 Markdown 对象被改动，无 backup
+  需求；回滚 = 回退注册 commit，无数据需恢复。
+- **验证**：v0.2 全部 166 对象仍 validate 通过；111 测试通过（98 既有 + 13 新增）；
+  v0.2 Company round-trip 测试覆盖；coverage 84.77% ≥ 80% Gate；ruff/mypy pass。
+- **dry-run/apply**：不适用（无 Markdown 变更）。
 
 ### MIG-v0.3-002：Company 可选字段升级
 

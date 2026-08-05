@@ -63,3 +63,18 @@ Updated: 2026-07-30
 The M6 synthetic baseline passes at 1,000 Sources and 500 Events. A permanent
 database, graph store or vector index should only be reconsidered after a measured
 query bottleneck or a stable high-frequency relationship-query requirement.
+
+## v0.3 schema registration status
+
+- The five v0.3 entity schemas (Sector/Security/Product/Technology/Metric) are
+  registered in the codebase (WP-102, RCP-v03-003 approved) but **no entities
+  exist yet** — the repository still holds 166 v0.2 objects of the original 8
+  types. Sector/Company entities will be created in batches starting WP-120,
+  per the region scope (D-REGION-SCOPE: CN/US AI firms primary, other regions
+  as key-node补充).
+- v0.2 Company objects remain at schema_version=1 and are not backfilled
+  (R1); v0.3 extension fields (region_primary, sector_ids, security_ids, ...)
+  are populated per-object by humans during WP-120.
+- Security/Product/Technology/Metric entity indexes and CLI commands
+  (`research-os universe ...`) are not yet wired; they arrive with entity
+  creation (WP-120) and later phases.
