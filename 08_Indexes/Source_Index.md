@@ -48,3 +48,4 @@
 | SRC-20260805-040 | NVIDIA 10-Q filing 2026-05-20 (FY26 Q1) | earnings | NVIDIA CORP (SEC EDGAR) | A | processed | reviewed |
 | SRC-20260805-041 | TSMC 20-F annual report 2025 (filed 2026-04-16) | earnings | TAIWAN SEMICONDUCTOR MFG (SEC EDGAR) | A | processed | reviewed |
 | SRC-20260805-042 | ASML 20-F annual report 2025 (filed 2026-02-25) | earnings | ASML HOLDING NV (SEC EDGAR) | A | processed | reviewed |
+| SRC-20260805-043 | SK Group and NVIDIA Expand Strategic Partnership Across AI Factories and Next-Generation Memory | other | SK hynix IR | B | processed | reviewed |
