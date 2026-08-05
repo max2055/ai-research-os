@@ -46,9 +46,7 @@
 | [[REL-20260805-032]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-033]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-034]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-036]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-037]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-038]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-039]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-040]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-041]] | ontology_assertion | 2026-08-05 |
@@ -230,9 +228,7 @@
 | [[REL-20260805-218]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-219]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-220]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-223]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-224]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-225]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-226]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-227]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-228]] | ontology_assertion | 2026-08-05 |

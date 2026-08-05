@@ -34,6 +34,7 @@
 | EVT-20260610-007 | 2026-06-10 | Oracle AI 基础设施增长伴随高资本开支，云应用增速较低 | THS-004 | 0.90 | reviewed |
 | EVT-20260611-008 | 2026-06-11 | SAP 将 Joule 引入客户门户以替代部分点击和搜索 | THS-001, THS-003, THS-004 | 0.80 | reviewed |
 | EVT-20260714-009 | 2026-07-14 | Oracle 将 Agentic Applications 放入 Fusion 原生运行时 | THS-002, THS-004, THS-005 | 0.90 | reviewed |
+| EVT-20260716-037 | 2026-07-16 | TSMC 2Q26: advanced-node (3nm/5nm) 63% of revenue, strong leading-edge demand |  | 0.75 | reviewed |
 | EVT-20260722-010 | 2026-07-22 | ServiceNow 披露 AI ACV 超过十亿美元及 Agentic 部署增长 | THS-002, THS-004, THS-005 | 0.90 | reviewed |
 | EVT-20260723-011 | 2026-07-23 | SAP 云业务增长但未独立披露 Agent 收入 | THS-004 | 0.90 | reviewed |
 | EVT-20260725-035 | 2026-07-25 | SK hynix and NVIDIA establish long-term AI memory (HBM) partnership |  | 0.80 | reviewed |
