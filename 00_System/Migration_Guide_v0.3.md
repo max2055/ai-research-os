@@ -63,12 +63,12 @@ v0.3 引入：
 
 ### MIG-v0.3-003：Universe Sector 实体入驻（WP-120 触发，人工批）
 
-- **范围**：创建首批 13 个 L1 Sector SEG-ID + 与 Taxonomy v2 对齐的子扇区。
-- **触发**：属 WP-120（Pilot Universe），需 RCP-v03-003 批准 + 人工确认 SEG-slug 拼写
-  与核心公司席位（按 D-REGION-SCOPE 优先中美）。
-- **不回填**：不将历史对象 INF-* tag 自动转为 sector_ids；新对象引用新 Sector。
-- **备份**：Git commit + 实体 hash manifest + Universe export snapshot。
-- **rollback**：删除新建 Sector + 重建 index（派生 index 可直接重建，Phase 0-1 §11）。
+- **状态：done**（WP-120，2026-08-05）
+- **范围**：创建 9 个 L1 Sector SEG-ID（Compute Chain 8 环节 + enterprise-applications）+ 51 家 Pilot Core Company + 8 家 v0.2 Company 补 v0.3 扩展字段。
+- **席位审**：名单由 max 逐环节拍板（D-REGION-SCOPE：中美优先，非中美关键节点如 ASML/TSMC/SK hynix 入 Core 理由在 company body）。
+- **不回填（R1）**：v0.2 历史 tag 未动；只新增 `sector_ids/region_primary/coverage_tier` 字段。
+- **备份**：Git commit + 实体 hash manifest。
+- **rollback**：删除新建 Sector/Company + 重建 index（派生 index 可直接重建，Phase 0-1 §11）。
 
 ### MIG-v0.3-004：Taxonomy.md 标注 superseded（已完成，非代码 migration）
 

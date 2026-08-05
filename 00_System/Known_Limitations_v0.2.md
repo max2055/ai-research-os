@@ -67,14 +67,17 @@ query bottleneck or a stable high-frequency relationship-query requirement.
 ## v0.3 schema registration status
 
 - The five v0.3 entity schemas (Sector/Security/Product/Technology/Metric) are
-  registered in the codebase (WP-102, RCP-v03-003 approved) but **no entities
-  exist yet** — the repository still holds 166 v0.2 objects of the original 8
-  types. Sector/Company entities will be created in batches starting WP-120,
-  per the region scope (D-REGION-SCOPE: CN/US AI firms primary, other regions
-  as key-node补充).
-- v0.2 Company objects remain at schema_version=1 and are not backfilled
-  (R1); v0.3 extension fields (region_primary, sector_ids, security_ids, ...)
-  are populated per-object by humans during WP-120.
-- Security/Product/Technology/Metric entity indexes and CLI commands
-  (`research-os universe ...`) are not yet wired; they arrive with entity
-  creation (WP-120) and later phases.
+  registered (WP-102, RCP-v03-003 approved). **WP-120 has created 9 Sector
+  entities and 51 Pilot Core Company entities** (Compute Chain), plus v0.3
+  extension fields on the 8 v0.2 Companies. The repository now holds 225
+  formal objects across 10 types.
+- v0.2 Company objects remain at schema_version=1; v0.3 extension fields
+  (region_primary, sector_ids, coverage_tier) were added as new fields only —
+  historical tags were not rewritten (R1).
+- All new entities start `review_status: pending`; human review (via `review
+  apply`) is required before any entity becomes `reviewed`. None are approved
+  yet.
+- Security/Product/Technology/Metric entities do not exist yet; their indexes
+  and CLI commands (`research-os universe ...`) arrive in later WPs.
+- Sector IDs and Company IDs in `core_company_ids` / `sector_ids` are format-
+  validated but cross-object reference integrity is enforced in WP-103.

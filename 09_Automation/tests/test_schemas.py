@@ -35,11 +35,12 @@ class SchemaTests(unittest.TestCase):
         self.assertEqual(
             {
                 "action": 12,
-                "company": 8,
+                "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 31,
                 "project": 2,
                 "report": 2,
                 "review": 64,
+                "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "source": 39,
                 "thesis": 8,
             },
