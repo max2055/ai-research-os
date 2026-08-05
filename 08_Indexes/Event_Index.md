@@ -45,3 +45,4 @@
 | EVT-20260729-013 | 2026-07-29 | ServiceNow 以 Agent Fabric、Control Tower 和 Otto 争夺控制层 | THS-002, THS-005 | 0.85 | reviewed |
 | EVT-20260729-014 | 2026-07-29 | Palantir Foundry Agents 通过 Ontology 与范围化权限读写企业环境 | THS-002, THS-005 | 0.85 | reviewed |
 | EVT-20260729-015 | 2026-07-29 | OpenAI Workspace Agents 进入企业工作流预览 | THS-004, THS-005 | 0.80 | reviewed |
+| EVT-20260731-040 | 2026-07-31 | AWS and OpenAI expand $38B commitment by $100B over 8 years (AWS chips) |  | 0.85 | reviewed |

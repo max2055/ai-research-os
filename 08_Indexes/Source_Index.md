@@ -54,3 +54,4 @@
 | SRC-20260805-047 | TSMC 2Q26 Earnings Press Release (with guidance) | earnings | TSMC (SEC EDGAR exhibit) | A | processed | reviewed |
 | SRC-20260805-048 | NVIDIA FY27 Q1 CFO Commentary | earnings | NVIDIA CORP (SEC EDGAR exhibit) | A | processed | reviewed |
 | SRC-20260805-049 | Microsoft 10-Q FY26 Q3 (filed 2026-04-29) | earnings | MICROSOFT CORP (SEC EDGAR) | A | processed | reviewed |
+| SRC-20260805-050 | Amazon 10-Q Q2 2026 (filed 2026-07-31) | earnings | AMAZON.COM INC (SEC EDGAR) | A | processed | reviewed |
