@@ -114,6 +114,23 @@ class SourceProvenanceMigration:
         return editable.render()
 
 
+@dataclass(frozen=True)
+class RegisterV03SchemasMigration:
+    """MIG-v0.3-001: register v0.3 entity schemas (RCP-v03-003).
+
+    Registering Sector/Security/Product/Technology/Metric schemas is a
+    code-level change only (schemas/registry.py); no Markdown object is
+    touched. The migration is a documented no-op so the migration log records
+    "no object changed" explicitly, preserving traceability. Rollback = revert
+    the schema-registration commit; no data to restore.
+    """
+
+    migration_id: str = "MIG-v0.3-001-register-v0.3-schemas"
+
+    def render(self, document: MarkdownDocument) -> str:
+        return document.original_text
+
+
 class MigrationEngine:
     def __init__(
         self,

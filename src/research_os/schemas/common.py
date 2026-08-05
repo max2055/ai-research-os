@@ -51,7 +51,7 @@ class ManagedObjectSchema(BaseModel):
     title: str
     created_at: DateString
     updated_at: DateString | None = None
-    schema_version: Literal[1]
+    schema_version: Literal[1, 2]  # 1 = v0.2 objects; 2 = v0.3 entities (RCP-v03-003)
     project_ids: list[str]
     tags: list[str] = Field(default_factory=list)
 
