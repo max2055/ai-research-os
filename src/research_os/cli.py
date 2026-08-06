@@ -261,6 +261,25 @@ def parse_args() -> argparse.Namespace:
         help="compliant User-Agent (Name Contact@email); required for sec.gov",
     )
     candidates_promote.add_argument("--apply", action="store_true")
+    candidates_dismiss = candidates_commands.add_parser(
+        "dismiss", help="dismiss a candidate with a reason (B-020)"
+    )
+    candidates_dismiss.add_argument("--id", required=True)
+    candidates_dismiss.add_argument("--reason", required=True)
+    candidates_dismiss.add_argument("--actor", required=True)
+    candidates_dismiss.add_argument("--apply", action="store_true")
+    candidates_restore = candidates_commands.add_parser(
+        "restore", help="return a dismissed/expired candidate to the queue"
+    )
+    candidates_restore.add_argument("--id", required=True)
+    candidates_restore.add_argument("--actor", required=True)
+    candidates_restore.add_argument("--apply", action="store_true")
+    candidates_expire = candidates_commands.add_parser(
+        "expire", help="mark candidates past retention as expired (B-020)"
+    )
+    candidates_expire.add_argument("--channel", help="limit to one source channel")
+    candidates_expire.add_argument("--as-of", default="")
+    candidates_expire.add_argument("--apply", action="store_true")
     candidates_enrich = candidates_commands.add_parser(
         "enrich",
         help="backfill entity/sector/score proposals for unscored candidates",
@@ -827,6 +846,34 @@ def main() -> int:
                     f"{promote_result['source_id']} "
                     f"(action {promote_result['action_id']})"
                 )
+                return 0
+            if args.candidates_command == "dismiss":
+                triage_result = runtime.dismiss_candidate(
+                    args.root.resolve(),
+                    args.id,
+                    actor=args.actor,
+                    reason=args.reason,
+                    apply=args.apply,
+                )
+                print(runtime.render_triage_result(triage_result), end="")
+                return 0
+            if args.candidates_command == "restore":
+                triage_result = runtime.restore_candidate(
+                    args.root.resolve(),
+                    args.id,
+                    actor=args.actor,
+                    apply=args.apply,
+                )
+                print(runtime.render_triage_result(triage_result), end="")
+                return 0
+            if args.candidates_command == "expire":
+                triage_result = runtime.expire_candidates(
+                    args.root.resolve(),
+                    channel_id=args.channel,
+                    as_of=args.as_of or None,
+                    apply=args.apply,
+                )
+                print(runtime.render_triage_result(triage_result), end="")
                 return 0
             enriched = runtime.enrich_candidates(
                 args.root.resolve(),

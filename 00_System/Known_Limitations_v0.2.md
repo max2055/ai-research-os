@@ -230,3 +230,16 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   入。**172 tests (+5)。WP-230 剩余: B-020 dismiss/expire/restore。已知局限：
   promote 是权威仓库写入，须人工 --apply；capture 失败/无 URL 候选拒绝；
   crash 窗口（文件已提交、candidate 未链接）靠去重阻断重试，需人工 resolve。**
+- **B-020 dismiss/expire/restore 完成 + WP-230 全部完成 (2026-08-06)**:
+  `src/research_os/services/triage.py`（append-only action 状态机）。`candidates
+  dismiss --id --reason --actor [--apply]`（→ dismissed，reason 必填）、
+  `candidates restore --id --actor [--apply]`（dismissed/expired → new）、
+  `candidates expire [--channel --as-of --apply]`（batch retention sweep：
+  按 channel retention_days 默认 30d，actor=system）。全部动作只追加
+  candidate_actions 审计行，**不物理删除审计历史**；promoted 拒 dismiss；
+  restore 二次恢复拒。真实验证：dry-run dismiss/expire 正确、0 写入。
+  **179 tests (+7)。WP-230（B-018～020）全部 completed。已知局限：ADR §3
+  retention 的"dismissed/expired 立即清理（物理删除候选行）"未实现——需先
+  处理 candidate_actions FK 与审计保留的关系（schema 决策），留待 retention
+  sweep（B-021 runbook 配套）。下一个: B-021 launchd runbook / B-022 Daily
+  Brief。**

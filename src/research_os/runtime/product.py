@@ -90,6 +90,12 @@ from research_os.services.reviews import (
     review_queue,
 )
 from research_os.services.status import render_status
+from research_os.services.triage import (
+    dismiss_candidate,
+    expire_candidates,
+    render_triage_result,
+    restore_candidate,
+)
 from research_os.services.validation import count_by_type, validate_repository
 from research_os.services.workflow import (
     EventDraftSpec,
@@ -145,6 +151,10 @@ __all__ = [
     "render_candidate_detail",
     "render_candidate_list",
     "render_enrichment",
+    "dismiss_candidate",
+    "expire_candidates",
+    "render_triage_result",
+    "restore_candidate",
     "queue_rows",
     "queue_show",
     "render_indexes",
