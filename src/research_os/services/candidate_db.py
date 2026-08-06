@@ -159,3 +159,123 @@ def rollback_migrations(path: Path, to_version: int = 0) -> None:
         raise TransactionError(f"candidate rollback failed: {exc}") from exc
     finally:
         connection.close()
+
+
+def insert_candidates(
+    path: Path,
+    candidates: list[dict[str, object]],
+    channel_id: str,
+    discovered_at: str,
+) -> int:
+    """Insert discovery candidates into the operational store."""
+    if current_version(path) == 0:
+        apply_migrations(path)
+    connection = _connect(path)
+    inserted = 0
+    try:
+        connection.executescript("BEGIN")
+        for candidate in candidates:
+            cursor = connection.execute(
+                "INSERT OR IGNORE INTO candidates ("
+                "candidate_id, channel_id, discovered_at, published_at_proposal, "
+                "title, canonical_url, publisher, content_fingerprint, snippet, "
+                "language, fetch_status, status, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', 'new', ?)",
+                (
+                    str(candidate["candidate_id"]),
+                    channel_id,
+                    discovered_at,
+                    candidate.get("published_at_proposal"),
+                    str(candidate["title"]),
+                    candidate.get("canonical_url"),
+                    candidate.get("publisher"),
+                    candidate.get("content_fingerprint"),
+                    candidate.get("snippet"),
+                    candidate.get("language"),
+                    discovered_at,
+                ),
+            )
+            inserted += cursor.rowcount
+        connection.commit()
+    except sqlite3.Error as exc:
+        connection.rollback()
+        raise TransactionError(f"candidate insert failed: {exc}") from exc
+    finally:
+        connection.close()
+    return inserted
+
+
+def record_discovery_run(
+    path: Path,
+    run_id: str,
+    channel_id: str,
+    started_at: str,
+    *,
+    candidate_count: int = 0,
+    http_errors: int = 0,
+    parse_errors: int = 0,
+    retries: int = 0,
+    software_version: str = "",
+    status: str = "succeeded",
+    finished_at: str | None = None,
+) -> None:
+    if current_version(path) == 0:
+        apply_migrations(path)
+    connection = _connect(path)
+    try:
+        connection.execute(
+            "INSERT INTO discovery_runs (run_id, channel_id, started_at, "
+            "finished_at, candidate_count, http_errors, parse_errors, retries, "
+            "software_version, status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                run_id,
+                channel_id,
+                started_at,
+                finished_at or started_at,
+                candidate_count,
+                http_errors,
+                parse_errors,
+                retries,
+                software_version,
+                status,
+            ),
+        )
+        connection.commit()
+    except sqlite3.Error as exc:
+        connection.rollback()
+        raise TransactionError(f"discovery run insert failed: {exc}") from exc
+    finally:
+        connection.close()
+
+
+def list_candidates(
+    path: Path,
+    *,
+    status: str = "new",
+    limit: int = 50,
+) -> list[dict[str, object]]:
+    if not path.exists():
+        return []
+    connection = _connect(path)
+    try:
+        rows = connection.execute(
+            "SELECT candidate_id, channel_id, title, canonical_url, "
+            "published_at_proposal, status, created_at "
+            "FROM candidates WHERE status = ? ORDER BY created_at DESC LIMIT ?",
+            (status, limit),
+        ).fetchall()
+        return [
+            {
+                "candidate_id": row[0],
+                "channel_id": row[1],
+                "title": row[2],
+                "canonical_url": row[3],
+                "published_at_proposal": row[4],
+                "status": row[5],
+                "created_at": row[6],
+            }
+            for row in rows
+        ]
+    finally:
+        connection.close()

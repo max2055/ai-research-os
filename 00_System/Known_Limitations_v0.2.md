@@ -175,3 +175,10 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   `09_Automation/Channel_Trial_Run_20260806.md`。**发现 WP-210 adapters
   （discovery.py）已实现，B-007 discovery service 未实现。下一个: B-007
   （discovery service 写 Candidate DB）+ B-014（dedup）。**
+- **B-007 discovery service 完成 (2026-08-06)**: `src/research_os/services/
+  discovery.py`（Channel→adapter 自动映射 + preflight 守卫 reviewed/enabled/
+  restricted + 写 Candidate DB candidates/discovery_runs）+ `discover run/due`
+  CLI。WP-201 全部完成。真实试跑：SK hynix RSS 10 候选、arXiv 20 候选写入
+  Candidate DB。修复 insert_candidates 计数 bug（total_changes→rowcount）。
+  **重复候选未去重（同公告多 URL 变体）→ B-014 dedup 是下一个核心。**
+  **137 tests。下一个: B-014（dedup）或 B-017（scoring）或 B-018（Queue CLI）。**

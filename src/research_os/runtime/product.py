@@ -13,6 +13,10 @@ from research_os.services.channels import (
     render_channel_list,
     set_channel_enabled,
 )
+from research_os.services.discovery import (
+    render_discovery_result,
+    run_discovery,
+)
 from research_os.services.drafts import (
     apply_event_draft,
     prepare_assertion_draft,
@@ -117,6 +121,8 @@ __all__ = [
     "render_channel_check",
     "render_channel_list",
     "set_channel_enabled",
+    "render_discovery_result",
+    "run_discovery",
     "render_indexes",
     "render_impact",
     "render_metrics_comparison",

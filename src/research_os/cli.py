@@ -197,6 +197,19 @@ def parse_args() -> argparse.Namespace:
     export.add_argument("--format", choices=("jsonl", "sqlite"), required=True)
     export.add_argument("--output", type=Path)
     export.add_argument("--apply", action="store_true")
+    discover = subparsers.add_parser(
+        "discover", help="run bounded discovery for a Channel (B-007)"
+    )
+    discover_commands = discover.add_subparsers(dest="discover_command", required=True)
+    discover_run = discover_commands.add_parser(
+        "run", help="run discovery for one Channel"
+    )
+    discover_run.add_argument("--channel", required=True)
+    discover_run.add_argument("--apply", action="store_true")
+    discover_due = discover_commands.add_parser(
+        "due", help="list channels due for discovery"
+    )
+    discover_due.add_argument("--as-of", default="")
     impact = subparsers.add_parser("impact", help="show ontology relationships")
     impact.add_argument("--id", required=True)
     impact.add_argument("--depth", type=int, default=1)
@@ -632,6 +645,30 @@ def main() -> int:
                 print(runtime.render_metrics_markdown(values), end="")
             return 0
         except (FileExistsError, OSError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
+
+    if args.command == "discover":
+        try:
+            if args.discover_command == "run":
+                discovery_result = runtime.run_discovery(
+                    args.root.resolve(),
+                    args.channel,
+                    apply=args.apply,
+                )
+                print(runtime.render_discovery_result(discovery_result), end="")
+                return 0
+            if args.discover_command == "due":
+                channels = runtime.channel_rows(args.root.resolve())
+                for channel in channels:
+                    if (
+                        channel["review_status"] == "reviewed"
+                        and channel["enabled"]
+                        and channel["license_status"] != "restricted"
+                    ):
+                        print(channel["id"])
+                return 0
+        except (ValueError, OSError) as exc:
             print(f"ERROR: {exc}")
             return 2
 
