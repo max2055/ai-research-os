@@ -20,8 +20,8 @@ Decision date:
 - Final human-approved Reports: 1/1
   (`RPT-20260730-ai-coding-agent-value-chain-v0-1`,
   `REV-20260730-064`).
-- Completed Weekly reviews: 0/2.
-- Completed Monthly reviews: 0/1.
+- Completed Weekly reviews: 1/2（WK-20260806，max 2026-08-06）。
+- Completed Monthly reviews: 0/1。
 - M4 field accuracy Gate: passed — 10/10 Sources and 23/23 Fact anchors.
 - Encrypted Source-asset clean-clone recovery: passed for 12 Sources / 48 files.
 

@@ -1,0 +1,199 @@
+{
+  "as_of": "2026-08-06",
+  "evidence_quality": {
+    "average_sources_per_event": 1.1458,
+    "event_source_links": 55,
+    "events_without_thesis_links": 17,
+    "review_decisions": {
+      "approve": 15,
+      "reject": 0
+    }
+  },
+  "knowledge_and_reports": {
+    "companies_with_reviewed_evidence": 8,
+    "company_coverage_rate": 0.1356,
+    "final_reviewed_reports": 2
+  },
+  "object_counts": {
+    "company": {
+      "pending": 0,
+      "rejected": 0,
+      "reviewed": 59,
+      "superseded": 0,
+      "total": 59
+    },
+    "event": {
+      "pending": 0,
+      "rejected": 0,
+      "reviewed": 48,
+      "superseded": 0,
+      "total": 48
+    },
+    "report": {
+      "pending": 0,
+      "rejected": 0,
+      "reviewed": 2,
+      "superseded": 0,
+      "total": 2
+    },
+    "source": {
+      "pending": 0,
+      "rejected": 0,
+      "reviewed": 55,
+      "superseded": 0,
+      "total": 55
+    },
+    "thesis": {
+      "pending": 3,
+      "rejected": 0,
+      "reviewed": 5,
+      "superseded": 0,
+      "total": 8
+    }
+  },
+  "project_id": null,
+  "review_queue_total": 219,
+  "schema_version": 1,
+  "source_quality": {
+    "archived": 52,
+    "conversion_rate": 0.9455,
+    "grades": {
+      "A": 40,
+      "B": 14,
+      "C": 1,
+      "D": 0
+    },
+    "pending_sources_used_by_reviewed_events": 0,
+    "processed": 52,
+    "unused": 3,
+    "used_by_event": 52
+  },
+  "state": {
+    "reviewed_event_ids": [
+      "EVT-20240226-043",
+      "EVT-20240530-028",
+      "EVT-20250710-022",
+      "EVT-20250713-024",
+      "EVT-20250729-020",
+      "EVT-20250820-016",
+      "EVT-20250923-021",
+      "EVT-20251002-017",
+      "EVT-20251106-018",
+      "EVT-20260219-001",
+      "EVT-20260224-023",
+      "EVT-20260225-002",
+      "EVT-20260225-034",
+      "EVT-20260302-041",
+      "EVT-20260302-047",
+      "EVT-20260302-048",
+      "EVT-20260316-042",
+      "EVT-20260406-019",
+      "EVT-20260415-003",
+      "EVT-20260416-033",
+      "EVT-20260429-004",
+      "EVT-20260429-031",
+      "EVT-20260429-039",
+      "EVT-20260429-046",
+      "EVT-20260506-025",
+      "EVT-20260513-029",
+      "EVT-20260514-005",
+      "EVT-20260514-026",
+      "EVT-20260520-032",
+      "EVT-20260520-038",
+      "EVT-20260521-006",
+      "EVT-20260601-044",
+      "EVT-20260605-030",
+      "EVT-20260607-027",
+      "EVT-20260610-007",
+      "EVT-20260611-008",
+      "EVT-20260714-009",
+      "EVT-20260716-037",
+      "EVT-20260722-010",
+      "EVT-20260723-011",
+      "EVT-20260725-035",
+      "EVT-20260728-036",
+      "EVT-20260729-012",
+      "EVT-20260729-013",
+      "EVT-20260729-014",
+      "EVT-20260729-015",
+      "EVT-20260731-040",
+      "EVT-20260804-045"
+    ]
+  },
+  "system_health": {
+    "index_drift_files": 0,
+    "validation_errors": 0,
+    "validation_warnings": 0
+  },
+  "thesis_health": {
+    "average_confidence": 0.2612,
+    "items": [
+      {
+        "confidence": 0.29,
+        "contradicting": 2,
+        "id": "THS-001",
+        "review_date": "2026-07-30",
+        "review_status": "reviewed",
+        "supporting": 1
+      },
+      {
+        "confidence": 0.4,
+        "contradicting": 1,
+        "id": "THS-002",
+        "review_date": "2026-07-29",
+        "review_status": "reviewed",
+        "supporting": 4
+      },
+      {
+        "confidence": 0.28,
+        "contradicting": 1,
+        "id": "THS-003",
+        "review_date": "2026-07-29",
+        "review_status": "reviewed",
+        "supporting": 1
+      },
+      {
+        "confidence": 0.4,
+        "contradicting": 2,
+        "id": "THS-004",
+        "review_date": "2026-07-29",
+        "review_status": "reviewed",
+        "supporting": 4
+      },
+      {
+        "confidence": 0.32,
+        "contradicting": 2,
+        "id": "THS-005",
+        "review_date": "2026-07-30",
+        "review_status": "reviewed",
+        "supporting": 4
+      },
+      {
+        "confidence": 0.15,
+        "contradicting": 0,
+        "id": "THS-006",
+        "review_date": null,
+        "review_status": "pending",
+        "supporting": 0
+      },
+      {
+        "confidence": 0.15,
+        "contradicting": 0,
+        "id": "THS-007",
+        "review_date": null,
+        "review_status": "pending",
+        "supporting": 0
+      },
+      {
+        "confidence": 0.1,
+        "contradicting": 0,
+        "id": "THS-008",
+        "review_date": null,
+        "review_status": "pending",
+        "supporting": 0
+      }
+    ],
+    "without_contradicting": 3,
+    "without_supporting": 3
+  }
+}

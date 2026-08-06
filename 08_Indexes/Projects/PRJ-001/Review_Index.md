@@ -2,7 +2,7 @@
 
 <!-- Generated from immutable Review Decision objects. -->
 
-更新时间：2026-07-30
+更新时间：2026-08-06
 
 | Review ID | Date | Decision | Targets | Reviewer | Projects |
 |---|---|---|---|---|---|
@@ -48,3 +48,50 @@
 | REV-20260730-061 | 2026-07-30 | approve | COM-sap | max | PRJ-001 |
 | REV-20260730-062 | 2026-07-30 | approve | COM-servicenow | max | PRJ-001 |
 | REV-20260730-063 | 2026-07-30 | approve | SRC-20260730-039 | max | PRJ-001 |
+| REV-20260805-010 | 2026-08-05 | approve | EVT-20260520-032 | max | PRJ-001 |
+| REV-20260805-011 | 2026-08-05 | approve | EVT-20260416-033 | max | PRJ-001 |
+| REV-20260805-012 | 2026-08-05 | approve | SRC-20260805-040 | max | PRJ-001 |
+| REV-20260805-013 | 2026-08-05 | approve | SRC-20260805-041 | max | PRJ-001 |
+| REV-20260805-014 | 2026-08-05 | approve | EVT-20260225-034 | max | PRJ-001 |
+| REV-20260805-015 | 2026-08-05 | approve | SRC-20260805-042 | max | PRJ-001 |
+| REV-20260805-017 | 2026-08-05 | approve | SRC-20260805-043 | max | PRJ-001 |
+| REV-20260805-018 | 2026-08-05 | approve | EVT-20260725-035 | max | PRJ-001 |
+| REV-20260805-020 | 2026-08-05 | approve | SRC-20260805-044 | max | PRJ-001 |
+| REV-20260805-021 | 2026-08-05 | approve | EVT-20260728-036 | max | PRJ-001 |
+| REV-20260805-022 | 2026-08-05 | approve | SRC-20260805-046 | max | PRJ-001 |
+| REV-20260805-023 | 2026-08-05 | approve | SRC-20260805-047 | max | PRJ-001 |
+| REV-20260805-024 | 2026-08-05 | approve | EVT-20260716-037 | max | PRJ-001 |
+| REV-20260805-026 | 2026-08-05 | approve | SRC-20260805-048 | max | PRJ-001 |
+| REV-20260805-027 | 2026-08-05 | approve | EVT-20260520-038 | max | PRJ-001 |
+| REV-20260805-029 | 2026-08-05 | approve | SRC-20260805-049 | max | PRJ-001 |
+| REV-20260805-030 | 2026-08-05 | approve | EVT-20260429-039 | max | PRJ-001 |
+| REV-20260805-032 | 2026-08-05 | approve | SRC-20260805-050 | max | PRJ-001 |
+| REV-20260805-033 | 2026-08-05 | approve | EVT-20260731-040 | max | PRJ-001 |
+| REV-20260806-001 | 2026-08-06 | approve | SRC-20260806-051 | max | PRJ-001 |
+| REV-20260806-002 | 2026-08-06 | approve | SRC-20260806-052 | max | PRJ-001 |
+| REV-20260806-003 | 2026-08-06 | approve | SRC-20260806-053 | max | PRJ-001 |
+| REV-20260806-004 | 2026-08-06 | approve | SRC-20260806-054 | max | PRJ-001 |
+| REV-20260806-005 | 2026-08-06 | approve | SRC-20260806-055 | max | PRJ-001 |
+| REV-20260806-006 | 2026-08-06 | approve | SRC-20260806-056 | max | PRJ-001 |
+| REV-20260806-007 | 2026-08-06 | approve | EVT-20260302-041 | max | PRJ-001 |
+| REV-20260806-008 | 2026-08-06 | approve | EVT-20260316-042 | max | PRJ-001 |
+| REV-20260806-009 | 2026-08-06 | approve | EVT-20240226-043 | max | PRJ-001 |
+| REV-20260806-010 | 2026-08-06 | approve | EVT-20260601-044 | max | PRJ-001 |
+| REV-20260806-011 | 2026-08-06 | approve | EVT-20260804-045 | max | PRJ-001 |
+| REV-20260806-012 | 2026-08-06 | approve | EVT-20260429-046 | max | PRJ-001 |
+| REV-20260806-022 | 2026-08-06 | approve | EVT-20260302-047 | max | PRJ-001 |
+| REV-20260806-023 | 2026-08-06 | approve | EVT-20260302-048 | max | PRJ-001 |
+| REV-20260806-027 | 2026-08-06 | approve | REL-20260806-254 | max | PRJ-001 |
+| REV-20260806-028 | 2026-08-06 | approve | REL-20260806-255 | max | PRJ-001 |
+| REV-20260806-029 | 2026-08-06 | approve | REL-20260806-256 | max | PRJ-001 |
+| REV-20260806-030 | 2026-08-06 | approve | REL-20260806-257 | max | PRJ-001 |
+| REV-20260806-031 | 2026-08-06 | approve | REL-20260806-258 | max | PRJ-001 |
+| REV-20260806-032 | 2026-08-06 | approve | REL-20260806-259 | max | PRJ-001 |
+| REV-20260806-033 | 2026-08-06 | approve | REL-20260806-260 | max | PRJ-001 |
+| REV-20260806-039 | 2026-08-06 | approve | REL-20260806-261 | max | PRJ-001 |
+| REV-20260806-040 | 2026-08-06 | approve | REL-20260806-262 | max | PRJ-001 |
+| REV-20260806-041 | 2026-08-06 | approve | REL-20260806-263 | max | PRJ-001 |
+| REV-20260806-042 | 2026-08-06 | approve | REL-20260806-264 | max | PRJ-001 |
+| REV-20260806-043 | 2026-08-06 | approve | REL-20260806-265 | max | PRJ-001 |
+| REV-20260806-060 | 2026-08-06 | approve | COM-microsoft | max | PRJ-001 |
+| REV-20260806-062 | 2026-08-06 | approve | COM-openai | max | PRJ-001 |
