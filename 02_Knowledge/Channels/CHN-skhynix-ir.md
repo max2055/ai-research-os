@@ -11,7 +11,7 @@ review_status: reviewed
 tags: []
 name: "SK hynix IR"
 channel_type: rss
-locator: "https://news.skhynix.com/en/"
+locator: "https://news.skhynix.com/en/feed/"
 allow_hosts: [news.skhynix.com]
 publisher: "SK hynix Newsroom"
 source_grade_proposal: B
@@ -26,7 +26,7 @@ retention_days: 30
 license_status: reviewed
 license_notes: "公司官方 IR，公开；robots 允许（前几轮 WP 已验证采集）"
 robots_checked_at: "2026-08-06"
-enabled: false
+enabled: true
 ---
 
 # Source Channel

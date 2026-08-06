@@ -26,7 +26,7 @@ retention_days: 30
 license_status: reviewed
 license_notes: "arXiv 公开 API；robots 允许；按 arXiv API 政策限速"
 robots_checked_at: "2026-08-06"
-enabled: false
+enabled: true
 ---
 
 # Source Channel

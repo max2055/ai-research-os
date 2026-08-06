@@ -26,7 +26,7 @@ retention_days: 30
 license_status: reviewed
 license_notes: "公开 API；robots 允许；allowlist 限定 repos（不抓任意 repo）"
 robots_checked_at: "2026-08-06"
-enabled: false
+enabled: true
 ---
 
 # Source Channel

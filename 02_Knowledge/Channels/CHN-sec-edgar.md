@@ -26,7 +26,7 @@ retention_days: 30
 license_status: reviewed
 license_notes: "SEC data is public domain; robots allow; requires User-Agent header per EDGAR policy"
 robots_checked_at: "2026-08-06"
-enabled: false
+enabled: true
 ---
 
 # Source Channel

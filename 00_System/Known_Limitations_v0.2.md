@@ -168,3 +168,10 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   Channel reviewed（REV-064..069，SEC/SK hynix IR/TrendForce news-only/arXiv/
   GitHub/company IR）。**132 tests**。**下一个: WP-210（P0 adapters:
   SEC/RSS/arXiv/GitHub/IR）或 WP-220（dedup/entity/scoring）。**
+- **Channel 试跑 (2026-08-06)**: 启用 4 个 license=reviewed Channel（SEC/arXiv/
+  GitHub/SK hynix），4 类 adapter 全部真实 discover 成功。试跑暴露 2 问题：
+  (1) SK hynix Channel locator 配置 bug（`/en/` 网页 vs `/en/feed/` RSS，已修）；
+  (2) 同公告 3 URL 变体重复——验证 B-014 dedup 必要。记录
+  `09_Automation/Channel_Trial_Run_20260806.md`。**发现 WP-210 adapters
+  （discovery.py）已实现，B-007 discovery service 未实现。下一个: B-007
+  （discovery service 写 Candidate DB）+ B-014（dedup）。**
