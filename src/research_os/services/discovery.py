@@ -23,6 +23,7 @@ from research_os.adapters.discovery import (
     SourceCandidate,
 )
 from research_os.services import candidate_db
+from research_os.services.candidate_queue import enrich_candidates
 from research_os.services.dedup import assign_clusters, normalize_title
 from research_os.services.validation import validate_repository
 
@@ -190,6 +191,8 @@ def run_discovery(
         channel_id,
         started_at,
     )
+    # B-018: score the new candidates so the review queue can sort by priority.
+    enrich_candidates(root, db_path, apply=True)
     candidate_db.record_discovery_run(
         db_path,
         run_id,

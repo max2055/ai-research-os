@@ -7,6 +7,14 @@ from research_os.services.actions import (
     render_actions,
 )
 from research_os.services.benchmark import run_scale_benchmark
+from research_os.services.candidate_queue import (
+    enrich_candidates,
+    queue_rows,
+    queue_show,
+    render_candidate_detail,
+    render_candidate_list,
+    render_enrichment,
+)
 from research_os.services.channels import (
     channel_rows,
     render_channel_check,
@@ -98,6 +106,7 @@ __all__ = [
     "commit_new_source_capture",
     "confirm_published_date",
     "count_by_type",
+    "enrich_candidates",
     "index_drift",
     "job_rows",
     "load_metrics_snapshot",
@@ -123,6 +132,11 @@ __all__ = [
     "set_channel_enabled",
     "render_discovery_result",
     "run_discovery",
+    "render_candidate_detail",
+    "render_candidate_list",
+    "render_enrichment",
+    "queue_rows",
+    "queue_show",
     "render_indexes",
     "render_impact",
     "render_metrics_comparison",

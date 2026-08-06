@@ -210,6 +210,36 @@ def parse_args() -> argparse.Namespace:
         "due", help="list channels due for discovery"
     )
     discover_due.add_argument("--as-of", default="")
+    candidates = subparsers.add_parser(
+        "candidates", help="Candidate Queue (B-018)"
+    )
+    candidates_commands = candidates.add_subparsers(
+        dest="candidates_command", required=True
+    )
+    candidates_list = candidates_commands.add_parser(
+        "list", help="list candidates, highest priority first"
+    )
+    candidates_list.add_argument("--status", default="new")
+    candidates_list.add_argument("--channel", help="filter by source channel id")
+    candidates_list.add_argument("--entity", help="filter by resolved entity id")
+    candidates_list.add_argument(
+        "--tier",
+        choices=("core", "tracked", "discovery"),
+        help="filter by resolved company coverage tier",
+    )
+    candidates_list.add_argument(
+        "--min-priority", type=float, help="only candidates at/above this score"
+    )
+    candidates_list.add_argument("--limit", type=int, default=50)
+    candidates_show = candidates_commands.add_parser(
+        "show", help="show one candidate in detail"
+    )
+    candidates_show.add_argument("--id", required=True)
+    candidates_enrich = candidates_commands.add_parser(
+        "enrich",
+        help="backfill entity/sector/score proposals for unscored candidates",
+    )
+    candidates_enrich.add_argument("--apply", action="store_true")
     impact = subparsers.add_parser("impact", help="show ontology relationships")
     impact.add_argument("--id", required=True)
     impact.add_argument("--depth", type=int, default=1)
@@ -721,6 +751,39 @@ def main() -> int:
             print(f"ERROR: {exc}")
             return 2
 
+    if args.command == "candidates":
+        try:
+            if args.candidates_command == "list":
+                queue = runtime.queue_rows(
+                    args.root.resolve(),
+                    status=args.status,
+                    channel_id=args.channel,
+                    entity_id=args.entity,
+                    tier=args.tier,
+                    min_priority=args.min_priority,
+                    limit=args.limit,
+                )
+                print(runtime.render_candidate_list(queue), end="")
+                return 0
+            if args.candidates_command == "show":
+                detail = runtime.queue_show(
+                    args.root.resolve(),
+                    args.id,
+                )
+                if detail is None:
+                    print(f"ERROR: unknown candidate {args.id}")
+                    return 2
+                print(runtime.render_candidate_detail(detail), end="")
+                return 0
+            enriched = runtime.enrich_candidates(
+                args.root.resolve(),
+                apply=args.apply,
+            )
+            print(runtime.render_enrichment(enriched, applied=args.apply), end="")
+            return 0
+        except (OSError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
     if args.command == "project":
         try:
             if args.project_command == "list":

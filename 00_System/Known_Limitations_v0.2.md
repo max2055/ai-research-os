@@ -209,3 +209,12 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   （dup_pen 0.5）/ arXiv 未知 0.0（unc_pen 0.8）。**162 tests。WP-220 全部
   完成（dedup/entity/sector/scoring）。下一个: B-018 Candidate Queue CLI /
   B-019 promote / B-020 dismiss。**
+- **B-018 Candidate Queue CLI 完成 (2026-08-06)**: `src/research_os/services/
+  candidate_queue.py`（review 队列 list/show + enrich 回填）。`candidates
+  list`（--status/--channel/--entity/--tier/--min-priority/--limit，按
+  priority 降序）、`candidates show --id`（detail + entity/sector proposal +
+  reason codes + action 历史）、`candidates enrich [--apply]`（B-015/016/017
+  回填未打分候选，幂等，proposals 不改权威事实）。enrich 已接入
+  `discover run --apply` 写路径。真实验证：SK hynix CTI 0.620 / HBF 代表
+  0.590 / SK+NVIDIA 合作 ambiguous 0.578 / 重复变体 0.09–0.12。**167 tests
+  (+5)。WP-230 剩余: B-019 promote-to-Source / B-020 dismiss/restore。**
