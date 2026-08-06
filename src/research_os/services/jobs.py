@@ -10,6 +10,11 @@ from pathlib import Path
 
 from research_os.domain.models import ResearchObject
 from research_os.repositories.transaction import FileTransaction
+from research_os.services.brief import (
+    daily_brief,
+    render_daily_brief,
+    write_daily_brief,
+)
 from research_os.services.discovery import run_discovery
 from research_os.services.indexing import (
     apply_indexes,
@@ -34,6 +39,7 @@ JOB_NAMES = frozenset(
         "refresh",
         "discover",
         "expire",
+        "daily-brief",
     }
 )
 
@@ -119,6 +125,13 @@ def _execute_job(
             f"retention sweep: {len(expired['expired'])} expired, "
             f"{len(purged['purged'])} purged"
         )
+    if job_name == "daily-brief":
+        content = render_daily_brief(daily_brief(root, as_of))
+        try:
+            path = write_daily_brief(root, as_of, content)
+        except FileExistsError:
+            return f"daily brief already exists: Daily_Brief_{as_of}.md"
+        return f"daily brief created: {path.name}"
     if job_name in {"indexes", "refresh"}:
         apply_indexes(root, render_indexes(objects))
         projects = [

@@ -7,6 +7,12 @@ from research_os.services.actions import (
     render_actions,
 )
 from research_os.services.benchmark import run_scale_benchmark
+from research_os.services.brief import (
+    brief_path,
+    daily_brief,
+    render_daily_brief,
+    write_daily_brief,
+)
 from research_os.services.candidate_queue import (
     enrich_candidates,
     queue_rows,
@@ -116,6 +122,10 @@ __all__ = [
     "apply_review",
     "action_rows",
     "close_action",
+    "brief_path",
+    "daily_brief",
+    "render_daily_brief",
+    "write_daily_brief",
     "capture_existing_source",
     "commit_new_source_capture",
     "confirm_published_date",

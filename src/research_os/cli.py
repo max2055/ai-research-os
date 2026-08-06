@@ -552,11 +552,20 @@ def parse_args() -> argparse.Namespace:
             "refresh",
             "discover",
             "expire",
+            "daily-brief",
         ),
     )
     job_run.add_argument("--project")
     job_run.add_argument("--target")
     job_run.add_argument("--as-of")
+
+    brief = subparsers.add_parser("brief", help="Daily Brief (B-022)")
+    brief_commands = brief.add_subparsers(dest="brief_command", required=True)
+    brief_daily = brief_commands.add_parser(
+        "daily", help="generate a Daily Brief for one date"
+    )
+    brief_daily.add_argument("--date", default=date.today().isoformat())
+    brief_daily.add_argument("--apply", action="store_true")
 
     benchmark = subparsers.add_parser(
         "benchmark",
@@ -1273,6 +1282,27 @@ def main() -> int:
             )
             return 0
         except (ImportError, OSError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
+    if args.command == "brief":
+        try:
+            if args.brief_command == "daily":
+                data = runtime.daily_brief(args.root.resolve(), args.date)
+                content = runtime.render_daily_brief(data)
+                relative = runtime.brief_path(
+                    args.root.resolve(), args.date
+                ).relative_to(args.root.resolve())
+                if not args.apply:
+                    print(f"DRY-RUN target={relative}")
+                    print(content, end="")
+                    print("DRY-RUN: no files changed; rerun with --apply")
+                    return 0
+                target = runtime.write_daily_brief(
+                    args.root.resolve(), args.date, content
+                )
+                print(f"CREATED: {target.relative_to(args.root.resolve())}")
+                return 0
+        except (FileExistsError, OSError, TransactionError, ValueError) as exc:
             print(f"ERROR: {exc}")
             return 2
     if args.command == "jobs":

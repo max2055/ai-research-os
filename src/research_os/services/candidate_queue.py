@@ -119,8 +119,10 @@ def enrich_candidates(
             cluster_id = row["duplicate_cluster_id"]
             cluster = clusters.get(str(cluster_id)) if cluster_id else None
             cluster_size = int(cluster["size"]) if cluster else 1
-            is_representative = bool(
-                cluster and str(row["candidate_id"]) == cluster["representative_id"]
+            # A singleton (no cluster) is trivially its own representative;
+            # only a non-representative member of a real cluster is a dup.
+            is_representative = not cluster or (
+                str(row["candidate_id"]) == cluster["representative_id"]
             )
             channel_meta = channels.get(str(row["channel_id"])) or {}
             score = score_candidate(

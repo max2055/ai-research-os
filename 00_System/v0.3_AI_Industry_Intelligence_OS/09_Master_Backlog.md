@@ -76,7 +76,7 @@ Wave 0 Gate：RCP-v03-001 获批，所有关键人工选择记录，后续 WP �
 | WP-210 | B-008～013 | P0 adapters；每个 Adapter 独立子包 | proposed |
 | WP-220 | B-014～017 | dedup/entity/sector/scoring | completed |
 | WP-230 | B-018～020 | Candidate Queue + promote transaction | completed |
-| WP-231 | B-021～022 | launchd + Daily Brief | proposed |
+| WP-231 | B-021～022 | launchd + Daily Brief | completed |
 | WP-232 | B-023～024 | metrics/health/secret redaction | proposed |
 | WP-240 | B-025～026 | 14-day real Pilot + acceptance | proposed |
 

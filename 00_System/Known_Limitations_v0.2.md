@@ -259,3 +259,18 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   schedule 解析不支持 cron 语法（"0 9 * * *"→None→不到期，用 channels check
   人工发现）；expire job 的物理 purge 立即删除 dismissed/expired 行（ADR
   "立即清理"）。**
+- **B-022 Daily Brief generator 完成 + WP-231 全部完成 (2026-08-06)**:
+  `src/research_os/services/brief.py`。`brief daily --date [--apply]` +
+  `jobs run daily-brief --as-of`（幂等：已存在→"already exists"）。8 分区
+  （§8）：建议处理顺序 Top5 / 新增高优先级（≥0.5）/ 已提升正式 Source /
+  新 reviewed Event / Core Company 影响 / 反面冲突信号（ambiguous 或负面
+  关键词）/ 论文技术（arxiv channel）/ 抓取失败+stale+coverage gap。候选
+  分区每行标注 **unreviewed candidate**，与 reviewed 事实分区隔离。写
+  `05_Research/Operations/Briefs/Daily_Brief_<date>.md`（拒绝覆盖）。真实
+  验证：Top5 SK hynix CTI 0.620 / HBF 0.590 / SK+NVIDIA ambiguous 0.578；
+  Source/Event 分区正确；job 幂等。**附带修复 B-018 latent bug：enrich 里
+  singleton 候选（无 cluster）被误判 non-representative 加 dup_pen 0.5
+  （相对排序掩盖，绝对分偏低）——现 singleton 视为自身代表。196 tests
+  (+4)。WP-231（B-021～022）全部 completed。已知局限：反面信号是关键词/
+  ambiguous 启发式（无 NLP）；论文信号仅按 arxiv channel。下一个: B-023
+  metrics/health/secret redaction（WP-232）。**
