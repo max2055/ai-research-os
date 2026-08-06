@@ -195,3 +195,10 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   SK hynix 公告 → COM-sk-hynix；SK+NVIDIA 合作 → ambiguous（正确需人审）；
   arXiv 论文 → unknown（作者机构不在 universe）。**151 tests。WP-220 剩余:
   B-016 sector classification / B-017 scoring。**
+- **B-016 sector classification 完成 (2026-08-06)**: `src/research_os/services/
+  sector_classification.py`（SectorIndex 从 universe 构建，multi-label 关键词
+  匹配 title/publisher，输出 sector_ids + reasons；title/definition/token 全
+  纳入索引，hyphen 拆 spaced）。真实验证：HBF/AI Memory 标题 → SEG-memory-storage；
+  98 关键词 / 9 sector。**已知局限：纯关键词 classifier 对无 sector 词的标题
+  （如"2Q26 财报"、"Data Center"）无法判定，需结合 entity 推断（pipeline 组合
+  层）。156 tests。WP-220 剩余: B-017 scoring。**
