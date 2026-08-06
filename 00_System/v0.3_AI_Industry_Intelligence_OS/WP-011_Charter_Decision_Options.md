@@ -45,8 +45,8 @@ reviewer 统一：max。计划日期 = 对应阶段开始前（滚动）；此�
 |---|---|---|---|
 | RCP-v03-002 | Taxonomy v2 与稳定板块 ID | Wave 1（Phase 0-1） | Phase 1 migration 前 — **approved 2026-08-05 max** |
 | RCP-v03-003 | 新实体 Schema 与永久 ID | Wave 1（Phase 0-1） | Phase 1 写对象前 — **approved 2026-08-05 max** |
-| RCP-v03-004 | Candidate SQLite 与 retention | Wave 2（Phase 2） | Phase 2 写数据库前 |
-| RCP-v03-005 | Source Channel、scheduler、许可边界 | Wave 2（Phase 2） | Phase 2 自动运行前 |
+| RCP-v03-004 | Candidate SQLite 与 retention | Wave 2（Phase 2） | Phase 2 写数据库前 — **approved 2026-08-06 max** |
+| RCP-v03-005 | Source Channel、scheduler、许可边界 | Wave 2（Phase 2） | Phase 2 自动运行前 — **approved 2026-08-06 max** |
 | RCP-v03-006 | Ontology/Impact 关系语义 | Wave 3（Phase 3） | Phase 3 写 assertion 前 |
 | RCP-v03-007 | Analysis Mode 与 Analysis Run 权威边界 | Wave 4（Phase 4） | Phase 4 前 |
 | RCP-v03-008 | Forecast、Resolution、calibration | Wave 5（Phase 5） | Phase 5 前 |

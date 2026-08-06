@@ -2,7 +2,7 @@
 
 Proposal ID：RCP-v03-005
 
-状态：proposed
+状态：approved（2026-08-06，reviewer：max）
 
 创建日期：2026-08-06
 
@@ -70,13 +70,31 @@ Proposal ID：RCP-v03-005
 - 不把 Candidate 摘要当 reviewed Fact 混排。
 - 不引入分布式任务队列（单机 scheduler 足够时）。
 
-## Review points（reviewer：max）
+## Review points（reviewer：max，2026-08-06，全部采纳默认）
 
-1. 首批 Channel 清单（SEC EDGAR / SK hynix IR / TrendForce / arXiv / GitHub 等）
-   与各自许可/robots 状态。
-2. `restricted` Channel 的处理（是否保留登记但不采集）。
-3. 调度频率与每日候选上限的默认值（建议每 Channel 20/run）。
-4. 是否同意"Channel reviewed 是采集前置条件"。
+1. ✅ 首批 6 个 Channel 按许可分级：SEC EDGAR / SK hynix IR / TrendForce 新闻稿
+   （禁报告页）/ arXiv / GitHub Releases / 各公司官方 IR 分站；每个 Channel
+   记录 license_status + robots_checked_at
+2. ✅ `restricted` Channel 保留登记（status=restricted, enabled=false）但不采集，
+   作为许可治理审计痕迹
+3. ✅ 调度频率默认：SEC/IR/公司分站每 6h，arXiv 每日 1 次，GitHub 每日 2 次；
+   每 Channel 每 run 上限 20；溢出靠 novelty/quality 评分截断，不提高硬上限
+4. ✅ Channel reviewed 是采集前置条件（scheduler 只调 reviewed + enabled: true）
+
+- Decision：批准（accept RCP-v03-005 as drafted，4 项人审点全部采纳默认）
+- Reviewer：max
+- Date：2026-08-06
+- Reason：与 Phase 2 §3/§7 草案、Source_Policy 采集边界一致；补全 RCP-v03-003
+  的 `CHN-` 占位 ID；"reviewed 才采集"防"先抓再治理"。
+
+## Implementation record
+
+- Changed files：本文件（proposed → approved）；生效后由 WP-201 起落地
+  source_channel schema + Channel Registry + 首批 Channel reviewed
+- Test result：not run（本 RCP 为治理边界批准，无代码变更；测试在 WP-201 落地后运行）
+- Validation result：`research-os validate` 0 errors / 0 warnings（批准前后一致，
+  因无对象变更）
+- Effective date：2026-08-06（批准即生效；WP-201 起实施）
 
 ## 参考
 

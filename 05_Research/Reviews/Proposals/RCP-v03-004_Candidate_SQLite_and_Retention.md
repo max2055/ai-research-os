@@ -2,7 +2,7 @@
 
 Proposal ID：RCP-v03-004
 
-状态：proposed
+状态：approved（2026-08-06，reviewer：max）
 
 创建日期：2026-08-06
 
@@ -71,12 +71,29 @@ Proposal ID：RCP-v03-004
 - 不默认下载候选链接的所有子链接。
 - 不用 LLM 摘要替代原始 Source。
 
-## Review points（reviewer：max）
+## Review points（reviewer：max，2026-08-06，全部采纳默认）
 
-1. Candidate retention 默认值（建议 30 天、dismissed 即清、promoted 永留）。
-2. 三表结构是否符合 Phase 2 §4 草案。
-3. 是否同意"Agent 可写 Candidate 但不可自动提升"边界。
-4. B-004 migration engine 是否独立 RCP。
+1. ✅ Candidate retention 默认值：保留 30 天；dismissed/expired 即清；promoted 永留
+   （永久链接到 Source）
+2. ✅ 三表结构（candidates / candidate_events / runs）符合 Phase 2 §4 草案
+3. ✅ Agent 可写 Candidate 但不可自动提升（promote 须人工 Review Decision）
+4. ✅ B-004 migration engine 不独立 RCP，并入本 RCP 实施（operational 表
+   schema 升级/回滚走 B-004，不引入正式对象）
+
+- Decision：批准（accept RCP-v03-004 as drafted，4 项人审点全部采纳默认）
+- Reviewer：max
+- Date：2026-08-06
+- Reason：与 Phase 2 §4/§8 草案、D5 决策（Candidate store 用 SQLite）一致；
+  事实边界（Candidate 非权威源、promote 须人审）符合 v0.3 治理。
+
+## Implementation record
+
+- Changed files：本文件（proposed → approved）；生效后由 WP-200 起落地 Candidate
+  DB ADR（B-003）+ migration engine（B-004）+ Candidate schema
+- Test result：not run（本 RCP 为治理边界批准，无代码变更；测试在 WP-200 落地后运行）
+- Validation result：`research-os validate` 0 errors / 0 warnings（批准前后一致，
+  因无对象变更）
+- Effective date：2026-08-06（批准即生效；WP-200 起实施）
 
 ## 参考
 
