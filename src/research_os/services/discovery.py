@@ -23,6 +23,7 @@ from research_os.adapters.discovery import (
     SourceCandidate,
 )
 from research_os.services import candidate_db
+from research_os.services.dedup import assign_clusters, normalize_title
 from research_os.services.validation import validate_repository
 
 
@@ -174,6 +175,15 @@ def run_discovery(
         for candidate in discovered
     ]
     candidate_db.apply_migrations(db_path)
+    # B-014 dedup: extend existing clusters across runs, never drop records.
+    existing = candidate_db.existing_candidates(root)
+    existing_index: dict[str, str] = {}
+    for prior in existing:
+        key = prior.get("title") or ""
+        cluster = prior.get("duplicate_cluster_id")
+        if key and cluster:
+            existing_index[normalize_title(str(key))] = str(cluster)
+    candidates = assign_clusters(candidates, existing=existing_index)
     inserted = candidate_db.insert_candidates(
         db_path,
         candidates,

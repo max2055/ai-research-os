@@ -182,3 +182,10 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   Candidate DB。修复 insert_candidates 计数 bug（total_changes→rowcount）。
   **重复候选未去重（同公告多 URL 变体）→ B-014 dedup 是下一个核心。**
   **137 tests。下一个: B-014（dedup）或 B-017（scoring）或 B-018（Queue CLI）。**
+- **B-014 dedup 完成 (2026-08-06)**: `src/research_os/services/dedup.py`
+  （exact canonical URL/content_fingerprint + near normalized-title 聚类，
+  cluster 不丢记录）+ 集成进 discover.run（跨 run 扩展已有 cluster）+ 
+  candidate_db 写 duplicate_cluster_id。真实验证：SK hynix 10 候选 → 5
+  cluster（HBF 3 变体 / CTI 3 变体 / 2Q26 2 变体各 1 cluster）；20 候选
+  （2 run）仍 5 cluster（跨 run 正确扩展）。**144 tests。WP-220 剩余:
+  B-015 entity resolution / B-016 sector classification / B-017 scoring。**

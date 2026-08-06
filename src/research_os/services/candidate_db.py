@@ -179,8 +179,8 @@ def insert_candidates(
                 "INSERT OR IGNORE INTO candidates ("
                 "candidate_id, channel_id, discovered_at, published_at_proposal, "
                 "title, canonical_url, publisher, content_fingerprint, snippet, "
-                "language, fetch_status, status, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', 'new', ?)",
+                "language, fetch_status, status, duplicate_cluster_id, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', 'new', ?, ?)",
                 (
                     str(candidate["candidate_id"]),
                     channel_id,
@@ -192,6 +192,7 @@ def insert_candidates(
                     candidate.get("content_fingerprint"),
                     candidate.get("snippet"),
                     candidate.get("language"),
+                    candidate.get("duplicate_cluster_id"),
                     discovered_at,
                 ),
             )
@@ -274,6 +275,32 @@ def list_candidates(
                 "published_at_proposal": row[4],
                 "status": row[5],
                 "created_at": row[6],
+            }
+            for row in rows
+        ]
+    finally:
+        connection.close()
+
+
+def existing_candidates(root: Path) -> list[dict[str, object]]:
+    """Return prior candidates for dedup indexing (title/fingerprint/url)."""
+    path = candidate_db_path(root)
+    if not path.exists():
+        return []
+    connection = _connect(path)
+    try:
+        rows = connection.execute(
+            "SELECT candidate_id, title, canonical_url, content_fingerprint, "
+            "duplicate_cluster_id FROM candidates "
+            "WHERE duplicate_cluster_id IS NOT NULL"
+        ).fetchall()
+        return [
+            {
+                "candidate_id": row[0],
+                "title": row[1],
+                "canonical_url": row[2],
+                "content_fingerprint": row[3],
+                "duplicate_cluster_id": row[4],
             }
             for row in rows
         ]
