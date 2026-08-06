@@ -189,3 +189,9 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   cluster（HBF 3 变体 / CTI 3 变体 / 2Q26 2 变体各 1 cluster）；20 候选
   （2 run）仍 5 cluster（跨 run 正确扩展）。**144 tests。WP-220 剩余:
   B-015 entity resolution / B-016 sector classification / B-017 scoring。**
+- **B-015 entity resolution 完成 (2026-08-06)**: `src/research_os/services/
+  entity_resolution.py`（EntityIndex 从 universe 构建 87 归一化名 / 59 公司；
+  resolve 输出 matched/ambiguous/unknown；中文括号名独立索引）。真实验证：
+  SK hynix 公告 → COM-sk-hynix；SK+NVIDIA 合作 → ambiguous（正确需人审）；
+  arXiv 论文 → unknown（作者机构不在 universe）。**151 tests。WP-220 剩余:
+  B-016 sector classification / B-017 scoring。**
