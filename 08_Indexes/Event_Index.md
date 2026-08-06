@@ -20,6 +20,8 @@
 | EVT-20260225-002 | 2026-02-25 | Salesforce 披露 Agentforce ARR、交易和生产账户增长 | THS-003, THS-004 | 0.90 | reviewed |
 | EVT-20260225-034 | 2026-02-25 | ASML 20-F describes EUV 0.33/0.55 NA lithography platforms |  | 0.70 | reviewed |
 | EVT-20260302-041 | 2026-03-02 | CoreWeave 10-K FY2025: OpenAI $6.5B+$11.9B and Meta $14.2B committed contracts named |  | 0.80 | reviewed |
+| EVT-20260302-047 | 2026-03-02 | CoreWeave 10-K: names AWS, Google Cloud, Microsoft Azure, Oracle as key cloud competitors |  | 0.50 | reviewed |
+| EVT-20260302-048 | 2026-03-02 | CoreWeave 10-K: deploys NVIDIA GB200/GB300 NVL72, among first to deploy NVIDIA Rubin platform |  | 0.70 | reviewed |
 | EVT-20260316-042 | 2026-03-16 | Samsung: HBM4 in mass production designed for NVIDIA Vera Rubin platform (GTC 2026) |  | 0.60 | reviewed |
 | EVT-20260406-019 | 2026-04-06 | Meta reports context infrastructure reducing coding-agent exploration | THS-007 | 0.55 | reviewed |
 | EVT-20260415-003 | 2026-04-15 | OpenAI Agents SDK 增加计算机环境、沙箱和状态恢复 | THS-005 | 0.85 | reviewed |

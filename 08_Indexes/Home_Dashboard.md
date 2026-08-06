@@ -198,9 +198,6 @@
 | [[REL-20260805-206]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-207]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-208]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-209]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-210]] | ontology_assertion | 2026-08-05 |
-| [[REL-20260805-211]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-212]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-213]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-214]] | ontology_assertion | 2026-08-05 |
@@ -232,6 +229,8 @@
 | [[REL-20260805-247]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-251]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-253]] | ontology_assertion | 2026-08-05 |
+| [[REL-20260806-257]] | ontology_assertion | 2026-08-06 |
+| [[REL-20260806-258]] | ontology_assertion | 2026-08-06 |
 | [[THS-006]] | thesis | 2026-07-29 |
 | [[THS-007]] | thesis | 2026-07-29 |
 | [[THS-008]] | thesis | 2026-07-29 |

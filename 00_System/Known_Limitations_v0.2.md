@@ -108,3 +108,14 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   ENABLES Anthropic/Meta/xAI, Supermicro COMPETES Dell). Field Gate
   distribution still short: COMPETES_WITH 3/5, DEPENDS_ON 4/5,
   PARTNERS_WITH 1/5.
+- **Field Gate distribution fill (2026-08-06)**: zero new capture — reused
+  reviewed CoreWeave 10-K (SRC-051) + AWS/Microsoft contract Events. 2 new
+  Events (cloud competitors EVT-047, NVIDIA dependency EVT-048) + 9 new
+  relations → **39 relations approved**. Distribution now meets §9.3:
+  SUPPLIES 20/10, COMPETES_WITH 6/5, DEPENDS_ON 5/5, CUSTOMER_OF 4 +
+  PARTNERS_WITH 1 = 5/5 (客户/伙伴). Agent audit caught 2 broken evidence
+  chains (Anthropic/Meta CUSTOMER_OF Microsoft reused EVT-039 which does
+  not name either) — reverted to pending, replaced with OpenAI/Meta
+  CUSTOMER_OF CoreWeave (EVT-041 named contracts). **Remaining Field Gate
+  gap: PRODUCES 产品归属 0/5 (needs Product entities, deferred to WP-120)**.
+  10 Company human-verification sub-item also still open.
