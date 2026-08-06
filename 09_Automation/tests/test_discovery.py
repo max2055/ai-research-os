@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from research_os.adapters.discovery import (
+    CompositeDiscoveryAdapter,
+    GitHubReleaseDiscoveryAdapter,
+    SECDiscoveryAdapter,
+)
 from research_os.services import candidate_db
 from research_os.services.discovery import (
     _acquire_channel_lock,
+    _build_adapter,
+    _github_repos_from_locator,
     due_channels,
     preflight_channel,
     run_discovery,
@@ -190,6 +198,100 @@ class DiscoveryServiceTests(unittest.TestCase):
                     for d in due_channels(root, as_of="2026-08-07T00:00:01Z")
                 ],
             )
+
+
+def _github_release_payload() -> str:
+    return json.dumps(
+        [
+            {
+                "html_url": "https://github.com/a/b/releases/tag/v1.0",
+                "tag_name": "v1.0",
+                "name": "Release One",
+                "id": 1,
+                "published_at": "2026-01-01T00:00:00Z",
+            }
+        ]
+    )
+
+
+def _raising_fetcher(url: str, **kwargs: object) -> str:
+    raise ValueError("fetch failed")
+
+
+class MultiTargetDiscoveryTests(unittest.TestCase):
+    def test_multi_repo_locator_parses_all_repos(self) -> None:
+        locator = (
+            "https://github.com/a/b; https://github.com/c/d; "
+            "https://github.com/a/b"
+        )
+        self.assertEqual(["a/b", "c/d"], _github_repos_from_locator(locator))
+
+    def test_composite_skips_failing_target(self) -> None:
+        good = GitHubReleaseDiscoveryAdapter(
+            "a/b",
+            limit=10,
+            fetcher=lambda url, **kw: _github_release_payload(),
+        )
+        bad = GitHubReleaseDiscoveryAdapter(
+            "c/d",
+            limit=10,
+            fetcher=_raising_fetcher,
+        )
+        composite = CompositeDiscoveryAdapter([bad, good], limit=10)
+        results = composite.discover()
+        self.assertEqual(1, len(results))
+        self.assertEqual("Release One", results[0].title)
+
+    def test_composite_raises_when_all_fail(self) -> None:
+        def _failing(repo: str) -> GitHubReleaseDiscoveryAdapter:
+            return GitHubReleaseDiscoveryAdapter(
+                repo, limit=10, fetcher=_raising_fetcher
+            )
+
+        composite = CompositeDiscoveryAdapter(
+            [_failing("a/b"), _failing("c/d")],
+            limit=10,
+        )
+        with self.assertRaises(ValueError):
+            composite.discover()
+
+    def test_build_adapter_multi_target_returns_composite(self) -> None:
+        github = _build_adapter(
+            {
+                "channel_type": "github_release",
+                "locator": "https://github.com/a/b; https://github.com/c/d",
+                "max_candidates_per_run": 10,
+            }
+        )
+        self.assertIsInstance(github, CompositeDiscoveryAdapter)
+        sec = _build_adapter(
+            {
+                "channel_type": "sec",
+                "locator": "https://www.sec.gov/cgi-bin/browse-edgar?cik=1045810,1046179",
+                "query": "10-K,10-Q,20-F",
+                "max_candidates_per_run": 10,
+            }
+        )
+        self.assertIsInstance(sec, CompositeDiscoveryAdapter)
+
+    def test_build_adapter_single_target_returns_plain_adapter(self) -> None:
+        github = _build_adapter(
+            {
+                "channel_type": "github_release",
+                "locator": "https://github.com/a/b",
+                "max_candidates_per_run": 10,
+            }
+        )
+        self.assertIsInstance(github, GitHubReleaseDiscoveryAdapter)
+        sec = _build_adapter(
+            {
+                "channel_type": "sec",
+                "locator": "https://www.sec.gov/cgi-bin/browse-edgar?cik=1045810",
+                "query": "10-K,10-Q,20-F",
+                "max_candidates_per_run": 10,
+            }
+        )
+        self.assertIsInstance(sec, SECDiscoveryAdapter)
 
 
 if __name__ == "__main__":

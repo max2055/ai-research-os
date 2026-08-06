@@ -11,13 +11,13 @@ review_status: reviewed
 tags: []
 name: "SEC EDGAR"
 channel_type: sec
-locator: "https://www.sec.gov/cgi-bin/browse-edgar"
+locator: "https://www.sec.gov/cgi-bin/browse-edgar?cik=1045810,1046179,723125,789019,1326801,1018724,2015943"
 allow_hosts: [sec.gov]
 publisher: "U.S. SEC EDGAR"
 source_grade_proposal: A
 entity_ids: [COM-nvidia, COM-tsmc, COM-micron, COM-microsoft, COM-meta, COM-aws, COM-coreweave]
 sector_ids: [SEG-compute-silicon, SEG-memory-storage, SEG-cloud-ai-infrastructure]
-query: "10-K,10-Q,20-F; CIK allowlist"
+query: "10-K,10-Q,20-F"
 schedule: "every 6 hours"
 timezone: "Asia/Shanghai"
 max_candidates_per_run: 20

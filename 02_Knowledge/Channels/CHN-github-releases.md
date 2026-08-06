@@ -11,7 +11,7 @@ review_status: reviewed
 tags: []
 name: "GitHub Releases"
 channel_type: github_release
-locator: "https://api.github.com/repos/{owner}/{repo}/releases"
+locator: "https://github.com/openai/openai-python; https://github.com/anthropics/anthropic-sdk-python; https://github.com/meta-llama/llama-models; https://github.com/deepseek-ai/DeepSeek-V3; https://github.com/microsoft/autogen"
 allow_hosts: [github.com, api.github.com]
 publisher: "GitHub"
 source_grade_proposal: A

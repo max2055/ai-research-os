@@ -28,21 +28,20 @@
 | 每日人工 triage 中位耗时 | ≤45min | 待记录 |
 | 失败与许可限制写入 Known Limitations | 持续 | 见下方已知缺口 |
 
-## 已知配置缺口（需 max 决策，否则该 channel 每日失败）
+## 已知配置缺口（2026-08-06 更新）
 
-1. **CHN-github-releases**：locator 是占位符模板
-   `https://api.github.com/repos/{owner}/{repo}/releases`，`_github_repo_from_locator`
-   无法解析出真实 repo。→ 需要把 locator 改为具体 repo（如
-   `https://api.github.com/repos/anthropics/anthropic-sdk-python/releases`）或
-   disable。
-2. **CHN-sec-edgar**：locator `https://www.sec.gov/cgi-bin/browse-edgar` 无 CIK，
-   discovery 的「fall back to entity_ids→CIK」未实现。→ 需要在 locator 里加 CIK
-   （如 `?cik=320193,1045810,…`）或实现 entity_ids→CIK 解析，或 disable。
-3. **Channel 数量 4/20**：需 review/enable 更多 Channel（B-021 launchd 的
-   `channels check` 可列出可调度项）或新增 Channel 到 20。
+1. ~~**CHN-github-releases**：locator 是占位符模板~~ ✅ **已修复**：locator 改为
+   5 个真实 repo URL（openai-python / anthropic-sdk-python / llama-models /
+   DeepSeek-V3 / autogen），`CompositeDiscoveryAdapter` 支持多 repo。首轮验证
+   +20 候选。
+2. ~~**CHN-sec-edgar**：locator 无 CIK~~ ✅ **已修复**：locator 加
+   `?cik=1045810,1046179,723125,789019,1326801,1018724,2015943`，query 清理为
+   `10-K,10-Q,20-F`，composite 多 CIK。首轮验证 +20 候选。
+3. **Channel 数量 4/20**（仍缺）：需 review/enable 更多 Channel 或新增到 20
+   （`channels check` 可列出可调度项）。
 
-> 三个缺口未解决前，github/SEC 每轮失败会进 job_failures（不静默，符合 Gate
-> "留明确失败"），但 promoted 目标与相关性评估需要可用数据，建议优先解决。
+> github repo 列表是默认选择，max 可调整；个别 CIK 若失效 composite 会跳过
+> 不拖垮整通道。
 
 ## 每日例行（max）
 

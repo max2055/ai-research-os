@@ -304,3 +304,16 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   started_at=2026-08-06 + Phase_Acceptance_B026 checklist）。**205 tests
   (+1)。WP-240 in_progress（Day 1/14）。已知缺口：G1 4/20 channels、G4 dup
   50%、G6 0/20 promoted——需每日 triage + 优先解决 github/SEC 配置。**
+- **github/SEC 通道修复（2026-08-06）**: 加 `CompositeDiscoveryAdapter`
+  （iterate 多个 bounded sub-adapter，per-target 失败跳过、全败才 raise）。
+  `_build_adapter` 支持多目标：github 从 locator 解析多 repo、SEC 从 locator
+  解析多 CIK（各建一个 adapter 再 composite）。通道配置改具体目标：
+  CHN-github-releases locator = 5 个真实 repo URL（openai-python/
+  anthropic-sdk-python/llama-models/DeepSeek-V3/autogen）；CHN-sec-edgar
+  locator = `?cik=1045810,1046179,723125,789019,1326801,1018724,2015943`，
+  query 清理为 `10-K,10-Q,20-F`（原 `; CIK allowlist` 人类注释混进 forms
+  set 会漏 20-F）。真实验证：第二轮 launchd github +20、SEC +20 候选入库
+  （此前两通道每轮失败）；DB 现 **90 候选**（SK hynix 30 + arxiv 20 +
+  github 20 + SEC 20）。**210 tests (+5 multi-target)。已知局限：github repo
+  列表是我选的 5 个默认 repo，max 可改；SEC 若个别 CIK 失效 composite 会跳过
+  （需确认真实性）；channel 数量仍 4/20（G1 待补）。**

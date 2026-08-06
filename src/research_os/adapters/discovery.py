@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 from email.utils import parsedate_to_datetime
-from typing import Protocol
+from typing import Any, Protocol
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree
@@ -345,6 +345,40 @@ class SECDiscoveryAdapter:
             if len(candidates) >= self.limit:
                 break
         return tuple(candidates)
+
+
+class CompositeDiscoveryAdapter:
+    """Iterate several bounded adapters, capping total results at ``limit``.
+
+    A per-target failure is skipped so one bad repo/CIK does not kill the
+    channel; if every target fails the first error is raised so the channel
+    run records a clear failure rather than silently returning nothing.
+    """
+
+    def __init__(
+        self,
+        adapters: list[Any],
+        *,
+        limit: int = DEFAULT_DISCOVERY_LIMIT,
+    ) -> None:
+        if not adapters:
+            raise ValueError("composite discovery requires at least one adapter")
+        self.adapters = list(adapters)
+        self.limit = _bounded_limit(limit)
+
+    def discover(self) -> tuple[SourceCandidate, ...]:
+        results: list[SourceCandidate] = []
+        failures: list[Exception] = []
+        for adapter in self.adapters:
+            try:
+                results.extend(adapter.discover())
+            except Exception as exc:
+                failures.append(exc)
+            if len(results) >= self.limit:
+                break
+        if not results and failures:
+            raise failures[0]
+        return tuple(results[: self.limit])
 
 
 def candidates_json(candidates: tuple[SourceCandidate, ...]) -> str:

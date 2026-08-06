@@ -18,6 +18,7 @@ from typing import Any
 
 from research_os.adapters.discovery import (
     ArxivDiscoveryAdapter,
+    CompositeDiscoveryAdapter,
     DiscoveryAdapter,
     GitHubReleaseDiscoveryAdapter,
     RSSDiscoveryAdapter,
@@ -68,35 +69,56 @@ def _build_adapter(channel: dict[str, Any]) -> DiscoveryAdapter:
             limit=limit,
         )
     if channel_type == "github_release":
-        return GitHubReleaseDiscoveryAdapter(
-            _github_repo_from_locator(locator),
-            limit=limit,
-        )
+        repos = _github_repos_from_locator(locator)
+        github_adapters = [
+            GitHubReleaseDiscoveryAdapter(repo, limit=limit)
+            for repo in repos
+        ]
+        if len(github_adapters) == 1:
+            return github_adapters[0]
+        return CompositeDiscoveryAdapter(github_adapters, limit=limit)
     if channel_type == "arxiv":
         return ArxivDiscoveryAdapter(
             channel.get("query") or "",
             limit=limit,
         )
     if channel_type == "sec":
-        # locator may carry CIKs; fall back to entity_ids for CIK resolution.
+        # locator carries the CIK allowlist; one adapter per CIK.
         ciks = _ciks_from_locator(locator)
         if not ciks:
             raise ValueError("SEC channel requires a CIK in locator or entity_ids")
-        return SECDiscoveryAdapter(
-            ciks[0],
-            forms=frozenset((channel.get("query") or "10-Q,10-K,8-K,20-F").split(",")),
-            user_agent=channel.get("user_agent")
-            or "AI-Research-OS/0.3 max wu_chenlong@hotmail.com",
-            limit=limit,
+        forms = frozenset(
+            (channel.get("query") or "10-Q,10-K,8-K,20-F").split(",")
         )
+        user_agent = (
+            channel.get("user_agent")
+            or "AI-Research-OS/0.3 max wu_chenlong@hotmail.com"
+        )
+        sec_adapters = [
+            SECDiscoveryAdapter(
+                cik,
+                forms=forms,
+                user_agent=user_agent,
+                limit=limit,
+            )
+            for cik in ciks
+        ]
+        if len(sec_adapters) == 1:
+            return sec_adapters[0]
+        return CompositeDiscoveryAdapter(sec_adapters, limit=limit)
     raise ValueError(f"unsupported channel_type for discovery: {channel_type}")
 
 
-def _github_repo_from_locator(locator: str) -> str:
-    match = re.search(r"github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)", locator)
-    if not match:
-        raise ValueError(f"GitHub channel locator must be a repository URL: {locator}")
-    return match.group(1)
+def _github_repos_from_locator(locator: str) -> list[str]:
+    repos = re.findall(
+        r"github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)",
+        locator,
+    )
+    if not repos:
+        raise ValueError(
+            f"GitHub channel locator must carry a repository URL: {locator}"
+        )
+    return list(dict.fromkeys(repos))
 
 
 def _ciks_from_locator(locator: str) -> list[str]:
