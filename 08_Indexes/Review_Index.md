@@ -149,3 +149,23 @@
 | REV-20260806-041 | 2026-08-06 | approve | REL-20260806-263 | max | PRJ-001 |
 | REV-20260806-042 | 2026-08-06 | approve | REL-20260806-264 | max | PRJ-001 |
 | REV-20260806-043 | 2026-08-06 | approve | REL-20260806-265 | max | PRJ-001 |
+| REV-20260806-044 | 2026-08-06 | approve | INS-NASDAQ-NVDA | max |  |
+| REV-20260806-045 | 2026-08-06 | approve | INS-TWSE-2330 | max |  |
+| REV-20260806-046 | 2026-08-06 | approve | INS-NYSE-TSM | max |  |
+| REV-20260806-047 | 2026-08-06 | approve | INS-KRX-000660 | max |  |
+| REV-20260806-048 | 2026-08-06 | approve | INS-KRX-005930 | max |  |
+| REV-20260806-049 | 2026-08-06 | approve | INS-NASDAQ-MU | max |  |
+| REV-20260806-050 | 2026-08-06 | approve | INS-NASDAQ-MSFT | max |  |
+| REV-20260806-051 | 2026-08-06 | approve | INS-NASDAQ-CRWV | max |  |
+| REV-20260806-052 | 2026-08-06 | approve | INS-NASDAQ-META | max |  |
+| REV-20260806-053 | 2026-08-06 | approve | INS-NASDAQ-AMZN | max |  |
+| REV-20260806-054 | 2026-08-06 | approve | COM-nvidia | max |  |
+| REV-20260806-055 | 2026-08-06 | approve | COM-tsmc | max |  |
+| REV-20260806-056 | 2026-08-06 | approve | COM-sk-hynix | max |  |
+| REV-20260806-057 | 2026-08-06 | approve | COM-samsung-electronics | max |  |
+| REV-20260806-058 | 2026-08-06 | approve | COM-micron | max |  |
+| REV-20260806-059 | 2026-08-06 | approve | COM-aws | max |  |
+| REV-20260806-060 | 2026-08-06 | approve | COM-microsoft | max | PRJ-001 |
+| REV-20260806-061 | 2026-08-06 | approve | COM-coreweave | max |  |
+| REV-20260806-062 | 2026-08-06 | approve | COM-openai | max | PRJ-001 |
+| REV-20260806-063 | 2026-08-06 | approve | COM-meta | max |  |

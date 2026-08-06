@@ -3,7 +3,7 @@ id: COM-samsung-electronics
 type: company
 title: "Samsung Electronics"
 created_at: 2026-08-05
-updated_at: '2026-08-05'
+updated_at: '2026-08-06'
 schema_version: 2
 project_ids: []
 status: active
@@ -17,6 +17,7 @@ legal_name:
 company_stage: public
 headquarters: "Suwon, South Korea"
 key_metric_ids: []
+security_ids: [INS-KRX-005930]
 source_channel_ids: []
 evidence_ids: []
 ---

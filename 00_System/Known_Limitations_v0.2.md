@@ -128,3 +128,15 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   6, DEPENDS_ON 5, PRODUCES 5, 客户/伙伴 5. **44 relations approved total.**
   Agent audit: 2 fixes (CoreWeave PRD/REL 补 EVT-048 证据覆盖; conf 0.7→0.6
   对齐同类云产品)。**Remaining Field Gate: 10 Company human-verification 子项**.
+- **10 Company human-verification (2026-08-06, Field Gate §9.3 完成)**: 补了
+  WP-120 遗漏 3 —— OBJECT_PATTERNS 缺 Securities 目录（ID_PATTERNS 早已注册
+  security），REVIEWABLE_TYPES 缺 security（同 product/sector 先例）。新建 10
+  个 INS-* 证券实体并 reviewed（NVDA/TWSE-2330/NYSE-TSM ADR/KRX-000660/KRX-
+  005930/MU/MSFT/CRWV/META/AMZN-parent），挂接 9 家 Company security_ids。
+  补 v0.2 老 8 家身份字段（legal_name/HQ/stage）。Review packet passed
+  （REV-054..063，max 全 approve）。**Field Gate §9.3 全部完成**（10 Company +
+  30 relation 四要素核验）。**Known limitation: source_channel 类型未实现**
+  （RCP-v03-003 仅 ID 占位，字段留后续 RCP）——Company source_channel_ids
+  无法引用，来源核验改用 evidence_ids/reviewed Events 支撑；59/59 Company
+  source_channel_ids 留空，待实现后补登记。**下一个候选: A-020 阶段验收
+  （clean-clone + migration rollback）或 v0.3 阶段 1 收口。**

@@ -3,7 +3,7 @@ id: COM-microsoft
 type: company
 title: Microsoft
 created_at: 2026-07-29
-updated_at: '2026-07-30'
+updated_at: '2026-08-06'
 status: active
 review_status: reviewed
 aliases: [Microsoft Corporation, MSFT]
@@ -14,6 +14,11 @@ tags: [INF-CLOUD-AI, APP-COLLABORATION, APP-CRM, MOAT-DISTRIBUTION]
 sector_ids: [SEG-cloud-ai-infrastructure, SEG-enterprise-applications]
 region_primary: REG-us
 coverage_tier: core
+legal_name: "Microsoft Corporation"
+company_stage: public
+headquarters: "Redmond, WA, USA"
+security_ids: [INS-NASDAQ-MSFT]
+key_metric_ids: []
 schema_version: 1
 project_ids:
 - PRJ-001

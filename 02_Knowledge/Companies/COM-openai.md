@@ -3,7 +3,7 @@ id: COM-openai
 type: company
 title: OpenAI
 created_at: 2026-07-29
-updated_at: '2026-07-30'
+updated_at: '2026-08-06'
 status: active
 review_status: reviewed
 aliases: [OpenAI]
@@ -14,6 +14,11 @@ tags: [MOD-FOUNDATION, DEV-AGENT-FRAMEWORK, DEV-ORCHESTRATION]
 sector_ids: [SEG-models, SEG-cloud-ai-infrastructure]
 region_primary: REG-us
 coverage_tier: core
+legal_name: "OpenAI, Inc."
+company_stage: private
+headquarters: "San Francisco, CA, USA"
+security_ids: []
+key_metric_ids: []
 schema_version: 1
 project_ids:
 - PRJ-001

@@ -203,6 +203,7 @@ def parse_args() -> argparse.Namespace:
             "sector",
             "ontology_assertion",
             "product",
+            "security",
         ),
     )
     review_queue.add_argument(

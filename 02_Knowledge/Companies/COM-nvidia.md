@@ -3,7 +3,7 @@ id: COM-nvidia
 type: company
 title: "NVIDIA"
 created_at: 2026-08-05
-updated_at: '2026-08-05'
+updated_at: '2026-08-06'
 schema_version: 2
 project_ids: []
 status: active
@@ -17,6 +17,7 @@ legal_name:
 company_stage: public
 headquarters: "Santa Clara, CA, USA"
 key_metric_ids: []
+security_ids: [INS-NASDAQ-NVDA]
 source_channel_ids: []
 evidence_ids: []
 ---

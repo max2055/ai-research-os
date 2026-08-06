@@ -46,8 +46,9 @@ class SchemaTests(unittest.TestCase):
                 "product": 5,  # WP-120 Product entities
                 "project": 2,
                 "report": 2,
-                "review": 143,  # +27 EvWP; +21 Gate30; +12 Field gap; +10 Product
+                "review": 163,  # +27 EvWP; +21 G30; +12 gap; +10 Prod; +20 Sec+Co
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
+                "security": 10,  # Field Gate §9.3 securities
                 "source": 55,  # EvWP: +10 (1 hollow 8-K removed); Gate30 sprint: +6
                 "thesis": 8,
             },
