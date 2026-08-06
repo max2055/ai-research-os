@@ -218,3 +218,15 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   `discover run --apply` 写路径。真实验证：SK hynix CTI 0.620 / HBF 代表
   0.590 / SK+NVIDIA 合作 ambiguous 0.578 / 重复变体 0.09–0.12。**167 tests
   (+5)。WP-230 剩余: B-019 promote-to-Source / B-020 dismiss/restore。**
+- **B-019 promote-to-Source 完成 (2026-08-06)**: `src/research_os/services/
+  promote.py`（事务服务）。`candidates promote --id --actor [--source-type
+  --source-grade --publisher --project --user-agent --apply]`：URL 实况
+  捕获 → Source+assets 原子提交（FileTransaction，§13 不留半个 Source）→
+  candidate 置 promoted + promoted_source_id + append-only action。幂等：
+  已 promoted 抛 AlreadyPromoted（CLI 打印 IDEMPOTENT exit 0）；dismissed/
+  expired/failed 拒绝。source_type 由 channel 映射（rss→article/arxiv→paper/
+  sec→report/github→other），companies 取 entity proposal（matched COM-*）。
+  真实验证：SK hynix CTI dry-run → SRC-20260806-057，COM-sk-hynix 关联，0 写
+  入。**172 tests (+5)。WP-230 剩余: B-020 dismiss/expire/restore。已知局限：
+  promote 是权威仓库写入，须人工 --apply；capture 失败/无 URL 候选拒绝；
+  crash 窗口（文件已提交、candidate 未链接）靠去重阻断重试，需人工 resolve。**

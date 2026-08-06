@@ -73,6 +73,12 @@ from research_os.services.projects import (
     render_project_list,
     render_project_status,
 )
+from research_os.services.promote import (
+    AlreadyPromoted,
+    commit_promote,
+    prepare_promote,
+    render_promote_plan,
+)
 from research_os.services.release import (
     release_readiness,
     render_release_readiness,
@@ -107,6 +113,10 @@ __all__ = [
     "confirm_published_date",
     "count_by_type",
     "enrich_candidates",
+    "AlreadyPromoted",
+    "commit_promote",
+    "prepare_promote",
+    "render_promote_plan",
     "index_drift",
     "job_rows",
     "load_metrics_snapshot",

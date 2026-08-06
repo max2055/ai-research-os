@@ -235,6 +235,32 @@ def parse_args() -> argparse.Namespace:
         "show", help="show one candidate in detail"
     )
     candidates_show.add_argument("--id", required=True)
+    candidates_promote = candidates_commands.add_parser(
+        "promote", help="promote a candidate to a permanent Source (B-019)"
+    )
+    candidates_promote.add_argument("--id", required=True)
+    candidates_promote.add_argument(
+        "--actor",
+        required=True,
+        help="who is promoting (recorded in the action log)",
+    )
+    candidates_promote.add_argument(
+        "--source-type",
+        help="override Source type (default from channel)",
+    )
+    candidates_promote.add_argument(
+        "--source-grade",
+        help="override Source grade (default from channel)",
+    )
+    candidates_promote.add_argument(
+        "--publisher", help="override publisher (default from candidate/channel)"
+    )
+    candidates_promote.add_argument("--project", default="PRJ-001")
+    candidates_promote.add_argument(
+        "--user-agent",
+        help="compliant User-Agent (Name Contact@email); required for sec.gov",
+    )
+    candidates_promote.add_argument("--apply", action="store_true")
     candidates_enrich = candidates_commands.add_parser(
         "enrich",
         help="backfill entity/sector/score proposals for unscored candidates",
@@ -775,6 +801,33 @@ def main() -> int:
                     return 2
                 print(runtime.render_candidate_detail(detail), end="")
                 return 0
+            if args.candidates_command == "promote":
+                promote_plan = runtime.prepare_promote(
+                    args.root.resolve(),
+                    args.id,
+                    actor=args.actor,
+                    source_type=args.source_type,
+                    source_grade=args.source_grade,
+                    publisher=args.publisher,
+                    project_id=args.project,
+                    user_agent=args.user_agent,
+                )
+                if not args.apply:
+                    print(runtime.render_promote_plan(promote_plan), end="")
+                    return 0
+                promote_result = runtime.commit_promote(
+                    args.root.resolve(), promote_plan
+                )
+                print(
+                    f"PROMOTED: {promote_result['source_id']} -> "
+                    f"{promote_result['source_path']}"
+                )
+                print(
+                    f"APPLIED: candidate {promote_plan.candidate_id} linked to "
+                    f"{promote_result['source_id']} "
+                    f"(action {promote_result['action_id']})"
+                )
+                return 0
             enriched = runtime.enrich_candidates(
                 args.root.resolve(),
                 apply=args.apply,
@@ -782,6 +835,11 @@ def main() -> int:
             print(runtime.render_enrichment(enriched, applied=args.apply), end="")
             return 0
         except (OSError, TransactionError, ValueError) as exc:
+            if isinstance(exc, runtime.AlreadyPromoted):
+                print(
+                    f"IDEMPOTENT: candidate already promoted to {exc.source_id}"
+                )
+                return 0
             print(f"ERROR: {exc}")
             return 2
     if args.command == "project":
