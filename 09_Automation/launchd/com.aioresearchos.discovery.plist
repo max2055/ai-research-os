@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.aioresearchos.discovery</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/max/Coding/57-AI-Research-OS/09_Automation/launchd/run_daily.sh</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>21600</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/max/Coding/57-AI-Research-OS/09_Automation/launchd/logs/launchd.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/max/Coding/57-AI-Research-OS/09_Automation/launchd/logs/launchd.stderr.log</string>
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>AbandonProcessGroup</key>
+    <true/>
+</dict>
+</plist>

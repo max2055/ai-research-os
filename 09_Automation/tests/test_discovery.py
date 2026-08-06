@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -9,6 +10,8 @@ from pathlib import Path
 
 from research_os.services import candidate_db
 from research_os.services.discovery import (
+    _acquire_channel_lock,
+    due_channels,
     preflight_channel,
     run_discovery,
 )
@@ -123,6 +126,70 @@ class DiscoveryServiceTests(unittest.TestCase):
             root = self._make_root(temp)
             with self.assertRaises(ValueError):
                 run_discovery(root, "CHN-nope")
+
+    def _running_run(self, root: Path, started_at: str) -> None:
+        candidate_db.apply_migrations(candidate_db.candidate_db_path(root))
+        candidate_db.record_discovery_run(
+            candidate_db.candidate_db_path(root),
+            "RUN-lock",
+            "CHN-test",
+            started_at,
+            status="running",
+        )
+
+    def test_lock_refuses_live_running_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            db_path = candidate_db.candidate_db_path(root)
+            now = "2026-08-06T12:00:00Z"
+            self._running_run(root, now)
+            with self.assertRaises(ValueError):
+                _acquire_channel_lock(db_path, "CHN-test", now)
+            row = sqlite3.connect(db_path).execute(
+                "SELECT status FROM discovery_runs WHERE run_id = 'RUN-lock'"
+            ).fetchone()
+            self.assertEqual("running", row[0])
+
+    def test_lock_reclaims_stale_running_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            db_path = candidate_db.candidate_db_path(root)
+            now = "2026-08-06T12:00:00Z"
+            self._running_run(root, "2026-08-06T11:00:00Z")  # 1h old
+            _acquire_channel_lock(db_path, "CHN-test", now)  # no raise
+            row = sqlite3.connect(db_path).execute(
+                "SELECT status FROM discovery_runs WHERE run_id = 'RUN-lock'"
+            ).fetchone()
+            self.assertEqual("failed", row[0])
+
+    def test_due_channels_respects_schedule_and_last_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            candidate_db.apply_migrations(candidate_db.candidate_db_path(root))
+            candidate_db.record_discovery_run(
+                candidate_db.candidate_db_path(root),
+                "RUN-a",
+                "CHN-test",
+                "2026-08-06T00:00:00Z",
+                status="succeeded",
+            )
+            # never-run channel CHN-other stays due; CHN-test due only after 1 day
+            self._make_channel(root, "CHN-other")
+            self.assertEqual(
+                ["CHN-other"],
+                [
+                    d["channel_id"]
+                    for d in due_channels(root, as_of="2026-08-06T12:00:00Z")
+                ],
+            )
+            self.assertEqual(
+                ["CHN-other", "CHN-test"],
+                [
+                    d["channel_id"]
+                    for d in due_channels(root, as_of="2026-08-07T00:00:01Z")
+                ],
+            )
 
 
 if __name__ == "__main__":

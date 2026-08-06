@@ -13,7 +13,7 @@ from pathlib import Path
 
 from research_os.repositories.transaction import TransactionError
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _DEFAULT_PATH = Path("09_Automation/operational/candidates.db")
 
 _SCHEMA_V1 = """
@@ -87,6 +87,28 @@ CREATE INDEX IF NOT EXISTS candidate_actions_candidate_idx
     ON candidate_actions(candidate_id, acted_at);
 """
 
+# v2: drop the candidate_actions FK so a purged candidate keeps its audit
+# rows (ADR retention: dismissed/expired cleaned up, audit actions retained).
+_SCHEMA_V2 = """
+CREATE TABLE IF NOT EXISTS candidate_actions_v2 (
+    action_id TEXT PRIMARY KEY,
+    candidate_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    reason TEXT,
+    actor TEXT NOT NULL,
+    acted_at TEXT NOT NULL,
+    payload_json TEXT
+);
+INSERT INTO candidate_actions_v2 (
+    action_id, candidate_id, action, reason, actor, acted_at, payload_json
+) SELECT action_id, candidate_id, action, reason, actor, acted_at, payload_json
+  FROM candidate_actions;
+DROP TABLE candidate_actions;
+ALTER TABLE candidate_actions_v2 RENAME TO candidate_actions;
+CREATE INDEX IF NOT EXISTS candidate_actions_candidate_idx
+    ON candidate_actions(candidate_id, acted_at);
+"""
+
 
 def candidate_db_path(root: Path) -> Path:
     return root / _DEFAULT_PATH
@@ -122,9 +144,15 @@ def apply_migrations(path: Path) -> int:
         if version < 1:
             connection.executescript("BEGIN")
             connection.executescript(_SCHEMA_V1)
-            connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+            connection.execute("PRAGMA user_version = 1")
             connection.commit()
-            version = SCHEMA_VERSION
+            version = 1
+        if version < 2:
+            connection.executescript("BEGIN")
+            connection.executescript(_SCHEMA_V2)
+            connection.execute("PRAGMA user_version = 2")
+            connection.commit()
+            version = 2
         return version
     except sqlite3.Error as exc:
         connection.rollback()
@@ -246,6 +274,34 @@ def record_discovery_run(
     except sqlite3.Error as exc:
         connection.rollback()
         raise TransactionError(f"discovery run insert failed: {exc}") from exc
+    finally:
+        connection.close()
+
+
+def finish_discovery_run(
+    path: Path,
+    run_id: str,
+    *,
+    status: str,
+    candidate_count: int | None = None,
+    finished_at: str | None = None,
+) -> None:
+    """Close a running discovery run with a terminal status (B-021 lock)."""
+    if not path.exists():
+        raise TransactionError(f"no candidate db to finish run: {path}")
+    connection = _connect(path)
+    try:
+        cursor = connection.execute(
+            "UPDATE discovery_runs SET status = ?, finished_at = ?, "
+            "candidate_count = ? WHERE run_id = ?",
+            (status, finished_at, candidate_count, run_id),
+        )
+        if cursor.rowcount != 1:
+            raise TransactionError(f"unknown discovery run {run_id}")
+        connection.commit()
+    except sqlite3.Error as exc:
+        connection.rollback()
+        raise TransactionError(f"discovery run update failed: {exc}") from exc
     finally:
         connection.close()
 

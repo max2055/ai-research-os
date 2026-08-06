@@ -22,6 +22,7 @@ from research_os.services.channels import (
     set_channel_enabled,
 )
 from research_os.services.discovery import (
+    due_channels,
     render_discovery_result,
     run_discovery,
 )
@@ -93,6 +94,7 @@ from research_os.services.status import render_status
 from research_os.services.triage import (
     dismiss_candidate,
     expire_candidates,
+    purge_candidates,
     render_triage_result,
     restore_candidate,
 )
@@ -148,11 +150,13 @@ __all__ = [
     "set_channel_enabled",
     "render_discovery_result",
     "run_discovery",
+    "due_channels",
     "render_candidate_detail",
     "render_candidate_list",
     "render_enrichment",
     "dismiss_candidate",
     "expire_candidates",
+    "purge_candidates",
     "render_triage_result",
     "restore_candidate",
     "queue_rows",

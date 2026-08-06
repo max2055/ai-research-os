@@ -10,6 +10,7 @@ from pathlib import Path
 
 from research_os.domain.models import ResearchObject
 from research_os.repositories.transaction import FileTransaction
+from research_os.services.discovery import run_discovery
 from research_os.services.indexing import (
     apply_indexes,
     render_indexes,
@@ -21,9 +22,20 @@ from research_os.services.metrics import (
     metrics_snapshot_path,
     research_metrics,
 )
+from research_os.services.triage import expire_candidates, purge_candidates
 from research_os.services.validation import validate_repository
 
-JOB_NAMES = frozenset({"validate", "indexes", "metrics", "source-process", "refresh"})
+JOB_NAMES = frozenset(
+    {
+        "validate",
+        "indexes",
+        "metrics",
+        "source-process",
+        "refresh",
+        "discover",
+        "expire",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -90,6 +102,22 @@ def _execute_job(
             f"{target} already processed; no changes"
             if not changed
             else f"{target} processed; {len(changed)} paths changed"
+        )
+    if job_name == "discover":
+        if not target:
+            raise ValueError("discover requires --target CHN-ID")
+        result = run_discovery(root, target, apply=True)
+        return (
+            f"discovery run {result['run_id']} for {target}: "
+            f"{result['candidate_count']} candidates, "
+            f"{result['inserted']} inserted"
+        )
+    if job_name == "expire":
+        expired = expire_candidates(root, apply=True)
+        purged = purge_candidates(root, apply=True)
+        return (
+            f"retention sweep: {len(expired['expired'])} expired, "
+            f"{len(purged['purged'])} purged"
         )
     if job_name in {"indexes", "refresh"}:
         apply_indexes(root, render_indexes(objects))

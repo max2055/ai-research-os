@@ -280,6 +280,11 @@ def parse_args() -> argparse.Namespace:
     candidates_expire.add_argument("--channel", help="limit to one source channel")
     candidates_expire.add_argument("--as-of", default="")
     candidates_expire.add_argument("--apply", action="store_true")
+    candidates_purge = candidates_commands.add_parser(
+        "purge",
+        help="delete dismissed/expired candidate rows, keep audit actions",
+    )
+    candidates_purge.add_argument("--apply", action="store_true")
     candidates_enrich = candidates_commands.add_parser(
         "enrich",
         help="backfill entity/sector/score proposals for unscored candidates",
@@ -539,7 +544,15 @@ def parse_args() -> argparse.Namespace:
     job_run = job_commands.add_parser("run", help="execute and record one job")
     job_run.add_argument(
         "name",
-        choices=("validate", "indexes", "metrics", "source-process", "refresh"),
+        choices=(
+            "validate",
+            "indexes",
+            "metrics",
+            "source-process",
+            "refresh",
+            "discover",
+            "expire",
+        ),
     )
     job_run.add_argument("--project")
     job_run.add_argument("--target")
@@ -734,14 +747,12 @@ def main() -> int:
                 print(runtime.render_discovery_result(discovery_result), end="")
                 return 0
             if args.discover_command == "due":
-                channels = runtime.channel_rows(args.root.resolve())
-                for channel in channels:
-                    if (
-                        channel["review_status"] == "reviewed"
-                        and channel["enabled"]
-                        and channel["license_status"] != "restricted"
-                    ):
-                        print(channel["id"])
+                due = runtime.due_channels(
+                    args.root.resolve(),
+                    as_of=args.as_of or None,
+                )
+                for item in due:
+                    print(item["channel_id"])
                 return 0
         except (ValueError, OSError) as exc:
             print(f"ERROR: {exc}")
@@ -871,6 +882,13 @@ def main() -> int:
                     args.root.resolve(),
                     channel_id=args.channel,
                     as_of=args.as_of or None,
+                    apply=args.apply,
+                )
+                print(runtime.render_triage_result(triage_result), end="")
+                return 0
+            if args.candidates_command == "purge":
+                triage_result = runtime.purge_candidates(
+                    args.root.resolve(),
                     apply=args.apply,
                 )
                 print(runtime.render_triage_result(triage_result), end="")

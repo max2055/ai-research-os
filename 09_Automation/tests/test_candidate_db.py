@@ -81,6 +81,39 @@ class CandidateDbTests(unittest.TestCase):
             finally:
                 connection.close()
 
+    def test_v2_drops_action_fk_so_purge_keeps_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "candidates.db"
+            apply_migrations(path)
+            self.assertEqual(2, current_version(path))
+            connection = sqlite_connect(path)
+            try:
+                connection.execute("PRAGMA foreign_keys = ON")
+                connection.execute(
+                    "INSERT INTO candidates (candidate_id, channel_id, "
+                    "discovered_at, title, created_at, status) "
+                    "VALUES ('CND-x', 'CHN-sec', '2026-08-06T00:00:00Z', "
+                    "'X', '2026-08-06T00:00:00Z', 'dismissed')"
+                )
+                connection.execute(
+                    "INSERT INTO candidate_actions (action_id, candidate_id, "
+                    "action, reason, actor, acted_at) "
+                    "VALUES ('CA-1', 'CND-x', 'dismiss', 'noise', "
+                    "'max', '2026-08-06T00:00:00Z')"
+                )
+                # FK is gone in v2: deleting the candidate must succeed while
+                # the audit action row survives.
+                connection.execute(
+                    "DELETE FROM candidates WHERE candidate_id = 'CND-x'"
+                )
+                connection.commit()
+                row = connection.execute(
+                    "SELECT action FROM candidate_actions WHERE action_id = 'CA-1'"
+                ).fetchone()
+                self.assertEqual("dismiss", row[0])
+            finally:
+                connection.close()
+
 
 def sqlite_connect(path: Path):
     import sqlite3

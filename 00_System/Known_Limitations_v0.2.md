@@ -243,3 +243,19 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   处理 candidate_actions FK 与审计保留的关系（schema 决策），留待 retention
   sweep（B-021 runbook 配套）。下一个: B-021 launchd runbook / B-022 Daily
   Brief。**
+- **B-021 launchd runbook + scheduler + retention sweep 完成 (2026-08-06)**:
+  `schedule.py`（daily/daily Nx/every N hours|minutes|days/weekly → interval；
+  不可解析视为不到期）+ `discover due` 变 schedule-aware（按 channel schedule +
+  discovery_runs 上次 run）；discovery 加 **per-channel no-overlap lock**
+  （running 行 + 30min stale 回收，重启后可恢复）；`jobs run discover
+  --target CHN-ID` 与 `jobs run expire`（retention sweep）；launchd runbook
+  （`09_Automation/launchd/RUNBOOK.md` + plist + wrapper run_daily.sh）。
+  **retention purge 落地**：schema v2（去掉 candidate_actions FK，审计行可
+  独立于候选保留）+ `candidates purge [--apply]`。JobSchema job_name 扩到
+  discover/expire（实现已批准 §7/§10 CLI）。真实验证：discover due 只列
+  3 个 reviewed+enabled 到期 channel（SK hynix 未到期、restricted/pending
+  排除）；live DB v1→v2 迁移成功；jobs run expire → 0 expired/0 purged +
+  JOB 记录。**192 tests (+13)。WP-231 剩余: B-022 Daily Brief。已知局限：
+  schedule 解析不支持 cron 语法（"0 9 * * *"→None→不到期，用 channels check
+  人工发现）；expire job 的物理 purge 立即删除 dismissed/expired 行（ADR
+  "立即清理"）。**

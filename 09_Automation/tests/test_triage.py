@@ -12,6 +12,7 @@ from research_os.services import candidate_db
 from research_os.services.triage import (
     dismiss_candidate,
     expire_candidates,
+    purge_candidates,
     render_triage_result,
     restore_candidate,
 )
@@ -326,6 +327,30 @@ class TriageTests(unittest.TestCase):
             )
             self.assertEqual([], result["expired"])
             self.assertEqual("new", self._status(root, "CND-old"))
+
+    def test_purge_deletes_terminal_candidates_but_keeps_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(root, "CND-0000")
+            dismiss_candidate(
+                root, "CND-0000", actor="max", reason="noise", apply=True
+            )
+            result = purge_candidates(root, apply=True)
+            purged_ids = [i["candidate_id"] for i in result["purged"]]
+            self.assertEqual(["CND-0000"], purged_ids)
+            self.assertEqual("missing", self._status(root, "CND-0000"))
+            self.assertEqual(
+                [("dismiss", "noise", "max")],
+                self._actions(root, "CND-0000"),
+            )
+
+    def test_purge_dry_run_writes_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(root, "CND-0000")
+            result = purge_candidates(root, apply=False)
+            self.assertEqual([], result["purged"])
+            self.assertEqual("new", self._status(root, "CND-0000"))
 
 
 if __name__ == "__main__":

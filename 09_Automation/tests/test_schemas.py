@@ -42,6 +42,7 @@ class SchemaTests(unittest.TestCase):
                 "action": 12,
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 48,  # EvWP: +9; Gate30 sprint: +6; Field gap: +2
+                "job": 1,  # B-021: retention sweep Job Run record
                 "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
                 "product": 5,  # WP-120 Product entities
                 "project": 2,

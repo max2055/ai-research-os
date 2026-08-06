@@ -22,6 +22,8 @@ class JobSchema(ManagedObjectSchema):
         "metrics",
         "source-process",
         "refresh",
+        "discover",
+        "expire",
     ]
     started_at: DateTimeString
     finished_at: DateTimeString

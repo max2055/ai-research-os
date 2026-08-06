@@ -308,8 +308,69 @@ def expire_candidates(
         connection.close()
 
 
+def purge_candidates(
+    root: Path,
+    *,
+    apply: bool = False,
+) -> dict[str, Any]:
+    """Delete dismissed/expired candidate rows, keeping audit actions (B-021).
+
+    Implements ADR §3 retention: terminal-status candidates are cleaned up
+    while ``candidate_actions`` rows are preserved. Requires schema v2, where
+    the candidate_actions FK is dropped so actions outlive their candidate.
+    """
+    root = root.resolve()
+    db_path = candidate_db.candidate_db_path(root)
+    if not db_path.exists():
+        return {"purged": [], "applied": apply}
+    candidate_db.apply_migrations(db_path)  # ensure v2 (no FK on actions)
+    connection = _connect(db_path)
+    try:
+        rows = connection.execute(
+            "SELECT candidate_id, status FROM candidates "
+            "WHERE status IN ('dismissed', 'expired')"
+        ).fetchall()
+        purged = [
+            {
+                "candidate_id": str(row["candidate_id"]),
+                "status": str(row["status"]),
+            }
+            for row in rows
+        ]
+        if apply and purged:
+            connection.execute("BEGIN")
+            connection.execute(
+                "DELETE FROM candidates "
+                "WHERE status IN ('dismissed', 'expired')"
+            )
+            connection.commit()
+        return {"purged": purged, "applied": apply}
+    except sqlite3.Error as exc:
+        connection.rollback()
+        raise TransactionError(f"candidate purge failed: {exc}") from exc
+    finally:
+        connection.close()
+
+
 def render_triage_result(result: dict[str, Any]) -> str:
     mode = "APPLIED" if result.get("applied") else "DRY-RUN"
+    if "purged" in result:
+        purged = result["purged"]
+        lines = [
+            f"# Purge candidates ({mode})",
+            "",
+            f"Terminal candidates: {len(purged)}",
+        ]
+        if purged:
+            lines.append("")
+            lines.append("| Candidate | Status |")
+            lines.append("|---|---|")
+            for item in purged:
+                lines.append(f"| {item['candidate_id']} | {item['status']} |")
+        if not result.get("applied"):
+            lines.append("")
+            lines.append("DRY-RUN: no changes written; rerun with --apply")
+        return "\n".join(lines) + "\n"
     if "expired" in result:
         expired = result["expired"]
         lines = [

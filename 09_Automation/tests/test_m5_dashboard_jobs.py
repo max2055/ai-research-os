@@ -199,6 +199,24 @@ class SchedulerJobTests(unittest.TestCase):
             self.assertIn(failed.job_id, health.text)
             self.assertIn("failed jobs", health.text)
 
+    def test_discover_and_expire_scheduler_jobs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            expired = run_job(
+                root,
+                "expire",
+                started_at=datetime(2026, 8, 6, 10, 0, 0, tzinfo=UTC),
+            )
+            self.assertEqual("success", expired.status)
+            self.assertIn("0 expired, 0 purged", expired.message)
+            missing = run_job(
+                root,
+                "discover",
+                started_at=datetime(2026, 8, 6, 10, 0, 1, tzinfo=UTC),
+            )
+            self.assertEqual("failed", missing.status)
+            self.assertIn("requires --target", missing.message)
+
     def test_refresh_job_and_cli_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = prepared_root(temp)
