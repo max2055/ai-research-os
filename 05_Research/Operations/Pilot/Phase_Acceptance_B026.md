@@ -14,8 +14,8 @@
 | G3 | 无静默漏跑 | `pilot status` stale/never-run + 每日 brief 是否生成 | ⬜ | 待观察 |
 | G4 | 重复入队比例 <15% | `pipeline metrics` duplicate rate | ⬜ | 基线 50% |
 | G5 | Top-20 人工相关性 ≥75% | 每日记录人工抽样判定 | ⬜ | 人工 |
-| G6 | ≥20 Candidate 提升为正式 Source | `pilot status` promoted 计数 + `candidates list --status promoted` | ⬜ | 基线 0 |
-| G7 | 提升 Source 通过资产/hash 检查 | `source verify-assets` 全 OK | ⬜ | 逐次 |
+| G6 | ≥20 Candidate 提升为正式 Source | `pilot status` promoted 计数 + `candidates list --status promoted` | ⬜ | **26/20（Day 1 达成）**|
+| G7 | 提升 Source 通过资产/hash 检查 | `source verify-assets` 全 OK | ⬜ | 26 个新 Source 全 OK |
 | G8 | 候选摘要不作 reviewed Fact | Daily Brief `unreviewed candidate` 标记 + 审阅流程审查 | ⬜ | 已机制化 |
 | G9 | 每日 triage 中位耗时 ≤45min | 每日记录耗时 | ⬜ | 人工 |
 | G10 | 失败与许可限制写入 Known Limitations | Known_Limitations_v0.2.md | ⬜ | github/SEC 缺口已记 |
@@ -37,7 +37,7 @@
 - ~~**G1 4/20**~~ ✅ **20/20 达成**（Day 1，7 SEC + 5 GitHub + 6 arXiv + 2 原通道）。
 - **G4 50%**：SK hynix 多 URL 变体噪声；按 cluster 代表 promote 可缓解，
   目标 <15% 需在 feed 解析/去重上继续收紧。
-- **G6 0/20**：目前无任何 promote——每日 triage 需主动推进。
+- ~~**G6 0/20**~~ ✅ **26/20 达成**（Day 1，26 个 SEC 10-K/10-Q promote）。
 
 ## 验收记录
 

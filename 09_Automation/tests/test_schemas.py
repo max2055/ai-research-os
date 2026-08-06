@@ -42,7 +42,7 @@ class SchemaTests(unittest.TestCase):
                 "action": 12,
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 48,  # EvWP: +9; Gate30 sprint: +6; Field gap: +2
-                "job": 30,  # B-021/022 + launchd pilot rounds Job Run records
+                "job": 31,  # B-021/022 + launchd pilot rounds Job Run records
                 "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
                 "product": 5,  # WP-120 Product entities
                 "project": 2,
@@ -50,7 +50,7 @@ class SchemaTests(unittest.TestCase):
                 "review": 170,  # +1 G1 channel batch (REV-070)
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "security": 10,  # Field Gate §9.3 securities
-                "source": 55,  # EvWP: +10 (1 hollow 8-K removed); Gate30 sprint: +6
+                "source": 81,  # +26 Pilot G6 promote (SEC 10-K/10-Q)
                 "source_channel": 24,  # WP-201: 6 first-batch + 18 Pilot G1 batch
                 "thesis": 8,
             },

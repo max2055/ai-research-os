@@ -317,6 +317,14 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   github 20 + SEC 20）。**210 tests (+5 multi-target)。已知局限：github repo
   列表是我选的 5 个默认 repo，max 可改；SEC 若个别 CIK 失效 composite 会跳过
   （需确认真实性）；channel 数量仍 4/20（G1 待补）。**
+- **首个 triage 轮（2026-08-06，Pilot Day 1）**: 审 69 候选——**promote 26 个
+  SEC 10-K/10-Q**（Amazon 5 / Meta 6 / Micron 6 / Microsoft 7 / NVIDIA 5 → SRC-
+  20260806-057..082，全部真实捕获、26/26 通过资产/hash 检查）；**dismiss 43**
+  （40 聚合重复 + 3 内容已存在为 Source）。**Pilot G6 达成（26/20 promoted）**；
+  G1 20/20 也达成。G4 dup 率 35.7%（目标 <15%）。候选状态：26 promoted / 43
+  dismissed / 326 new（8-K、github releases、arxiv 待后续 triage）。发现：
+  promote 对已捕获内容（SRC-20260805-040/049/050）正确拒绝重复。**210 tests；
+  schema 基线更新（source 81、job 31）。剩 Gate：G4、G5（人工相关性）、G9（耗时）。**
 - **G1 补齐 20 channel（2026-08-06）**: 新增 18 个通道（7 per-company SEC：
   NVIDIA/TSMC/Micron/Microsoft/Meta/Amazon/CoreWeave，各独立 CIK + forms；
   5 per-repo GitHub：openai/anthropic/meta-llama/DeepSeek-V3/autogen；6 arXiv

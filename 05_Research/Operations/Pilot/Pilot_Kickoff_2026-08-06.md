@@ -22,7 +22,7 @@
 | 不出现静默漏跑 | 持续 | 待观察（`pilot status` 的 job_failures + stale）|
 | 重复入队比例 | <15% | 50%（SK hynix 多 URL 变体，promote 前按 cluster 代表处理）|
 | Top-20 人工相关性 | ≥75% | 待每日 triage 记录 |
-| ≥20 Candidate 提升为正式 Source | ≥20 | **0/20** |
+| ≥20 Candidate 提升为正式 Source | ≥20 | **26/20 ✅**（26 个 SEC 10-K/10-Q 已 promote 为 Source）|
 | 提升 Source 通过资产/hash 检查 | 全过 | `source verify-assets` 逐次检查 |
 | 候选摘要不作 reviewed Fact | 硬性 | Daily Brief 已强制 `unreviewed candidate` 标记 |
 | 每日人工 triage 中位耗时 | ≤45min | 待记录 |
@@ -72,4 +72,4 @@ research-os source verify-assets
 
 | 日期 | 新候选 | 审阅数 | promote | dismiss | triage 耗时 | Top-20 相关性 | 备注 |
 |---|---|---|---|---|---|---|---|
-| 2026-08-06 | 50 | | | | | | launchd 验证轮 |
+| 2026-08-06 | 395 | 69 | 26 | 43 | | | 26×SEC 10-K/10-Q；43×聚合重复+已存在内容 |
