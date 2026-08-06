@@ -42,10 +42,11 @@ class SchemaTests(unittest.TestCase):
                 "action": 12,
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 48,  # EvWP: +9; Gate30 sprint: +6; Field gap: +2
-                "ontology_assertion": 255,  # RelWP relations; Field gap: +7
+                "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
+                "product": 5,  # WP-120 Product entities
                 "project": 2,
                 "report": 2,
-                "review": 133,  # WP-120: +9; EvWP: +27; Gate30: +21; Field gap: +12
+                "review": 143,  # +27 EvWP; +21 Gate30; +12 Field gap; +10 Product
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "source": 55,  # EvWP: +10 (1 hollow 8-K removed); Gate30 sprint: +6
                 "thesis": 8,

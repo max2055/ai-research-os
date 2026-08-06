@@ -119,3 +119,12 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   CUSTOMER_OF CoreWeave (EVT-041 named contracts). **Remaining Field Gate
   gap: PRODUCES 产品归属 0/5 (needs Product entities, deferred to WP-120)**.
   10 Company human-verification sub-item also still open.
+- **Product ownership WP (2026-08-06, WP-120 收尾)**: fixed WP-120 遗漏 —
+  OBJECT_PATTERNS 缺 `02_Knowledge/Products/PRD-*.md`（ID_PATTERNS 早已注册
+  product），REVIEWABLE_TYPES 缺 product（Sector 先例），两者均已补齐。
+  5 Product entities created + reviewed (PRD-hbm4/hbm3e/azure-ai-infra/
+  aws-ai-infra/coreweave-cloud) + 5 PRODUCES relations approved
+  (REL-261..265). **Field Gate §9.3 分布全部达成**: SUPPLIES 20, COMPETES_WITH
+  6, DEPENDS_ON 5, PRODUCES 5, 客户/伙伴 5. **44 relations approved total.**
+  Agent audit: 2 fixes (CoreWeave PRD/REL 补 EVT-048 证据覆盖; conf 0.7→0.6
+  对齐同类云产品)。**Remaining Field Gate: 10 Company human-verification 子项**.

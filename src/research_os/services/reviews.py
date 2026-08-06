@@ -17,7 +17,16 @@ from research_os.services.projects import objects_for_project
 from research_os.services.validation import validate_repository
 
 REVIEWABLE_TYPES = frozenset(
-    {"source", "event", "thesis", "company", "report", "sector", "ontology_assertion"}
+    {
+        "source",
+        "event",
+        "thesis",
+        "company",
+        "report",
+        "sector",
+        "ontology_assertion",
+        "product",
+    }
 )
 
 
