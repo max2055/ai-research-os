@@ -329,3 +329,9 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   per-company SEC 的 TSMC 用 20-F/6-K、其余 US 公司 10-K/10-Q/8-K；github
   repo 仍是我选的默认值；company-ir（无 adapter）与 trendforce（restricted）
   维持禁用。**
+- **20 通道全链路首轮验证（2026-08-06）**: launchd 一轮跑完 18 新通道全部
+  SUCCESS（0 失败），DB 现 **395 候选**（arxiv 7 分区 140 + SEC 7 公司 120
+  （coreweave 修正后）+ github 6 通道 81 + skhynix 30 等）；median latency
+  5.0s；dup 率降到 **35.7%**。**核心数据修正：CoreWeave CIK 2015943 实为
+  Five Arrows，正确 CIK 是 1769628**（live verify 发现 0 候选后查 company_
+  tickers 修正）；7 个 SEC CIK 全部核验指向正确实体。job 记录 30 个。**

@@ -11,7 +11,7 @@ review_status: reviewed
 tags: []
 name: "CoreWeave SEC"
 channel_type: sec
-locator: "https://www.sec.gov/cgi-bin/browse-edgar?cik=2015943"
+locator: "https://www.sec.gov/cgi-bin/browse-edgar?cik=1769628"
 allow_hosts: [sec.gov]
 publisher: "U.S. SEC EDGAR"
 source_grade_proposal: A
