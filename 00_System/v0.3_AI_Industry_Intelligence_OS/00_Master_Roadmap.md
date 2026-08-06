@@ -80,15 +80,15 @@ Candidate 数据量预计远大于正式研究对象，因此不能把每条候�
 
 ## 4. 阶段总览
 
-| 阶段 | 名称 | 建议周期 | 核心 Gate | 依赖 |
-|---|---|---:|---|---|
-| 0 | 产品重定义与治理准备 | 1–2 周 | Charter、RCP、边界获批 | v0.2 基线 |
-| 1 | AI Taxonomy、Ontology 与 Universe | 3–5 周 | 8–10 板块、30–50 Core Company、关系可验证 | 阶段 0 |
-| 2 | 每日情报发现与 Candidate Pipeline | 5–7 周 | 连续 14 天稳定运行、无静默丢失、可控噪声 | 阶段 1 |
-| 3 | Impact Assertion 与跨板块传导 | 4–6 周 | 20 个真实事件的人工影响路径 Gate | 阶段 1–2 |
-| 4 | Analysis Mode Framework | 4–6 周 | 6 个模式、同证据可复现、差异可解释 | 阶段 3 |
-| 5 | Forecast、Valuation 与 Recommendation Draft | 5–7 周 | 可解析预测、三情景、人工建议 Gate | 阶段 4 |
-| 6 | Dashboard、规模化、运行与发布 | 5–8 周 | 30 天 pilot、恢复、性能、治理和发布 Gate | 阶段 2–5 |
+| 阶段 | 名称 | 建议周期 | 核心 Gate | 依赖 | 状态 |
+|---|---|---:|---|---|---|
+| 0 | 产品重定义与治理准备 | 1–2 周 | Charter、RCP、边界获批 | v0.2 基线 | ✅ 完成（2026-08-05）|
+| 1 | AI Taxonomy、Ontology 与 Universe | 3–5 周 | 8–10 板块、30–50 Core Company、关系可验证 | 阶段 0 | ✅ 完成（2026-08-06）|
+| 2 | 每日情报发现与 Candidate Pipeline | 5–7 周 | 连续 14 天稳定运行、无静默丢失、可控噪声 | 阶段 1 | ⬜ proposed |
+| 3 | Impact Assertion 与跨板块传导 | 4–6 周 | 20 个真实事件的人工影响路径 Gate | 阶段 1–2 | ⬜ proposed |
+| 4 | Analysis Mode Framework | 4–6 周 | 6 个模式、同证据可复现、差异可解释 | 阶段 3 | ⬜ proposed |
+| 5 | Forecast、Valuation 与 Recommendation Draft | 5–7 周 | 可解析预测、三情景、人工建议 Gate | 阶段 4 | ⬜ proposed |
+| 6 | Dashboard、规模化、运行与发布 | 5–8 周 | 30 天 pilot、恢复、性能、治理和发布 Gate | 阶段 2–5 | ⬜ proposed |
 
 单 Agent 串行估算约 27–41 周。多个 Agent 可以并行处理 Adapter、UI、Schema 测试和
 Universe 数据，但 Schema、Taxonomy、同一对象和最终报告不得无人协调并行修改。

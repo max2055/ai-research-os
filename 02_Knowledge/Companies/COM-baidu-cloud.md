@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-cloud-ai-infrastructure]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Baidu, Inc."
 company_stage: public
 headquarters: "Beijing, China"
 key_metric_ids: []

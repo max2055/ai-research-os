@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-memory-storage]
 region_primary: REG-kr
 coverage_tier: core
-legal_name:
+legal_name: "Samsung Electronics Co., Ltd."
 company_stage: public
 headquarters: "Suwon, South Korea"
 key_metric_ids: []

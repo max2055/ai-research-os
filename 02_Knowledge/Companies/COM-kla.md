@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-semiconductor-materials-equipment]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "KLA Corporation"
 company_stage: public
 headquarters: "Milpitas, CA, USA"
 key_metric_ids: []

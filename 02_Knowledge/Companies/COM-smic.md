@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-foundry-packaging-test]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Semiconductor Manufacturing International Corporation"
 company_stage: public
 headquarters: "Shanghai, China"
 key_metric_ids: []

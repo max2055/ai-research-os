@@ -45,7 +45,9 @@ from research_os.services.metrics import (
     metrics_snapshot_path,
     render_metrics_comparison,
     render_metrics_markdown,
+    render_universe_coverage,
     research_metrics,
+    universe_coverage,
     write_metrics_snapshot,
 )
 from research_os.services.ontology import (
@@ -97,11 +99,13 @@ __all__ = [
     "render_scale_assessment",
     "render_source_draft",
     "render_status",
+    "render_universe_coverage",
     "research_metrics",
     "source_processing_state",
     "split_values",
     "taxonomy_codes",
     "thesis_relationships",
+    "universe_coverage",
     "validate_repository",
     "validate_slug",
     "write_metrics_snapshot",

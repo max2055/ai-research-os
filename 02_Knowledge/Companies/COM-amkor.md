@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-foundry-packaging-test]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Amkor Technology, Inc."
 company_stage: public
 headquarters: "Tempe, AZ, USA"
 key_metric_ids: []

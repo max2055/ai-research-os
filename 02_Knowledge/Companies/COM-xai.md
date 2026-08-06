@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-models]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "xAI Corp."
 company_stage: private
 headquarters: "San Francisco, CA, USA"
 key_metric_ids: []

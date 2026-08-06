@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-foundry-packaging-test]
 region_primary: REG-tw
 coverage_tier: core
-legal_name:
+legal_name: "ASE Technology Holding Co., Ltd."
 company_stage: public
 headquarters: "Kaohsiung, Taiwan"
 key_metric_ids: []

@@ -30,8 +30,10 @@ from research_os_core import (
     render_metrics_markdown,
     render_scale_assessment,
     render_status,
+    render_universe_coverage,
     research_metrics,
     source_processing_state,
+    universe_coverage,
     validate_repository,
     write_metrics_snapshot,
     write_new_file,
@@ -641,6 +643,55 @@ class MetricsTests(unittest.TestCase):
             comparison = render_metrics_comparison(loaded, current)
             self.assertIn("2026-07-30 → 2026-08-01", comparison)
             self.assertIn("| event.total | 1 | 2 | +1 |", comparison)
+
+    def test_universe_coverage_reports_completeness(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = RepositoryValidationTests().make_root(temp)
+            write(
+                root / "02_Knowledge" / "Companies" / "COM-test.md",
+                """---
+id: COM-test
+type: company
+title: Test Co
+created_at: 2026-08-06
+updated_at: '2026-08-06'
+schema_version: 2
+project_ids: []
+status: active
+review_status: reviewed
+tags: []
+aliases: []
+legal_name: "Test Company, Inc."
+company_stage: public
+headquarters: "Testville, USA"
+region_primary: REG-us
+coverage_tier: core
+sector_ids: []
+source_channel_ids: []
+evidence_ids: []
+---
+
+# Company
+
+## Company role in the value chain
+## Business model
+## Competitive advantages
+## Risks
+## Related Thesis
+""",
+            )
+            coverage = universe_coverage(root)
+            self.assertEqual(1, coverage["total_companies"])
+            # the fixture company has legal_name/HQ/region
+            self.assertEqual(1, coverage["identity_completeness"]["complete"])
+            # no reviewed event names it, no assertion endpoint -> 0
+            self.assertEqual(0, coverage["source_completeness"]["complete"])
+            self.assertEqual(
+                0, coverage["relationship_completeness"]["complete"]
+            )
+            rendered = render_universe_coverage(coverage)
+            self.assertIn("Total companies: 1", rendered)
+            self.assertIn("| Identity (legal_name + HQ + region)", rendered)
 
 
 class OntologyTests(unittest.TestCase):

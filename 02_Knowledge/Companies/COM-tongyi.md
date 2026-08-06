@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-models]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Alibaba Cloud Computing Co., Ltd."
 company_stage: other
 headquarters: "Hangzhou, China"
 key_metric_ids: []

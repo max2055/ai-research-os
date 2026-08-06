@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-semiconductor-materials-equipment]
 region_primary: REG-jp
 coverage_tier: core
-legal_name:
+legal_name: "Shin-Etsu Chemical Co., Ltd."
 company_stage: public
 headquarters: "Tokyo, Japan"
 key_metric_ids: []

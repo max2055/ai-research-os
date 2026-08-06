@@ -14,6 +14,9 @@ tags: [APP-ERP, DEV-AGENT-FRAMEWORK, MOAT-DATA, MOAT-WORKFLOW]
 sector_ids: [SEG-enterprise-applications]
 region_primary: REG-us
 coverage_tier: tracked
+legal_name: "SAP SE"
+company_stage: public
+headquarters: "Walldorf, Germany"
 schema_version: 1
 project_ids:
 - PRJ-001

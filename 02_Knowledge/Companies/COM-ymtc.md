@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-memory-storage]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Yangtze Memory Technologies Co., Ltd."
 company_stage: other
 headquarters: "Wuhan, China"
 key_metric_ids: []

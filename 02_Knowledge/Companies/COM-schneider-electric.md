@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-datacenter-infrastructure]
 region_primary: REG-fr
 coverage_tier: core
-legal_name:
+legal_name: "Schneider Electric SE"
 company_stage: public
 headquarters: "Rueil-Malmaison, France"
 key_metric_ids: []

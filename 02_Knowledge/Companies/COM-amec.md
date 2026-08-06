@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-semiconductor-materials-equipment]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Advanced Micro-Fabrication Equipment Inc. China"
 company_stage: public
 headquarters: "Shanghai, China"
 key_metric_ids: []

@@ -14,6 +14,9 @@ tags: [DEV-DATA, DEV-ORCHESTRATION, MOAT-DATA, MOAT-PERMISSION]
 sector_ids: [SEG-enterprise-applications]
 region_primary: REG-us
 coverage_tier: tracked
+legal_name: "Palantir Technologies Inc."
+company_stage: public
+headquarters: "Denver, CO, USA"
 schema_version: 1
 project_ids:
 - PRJ-001

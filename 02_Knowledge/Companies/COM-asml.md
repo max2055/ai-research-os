@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-semiconductor-materials-equipment]
 region_primary: REG-nl
 coverage_tier: core
-legal_name:
+legal_name: "ASML Holding N.V."
 company_stage: public
 headquarters: "Veldhoven, Netherlands"
 key_metric_ids: []

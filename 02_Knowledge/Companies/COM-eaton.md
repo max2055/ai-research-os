@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-datacenter-infrastructure]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Eaton Corporation plc"
 company_stage: public
 headquarters: "Dublin, Ireland (HQ); Cleveland, OH"
 key_metric_ids: []

@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-datacenter-infrastructure]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Contemporary Amperex Technology Co., Limited"
 company_stage: public
 headquarters: "Ningde, China"
 key_metric_ids: []

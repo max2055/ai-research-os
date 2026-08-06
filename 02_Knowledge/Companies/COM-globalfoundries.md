@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-foundry-packaging-test]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "GlobalFoundries Inc."
 company_stage: public
 headquarters: "Malta, NY, USA"
 key_metric_ids: []

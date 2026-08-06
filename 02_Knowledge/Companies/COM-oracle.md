@@ -14,6 +14,9 @@ tags: [APP-ERP, INF-CLOUD-AI, MOAT-DATA, MOAT-WORKFLOW]
 sector_ids: [SEG-enterprise-applications, SEG-cloud-ai-infrastructure]
 region_primary: REG-us
 coverage_tier: tracked
+legal_name: "Oracle Corporation"
+company_stage: public
+headquarters: "Austin, TX, USA"
 schema_version: 1
 project_ids:
 - PRJ-001

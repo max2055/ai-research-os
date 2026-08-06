@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-server-network-interconnect]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Inspur Electronic Information Industry Co., Ltd."
 company_stage: public
 headquarters: "Jinan, China"
 key_metric_ids: []

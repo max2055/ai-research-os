@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-models]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Knowledge Atlas Technology Joint Stock Company Limited"
 company_stage: private
 headquarters: "Beijing, China"
 key_metric_ids: []

@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-server-network-interconnect]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Hewlett Packard Enterprise Company"
 company_stage: public
 headquarters: "Houston, TX, USA"
 key_metric_ids: []

@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-cloud-ai-infrastructure]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "ByteDance Ltd."
 company_stage: other
 headquarters: "Beijing, China"
 key_metric_ids: []

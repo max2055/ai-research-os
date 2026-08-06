@@ -161,6 +161,17 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="compare a prior JSON snapshot with current repository metrics",
     )
+    universe = subparsers.add_parser(
+        "universe", help="inspect the Universe (A-014 registry CLI)"
+    )
+    universe_commands = universe.add_subparsers(
+        dest="universe_command", required=True
+    )
+    universe_commands.add_parser("list", help="list companies (read-only)")
+    universe_commands.add_parser(
+        "coverage", help="Universe coverage metrics (A-018)"
+    )
+
     export = subparsers.add_parser("export", help="export derived ontology views")
     export.add_argument("--format", choices=("jsonl", "sqlite"), required=True)
     export.add_argument("--output", type=Path)
@@ -601,6 +612,21 @@ def main() -> int:
         except (FileExistsError, OSError, TransactionError, ValueError) as exc:
             print(f"ERROR: {exc}")
             return 2
+
+    if args.command == "universe":
+        if args.universe_command == "coverage":
+            coverage = runtime.universe_coverage(args.root.resolve())
+            print(runtime.render_universe_coverage(coverage), end="")
+            return 0
+        if args.universe_command == "list":
+            objects, _ = runtime.validate_repository(args.root.resolve())
+            companies = sorted(
+                obj.object_id for obj in objects if obj.object_type == "company"
+            )
+            for company_id in companies:
+                print(company_id)
+            return 0
+
     if args.command == "project":
         try:
             if args.project_command == "list":

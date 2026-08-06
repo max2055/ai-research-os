@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-cloud-ai-infrastructure]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "CoreWeave, Inc."
 company_stage: public
 headquarters: "Roseland, NJ, USA"
 key_metric_ids: []

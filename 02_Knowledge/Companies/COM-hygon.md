@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-compute-silicon]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "Hygon Information Technology Co., Ltd."
 company_stage: public
 headquarters: "Tianjin, China"
 key_metric_ids: []

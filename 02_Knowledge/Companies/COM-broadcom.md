@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-compute-silicon]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Broadcom Inc."
 company_stage: public
 headquarters: "Palo Alto, CA, USA"
 key_metric_ids: []

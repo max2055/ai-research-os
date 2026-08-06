@@ -37,7 +37,9 @@ from research_os.services.metrics import (
     metrics_json,
     render_metrics_comparison,
     render_metrics_markdown,
+    render_universe_coverage,
     research_metrics,
+    universe_coverage,
     write_metrics_snapshot,
 )
 from research_os.services.ontology import (
@@ -109,6 +111,7 @@ __all__ = [
     "render_impact",
     "render_metrics_comparison",
     "render_metrics_markdown",
+    "render_universe_coverage",
     "render_actions",
     "render_project_indexes",
     "render_project_list",
@@ -120,6 +123,7 @@ __all__ = [
     "render_status",
     "research_metrics",
     "review_queue",
+    "universe_coverage",
     "run_scale_benchmark",
     "run_job",
     "split_values",

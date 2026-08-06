@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-server-network-interconnect]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Dell Technologies Inc."
 company_stage: public
 headquarters: "Round Rock, TX, USA"
 key_metric_ids: []

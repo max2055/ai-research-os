@@ -14,6 +14,9 @@ tags: [MOD-FOUNDATION, DEV-AGENT-FRAMEWORK, DEV-TOOL-PROTOCOL]
 sector_ids: [SEG-models]
 region_primary: REG-us
 coverage_tier: core
+legal_name: "Anthropic, PBC"
+company_stage: private
+headquarters: "San Francisco, CA, USA"
 schema_version: 1
 project_ids:
 - PRJ-001

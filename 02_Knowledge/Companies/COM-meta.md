@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-models]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Meta Platforms, Inc."
 company_stage: public
 headquarters: "Menlo Park, CA, USA"
 key_metric_ids: []

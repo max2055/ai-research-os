@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-semiconductor-materials-equipment]
 region_primary: REG-cn
 coverage_tier: core
-legal_name:
+legal_name: "NAURA Technology Group Co., Ltd."
 company_stage: public
 headquarters: "Beijing, China"
 key_metric_ids: []

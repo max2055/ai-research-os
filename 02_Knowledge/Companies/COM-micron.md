@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-memory-storage]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Micron Technology, Inc."
 company_stage: public
 headquarters: "Boise, ID, USA"
 key_metric_ids: []

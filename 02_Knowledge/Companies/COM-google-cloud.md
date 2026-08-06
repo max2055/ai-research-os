@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-cloud-ai-infrastructure]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Google LLC"
 company_stage: subsidiary
 headquarters: "Mountain View, CA, USA"
 key_metric_ids: []

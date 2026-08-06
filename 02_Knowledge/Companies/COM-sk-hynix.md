@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-memory-storage]
 region_primary: REG-kr
 coverage_tier: core
-legal_name:
+legal_name: "SK hynix Inc."
 company_stage: public
 headquarters: "Icheon, South Korea"
 key_metric_ids: []

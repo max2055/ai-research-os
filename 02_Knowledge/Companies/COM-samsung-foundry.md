@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-foundry-packaging-test]
 region_primary: REG-kr
 coverage_tier: core
-legal_name:
+legal_name: "Samsung Electronics Co., Ltd."
 company_stage: public
 headquarters: "Hwaseong, South Korea"
 key_metric_ids: []

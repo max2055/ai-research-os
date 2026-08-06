@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-server-network-interconnect]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Super Micro Computer, Inc."
 company_stage: public
 headquarters: "San Jose, CA, USA"
 key_metric_ids: []

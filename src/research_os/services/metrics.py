@@ -382,3 +382,114 @@ def render_metrics_comparison(
     changed = sum(old != new for _, old, new in rows)
     lines += ["", f"Changed metrics: {changed}/{len(rows)}"]
     return "\n".join(lines) + "\n"
+
+
+def universe_coverage(root: Path) -> dict[str, Any]:
+    """A-018 Universe coverage: identity/source/relationship completeness.
+
+    identity: Company has legal_name + headquarters + region_primary.
+    source: Company is named in >=1 reviewed Event.
+    relationship: Company is an endpoint of >=1 reviewed Ontology Assertion.
+    """
+    objects, findings = validate_repository(root)
+    if any(finding.level == "error" for finding in findings):
+        raise ValueError("repository validation must pass before coverage metrics")
+    companies = [obj for obj in objects if obj.object_type == "company"]
+    company_ids = {obj.object_id for obj in companies}
+
+    reviewed_events = [obj for obj in objects if obj.object_type == "event"
+                       and obj.metadata.get("review_status") == "reviewed"]
+    event_company_ids: set[str] = set()
+    for event in reviewed_events:
+        for company_id in event.metadata.get("companies", []):
+            if company_id in company_ids:
+                event_company_ids.add(company_id)
+
+    reviewed_rels = [obj for obj in objects if obj.object_type == "ontology_assertion"
+                     and obj.metadata.get("review_status") == "reviewed"]
+    rel_endpoint_ids: set[str] = set()
+    for rel in reviewed_rels:
+        subject = rel.metadata.get("subject_id")
+        object_id = rel.metadata.get("object_id")
+        if subject in company_ids:
+            rel_endpoint_ids.add(subject)
+        if object_id in company_ids:
+            rel_endpoint_ids.add(object_id)
+
+    identity_complete = []
+    source_complete = []
+    relationship_complete = []
+    per_company: list[dict[str, Any]] = []
+    for company in companies:
+        meta = company.metadata
+        identity = bool(meta.get("legal_name")) and bool(meta.get("headquarters")) \
+            and bool(meta.get("region_primary"))
+        sourced = company.object_id in event_company_ids
+        related = company.object_id in rel_endpoint_ids
+        if identity:
+            identity_complete.append(company.object_id)
+        if sourced:
+            source_complete.append(company.object_id)
+        if related:
+            relationship_complete.append(company.object_id)
+        per_company.append({
+            "company_id": company.object_id,
+            "identity_complete": identity,
+            "sourced": sourced,
+            "related": related,
+        })
+
+    total = len(companies)
+    def rate(complete: list[str]) -> float:
+        return round(len(complete) / total, 4) if total else 0.0
+
+    return {
+        "schema_version": METRICS_SCHEMA_VERSION,
+        "as_of": date.today().isoformat(),
+        "total_companies": total,
+        "identity_completeness": {
+            "complete": len(identity_complete),
+            "rate": rate(identity_complete),
+        },
+        "source_completeness": {
+            "complete": len(source_complete),
+            "rate": rate(source_complete),
+        },
+        "relationship_completeness": {
+            "complete": len(relationship_complete),
+            "rate": rate(relationship_complete),
+        },
+        "companies": per_company,
+    }
+
+
+def render_universe_coverage(coverage: dict[str, Any]) -> str:
+    lines = [
+        "# Universe Coverage",
+        "",
+        f"Generated from repository state: {coverage['as_of']}",
+        "",
+        f"Total companies: {coverage['total_companies']}",
+        "",
+        "| Dimension | Complete | Rate |",
+        "|---|---:|---:|",
+    ]
+    for key, label in (
+        ("identity_completeness", "Identity (legal_name + HQ + region)"),
+        ("source_completeness", "Source (named in reviewed Event)"),
+        ("relationship_completeness", "Relationship (assertion endpoint)"),
+    ):
+        dim = coverage[key]
+        lines.append(
+            f"| {label} | {dim['complete']} | {dim['rate']:.1%} |"
+        )
+    lines += ["", "## Per-company", "",
+              "| Company | Identity | Source | Relationship |",
+              "|---|---:|---:|---:|"]
+    for company in coverage["companies"]:
+        cid = company["company_id"]
+        idy = "Y" if company["identity_complete"] else "N"
+        src = "Y" if company["sourced"] else "N"
+        rel = "Y" if company["related"] else "N"
+        lines.append(f"| {cid} | {idy} | {src} | {rel} |")
+    return "\n".join(lines) + "\n"

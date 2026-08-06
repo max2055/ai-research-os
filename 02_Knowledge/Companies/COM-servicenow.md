@@ -14,6 +14,9 @@ tags: [APP-ITSM, DEV-ORCHESTRATION, MOAT-WORKFLOW, MOAT-PERMISSION]
 sector_ids: [SEG-enterprise-applications]
 region_primary: REG-us
 coverage_tier: tracked
+legal_name: "ServiceNow, Inc."
+company_stage: public
+headquarters: "Santa Clara, CA, USA"
 schema_version: 1
 project_ids:
 - PRJ-001

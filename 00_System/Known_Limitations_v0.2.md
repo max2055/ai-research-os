@@ -149,3 +149,12 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   （51 v0.3 + 3 v0.2 anthropic/microsoft/openai；5 家 v0.2 老公司为 tracked，
   0 discovery），详见 WP-011 D4 更新。**下一个: v0.3 阶段 1 收口，或 Phase 2
   Candidate Pipeline（需 RCP-v03-004）。**
+- **阶段 1 收口完成 (2026-08-06)**: 新增 `research-os universe coverage` 命令
+  （A-014/A-018 identity/source/relationship completeness）。补全 57 家
+  legal_name（Agent 核验）+ 5 家 v0.2 tracked 公司身份字段 → identity
+  completeness 3.4% → **100%**。Master Backlog Wave 0/1 全 completed，
+  Master Roadmap 阶段 0/1 标记完成。收口文档
+  `00_System/v0.3_AI_Industry_Intelligence_OS/Phase_1_Closeout.md`。
+  **Remaining coverage: source 39%（23/59，预期随阶段 2 证据累积）**。
+  **下一个: Phase 2 Candidate Pipeline（需 RCP-v03-004 SQLite +
+  RCP-v03-005 Source Channel/scheduler/许可）。**

@@ -1,6 +1,6 @@
 # v0.3 Master Backlog 与实施波次
 
-状态：`proposed`  
+状态：`wave1-completed`（Wave 0 治理 + Wave 1 Taxonomy/Schema/Universe 已完成；Wave 2 起 proposed）
 规则：本文件是执行索引；任务细节以各 Phase 文件为准。Agent 不得只读本表就开工。
 
 ## 1. 状态枚举
@@ -51,15 +51,15 @@ Wave 0 Gate：RCP-v03-001 获批，所有关键人工选择记录，后续 WP �
 
 | WP | 包含任务 | 可并行 | 主要交付 | 状态 |
 |---|---|---|---|---|
-| WP-100 | A-002～004 | 否 | Taxonomy audit/mapping/v2 RCP | proposed |
-| WP-101 | A-005～007 | 与 WP-100 设计协调 | Schema/ID/migration proposal | proposed |
-| WP-102 | A-008～010 | Product/Metric 可拆子包 | Entity schemas/services | proposed |
-| WP-103 | A-011～012 | 在 Schema 稳定后 | Relation assertion + ontology export | proposed |
-| WP-104 | A-013～015 | index/UI 可并行 | Registry CLI/index/dashboard | proposed |
-| WP-120 | A-016 | 按 Sector 分包 | 30–50 Core Company Universe | proposed |
-| WP-121 | A-017 | 按关系类型分包 | 100–200 relation proposals | proposed |
-| WP-122 | A-018～019 | 否 | coverage metrics + field review | proposed |
-| WP-123 | A-020 | 否 | migration/recovery/acceptance | proposed |
+| WP-100 | A-002～004 | 否 | Taxonomy audit/mapping/v2 RCP | completed |
+| WP-101 | A-005～007 | 与 WP-100 设计协调 | Schema/ID/migration proposal | completed |
+| WP-102 | A-008～010 | Product/Metric 可拆子包 | Entity schemas/services | completed |
+| WP-103 | A-011～012 | 在 Schema 稳定后 | Relation assertion + ontology export | completed |
+| WP-104 | A-013～015 | index/UI 可并行 | Registry CLI/index/dashboard | completed |
+| WP-120 | A-016 | 按 Sector 分包 | 30–50 Core Company Universe | completed |
+| WP-121 | A-017 | 按关系类型分包 | 100–200 relation proposals | completed |
+| WP-122 | A-018～019 | 否 | coverage metrics + field review | completed |
+| WP-123 | A-020 | 否 | migration/recovery/acceptance | completed |
 
 并行限制：
 

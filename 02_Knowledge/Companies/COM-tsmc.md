@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-foundry-packaging-test]
 region_primary: REG-tw
 coverage_tier: core
-legal_name:
+legal_name: "Taiwan Semiconductor Manufacturing Company Limited"
 company_stage: public
 headquarters: "Hsinchu, Taiwan"
 key_metric_ids: []

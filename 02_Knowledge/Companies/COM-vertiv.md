@@ -13,7 +13,7 @@ aliases: []
 sector_ids: [SEG-datacenter-infrastructure]
 region_primary: REG-us
 coverage_tier: core
-legal_name:
+legal_name: "Vertiv Holdings Co."
 company_stage: public
 headquarters: "Westerville, OH, USA"
 key_metric_ids: []

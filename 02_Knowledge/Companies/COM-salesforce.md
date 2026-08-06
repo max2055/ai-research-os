@@ -14,6 +14,9 @@ tags: [APP-CRM, DEV-AGENT-FRAMEWORK, MOAT-DATA, MOAT-WORKFLOW]
 sector_ids: [SEG-enterprise-applications]
 region_primary: REG-us
 coverage_tier: tracked
+legal_name: "Salesforce, Inc."
+company_stage: public
+headquarters: "San Francisco, CA, USA"
 schema_version: 1
 project_ids:
 - PRJ-001
