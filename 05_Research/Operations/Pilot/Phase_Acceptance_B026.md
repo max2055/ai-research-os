@@ -14,7 +14,7 @@
 | G3 | 无静默漏跑 | `pilot status` stale/never-run + 每日 brief 是否生成 | ⬜ | 待观察 |
 | G4 | 重复入队比例 <15% | `pipeline metrics` duplicate rate | ⬜ | 基线 50% |
 | G5 | Top-20 人工相关性 ≥75% | 每日记录人工抽样判定 | ⬜ | 人工 |
-| G6 | ≥20 Candidate 提升为正式 Source | `pilot status` promoted 计数 + `candidates list --status promoted` | ⬜ | **68/20（Day 1 达成）**|
+| G6 | ≥20 Candidate 提升为正式 Source | `pilot status` promoted 计数 + `candidates list --status promoted` | ⬜ | **70/20（Day 1 达成）**|
 | G7 | 提升 Source 通过资产/hash 检查 | `source verify-assets` 全 OK | ⬜ | 26 个新 Source 全 OK |
 | G8 | 候选摘要不作 reviewed Fact | Daily Brief `unreviewed candidate` 标记 + 审阅流程审查 | ⬜ | 已机制化 |
 | G9 | 每日 triage 中位耗时 ≤45min | 每日记录耗时 | ⬜ | 人工 |

@@ -129,3 +129,5 @@
 | SRC-20260806-122 | 8-K filing 2025-08-05 | report | NVIDIA CORP | A | captured | pending |
 | SRC-20260806-123 | 8-K filing 2026-01-23 | report | NVIDIA CORP | A | captured | pending |
 | SRC-20260806-124 | 8-K filing 2026-03-06 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-125 | v2.53.0 | other | openai/openai-python | A | captured | pending |
+| SRC-20260806-126 | v0.2.0 | other | meta-llama/llama-models | A | captured | pending |

@@ -334,6 +334,15 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   （github release + arxiv 待筛）。全部新 Source 资产/hash 检查 OK。**210 tests；
   schema 基线 source 123。局限：Item 启发式对 8.01"其他事件"偏保守/偏松，5.02
   需人工看高管变动内容；UNKNOWN（无 Item 匹配）9 个已按例行 dismiss。**
+- **GitHub release 筛选（2026-08-06）**: 65 个 github release 候选，逐个抓
+  release notes 找新模型信号。结果：**只有 2 个重大**——meta llama-models
+  **v0.2.0（Llama 4 支持）** + openai-python **v2.53.0（gpt-5.5 API）**，
+  均已 promote（SRC-125/126）；其余 **63 个例行 dismiss**（anthropic SDK v0.1xx
+  bugfix、autogen 框架功能、openai SDK 版本、deepseek v1.0.0 归档/DOI）。
+  **Pilot G6 = 70/20 promoted**；候选 70 promoted / 128 dismissed / 197 new
+  （几乎全是 arxiv 论文）。已知局限：github release 大多例行（SDK 版本号），
+  模型信号靠 release notes 关键词（gpt-5.5/llama 4）识别；autogen 的
+  "gpt-"/"claude" 是框架对模型的**支持**（false positive），非新模型发布。**
 - **G1 补齐 20 channel（2026-08-06）**: 新增 18 个通道（7 per-company SEC：
   NVIDIA/TSMC/Micron/Microsoft/Meta/Amazon/CoreWeave，各独立 CIK + forms；
   5 per-repo GitHub：openai/anthropic/meta-llama/DeepSeek-V3/autogen；6 arXiv
