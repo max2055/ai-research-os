@@ -9,7 +9,7 @@
 
 | # | Gate | 证据源 | 判定 | 记录 |
 |---|---|---|---|---|
-| G1 | ≥20 reviewed+enabled Channel | `channels list/check` | ⬜ | 基线 4/20 |
+| G1 | ≥20 reviewed+enabled Channel | `channels list/check` | ⬜ | 20/20（Day 1 达成）|
 | G2 | 每日任务按计划完成或留明确失败 | `pilot status` job_failures + launchd sweep.log | ⬜ | 依赖 launchd 持续 |
 | G3 | 无静默漏跑 | `pilot status` stale/never-run + 每日 brief 是否生成 | ⬜ | 待观察 |
 | G4 | 重复入队比例 <15% | `pipeline metrics` duplicate rate | ⬜ | 基线 50% |
@@ -34,11 +34,10 @@
 
 ## 已知未达标风险（Day 1 暴露）
 
-- **G1 4/20**：channel 数量远低于目标——最大缺口。
+- ~~**G1 4/20**~~ ✅ **20/20 达成**（Day 1，7 SEC + 5 GitHub + 6 arXiv + 2 原通道）。
 - **G4 50%**：SK hynix 多 URL 变体噪声；按 cluster 代表 promote 可缓解，
   目标 <15% 需在 feed 解析/去重上继续收紧。
 - **G6 0/20**：目前无任何 promote——每日 triage 需主动推进。
-- **G2 github/SEC 每日失败**：见 Pilot_Kickoff 已知配置缺口，优先解决。
 
 ## 验收记录
 

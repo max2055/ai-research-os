@@ -17,7 +17,7 @@
 
 | Gate | 目标 | Day 1 状态 |
 |---|---|---|
-| reviewed+enabled Channel | ≥20 | **4/20**（缺口大：repo 6 个 channel 仅 4 个 enabled）|
+| reviewed+enabled Channel | ≥20 | **20/20 ✅**（6 首批发 + 18 新：7 per-company SEC + 5 per-repo GitHub + 6 arXiv 分区；SEC/GitHub 聚合已禁用避免重复抓取）|
 | 每日任务按计划完成或留明确失败 | 持续 | 依赖 launchd（已装）；github/SEC 每次失败留 Job 记录 |
 | 不出现静默漏跑 | 持续 | 待观察（`pilot status` 的 job_failures + stale）|
 | 重复入队比例 | <15% | 50%（SK hynix 多 URL 变体，promote 前按 cluster 代表处理）|
@@ -37,8 +37,9 @@
 2. ~~**CHN-sec-edgar**：locator 无 CIK~~ ✅ **已修复**：locator 加
    `?cik=1045810,1046179,723125,789019,1326801,1018724,2015943`，query 清理为
    `10-K,10-Q,20-F`，composite 多 CIK。首轮验证 +20 候选。
-3. **Channel 数量 4/20**（仍缺）：需 review/enable 更多 Channel 或新增到 20
-   （`channels check` 可列出可调度项）。
+3. ~~**Channel 数量 4/20**~~ ✅ **已补齐 20/20**（2026-08-06）：新增 18 个通道
+   （7 per-company SEC + 5 per-repo GitHub + 6 arXiv 研究分区），batch review
+   （REV-070）+ enable；SEC/GitHub 聚合已禁用（enabled: false）避免重复抓取。
 
 > github repo 列表是默认选择，max 可调整；个别 CIK 若失效 composite 会跳过
 > 不拖垮整通道。

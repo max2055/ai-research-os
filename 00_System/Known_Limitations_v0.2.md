@@ -317,3 +317,15 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   github 20 + SEC 20）。**210 tests (+5 multi-target)。已知局限：github repo
   列表是我选的 5 个默认 repo，max 可改；SEC 若个别 CIK 失效 composite 会跳过
   （需确认真实性）；channel 数量仍 4/20（G1 待补）。**
+- **G1 补齐 20 channel（2026-08-06）**: 新增 18 个通道（7 per-company SEC：
+  NVIDIA/TSMC/Micron/Microsoft/Meta/Amazon/CoreWeave，各独立 CIK + forms；
+  5 per-repo GitHub：openai/anthropic/meta-llama/DeepSeek-V3/autogen；6 arXiv
+  研究分区：cs.CL/cs.CV/cs.DC/cs.AR/cs.MA/econ.GN）。SEC/GitHub 聚合
+  （CHN-sec-edgar / CHN-github-releases）**已禁用**（enabled: false）避免
+  重复抓取。batch review REV-070（reviewer=max，备注含 license/robots/live
+  verify 证据）+ 逐个 enable。`channels check` 现 **20/20 schedulable**（G1
+  达成）；spot-check：CHN-sec-nvidia / CHN-github-anthropic / CHN-arxiv-llm
+  各 20 候选。validate 0 error；index 重建后全 PASS；210 tests。已知局限：
+  per-company SEC 的 TSMC 用 20-F/6-K、其余 US 公司 10-K/10-Q/8-K；github
+  repo 仍是我选的默认值；company-ir（无 adapter）与 trendforce（restricted）
+  维持禁用。**
