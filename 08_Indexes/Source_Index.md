@@ -87,3 +87,45 @@
 | SRC-20260806-080 | 10-Q filing 2025-11-19 | report | NVIDIA CORP | A | captured | pending |
 | SRC-20260806-081 | 10-Q filing 2025-08-27 | report | NVIDIA CORP | A | captured | pending |
 | SRC-20260806-082 | 10-Q filing 2025-05-28 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-083 | 8-K filing 2026-02-27 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-084 | 8-K filing 2026-06-10 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-085 | 8-K filing 2025-04-30 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-086 | 8-K filing 2025-07-30 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-087 | 8-K filing 2025-10-29 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-088 | 8-K filing 2026-01-28 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-089 | 8-K filing 2026-04-29 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-090 | 8-K filing 2026-07-29 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-091 | 8-K filing 2025-04-29 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-092 | 8-K filing 2025-06-25 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-093 | 8-K filing 2025-08-11 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-094 | 8-K filing 2025-09-23 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-095 | 8-K filing 2025-12-17 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-096 | 8-K filing 2026-03-18 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-097 | 8-K filing 2026-06-24 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-098 | 8-K filing 2025-01-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-099 | 8-K filing 2025-04-30 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-100 | 8-K filing 2025-07-30 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-101 | 8-K filing 2025-10-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-102 | 8-K filing 2026-01-28 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-103 | 8-K filing 2026-04-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-104 | 8-K filing 2026-07-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-105 | 8-K filing 2025-05-28 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-106 | 8-K filing 2025-08-27 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-107 | 8-K filing 2025-11-19 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-108 | 8-K filing 2026-02-25 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-109 | 8-K filing 2025-11-20 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-110 | 8-K filing 2026-03-13 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-111 | 8-K filing 2026-03-16 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-112 | 8-K filing 2026-04-14 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-113 | 8-K filing 2026-06-12 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-114 | 8-K filing 2026-07-09 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-115 | 8-K filing 2025-11-03 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-116 | 8-K filing 2025-12-12 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-117 | 8-K filing 2025-09-30 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-118 | 8-K filing 2026-06-05 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-119 | 8-K filing 2025-06-12 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-120 | 8-K filing 2025-04-15 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-121 | 8-K filing 2026-06-18 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-122 | 8-K filing 2025-08-05 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-123 | 8-K filing 2026-01-23 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-124 | 8-K filing 2026-03-06 | report | NVIDIA CORP | A | captured | pending |

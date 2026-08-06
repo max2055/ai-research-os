@@ -50,7 +50,7 @@ class SchemaTests(unittest.TestCase):
                 "review": 170,  # +1 G1 channel batch (REV-070)
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "security": 10,  # Field Gate §9.3 securities
-                "source": 81,  # +26 Pilot G6 promote (SEC 10-K/10-Q)
+                "source": 123,  # +26 10-K/10-Q +42 8-K Pilot G6 promote
                 "source_channel": 24,  # WP-201: 6 first-batch + 18 Pilot G1 batch
                 "thesis": 8,
             },

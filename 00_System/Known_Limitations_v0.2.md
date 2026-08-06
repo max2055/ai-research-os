@@ -325,6 +325,15 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   dismissed / 326 new（8-K、github releases、arxiv 待后续 triage）。发现：
   promote 对已捕获内容（SRC-20260805-040/049/050）正确拒绝重复。**210 tests；
   schema 基线更新（source 81、job 31）。剩 Gate：G4、G5（人工相关性）、G9（耗时）。**
+- **8-K 重大披露筛选（2026-08-06）**: 71 个 8-K 用 **Item 启发式**筛查（逐抓
+  内容提取 Item 段落：2.02 财报 / 1.01 协议 / 7.01 指引 → MATERIAL；5.07 投票 /
+  5.03 章程 / 5.02 董事会任命 → routine）。结果：**promote 42 个重大 8-K**
+  （26 财报 2.02 + 协议 1.01/8.01 ~13 + NVIDIA 高管变动 3），**dismiss 25 例行**
+  （+3 个灰色区留后续：Meta 2026-05-04 协议、Micron 2026-03-25/04-01 MIXED）。
+  **Pilot G6 = 68/20 promoted**；候选 68 promoted / 66 dismissed / 261 new
+  （github release + arxiv 待筛）。全部新 Source 资产/hash 检查 OK。**210 tests；
+  schema 基线 source 123。局限：Item 启发式对 8.01"其他事件"偏保守/偏松，5.02
+  需人工看高管变动内容；UNKNOWN（无 Item 匹配）9 个已按例行 dismiss。**
 - **G1 补齐 20 channel（2026-08-06）**: 新增 18 个通道（7 per-company SEC：
   NVIDIA/TSMC/Micron/Microsoft/Meta/Amazon/CoreWeave，各独立 CIK + forms；
   5 per-repo GitHub：openai/anthropic/meta-llama/DeepSeek-V3/autogen；6 arXiv
