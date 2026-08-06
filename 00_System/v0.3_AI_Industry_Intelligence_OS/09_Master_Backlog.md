@@ -71,8 +71,8 @@ Wave 0 Gate：RCP-v03-001 获批，所有关键人工选择记录，后续 WP �
 
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
-| WP-200 | B-001～004 | RCP + Candidate DB ADR/migration | proposed |
-| WP-201 | B-005～007 | Channel Registry + discovery orchestration | proposed |
+| WP-200 | B-001～004 | RCP + Candidate DB ADR/migration | completed |
+| WP-201 | B-005～007 | Channel Registry + discovery orchestration | completed |
 | WP-210 | B-008～013 | P0 adapters；每个 Adapter 独立子包 | proposed |
 | WP-220 | B-014～017 | dedup/entity/sector/scoring | proposed |
 | WP-230 | B-018～020 | Candidate Queue + promote transaction | proposed |

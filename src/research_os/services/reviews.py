@@ -27,6 +27,7 @@ REVIEWABLE_TYPES = frozenset(
         "ontology_assertion",
         "product",
         "security",
+        "source_channel",
     }
 )
 

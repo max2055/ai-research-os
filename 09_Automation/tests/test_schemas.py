@@ -46,10 +46,11 @@ class SchemaTests(unittest.TestCase):
                 "product": 5,  # WP-120 Product entities
                 "project": 2,
                 "report": 2,
-                "review": 163,  # +27 EvWP; +21 G30; +12 gap; +10 Prod; +20 Sec+Co
+                "review": 169,  # +27 EvWP; +21 G30; +12 gap; +10 Prod; +20 S+C; +6 CHN
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "security": 10,  # Field Gate §9.3 securities
                 "source": 55,  # EvWP: +10 (1 hollow 8-K removed); Gate30 sprint: +6
+                "source_channel": 6,  # WP-201: first-batch channels
                 "thesis": 8,
             },
             dict(Counter(document.metadata["type"] for document in documents)),

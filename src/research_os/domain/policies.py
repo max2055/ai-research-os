@@ -25,6 +25,7 @@ ID_PATTERNS = {
     "product": re.compile(r"^PRD-[a-z0-9]+(?:-[a-z0-9]+)*$"),
     "technology": re.compile(r"^TEC-[a-z0-9]+(?:-[a-z0-9]+)*$"),
     "metric": re.compile(r"^MET-[a-z0-9]+(?:-[a-z0-9]+)*$"),
+    "source_channel": re.compile(r"^CHN-[a-z0-9]+(?:-[a-z0-9]+)*$"),
     "ontology_assertion": re.compile(r"^REL-\d{8}-\d{3}$"),
 }
 

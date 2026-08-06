@@ -158,3 +158,13 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   **Remaining coverage: source 39%（23/59，预期随阶段 2 证据累积）**。
   **下一个: Phase 2 Candidate Pipeline（需 RCP-v03-004 SQLite +
   RCP-v03-005 Source Channel/scheduler/许可）。**
+- **WP-200/201 完成 (2026-08-06)**: RCP-v03-004/005 已批准。WP-200:
+  `ADR_Candidate_Operational_Store.md`（4 表 SQLite operational store）+ 
+  `src/research_os/services/candidate_db.py`（B-004 migration engine，
+  PRAGMA user_version 版本化 + apply/rollback + 6 测试）。WP-201:
+  `source_channel` schema（CHN-*，接入 registry/ID_PATTERNS/OBJECT_PATTERNS/
+  REVIEWABLE_TYPES/validation）+ `channels` CLI（list/check/enable/disable，
+  enable 守卫生效：未 reviewed 拒绝 + restricted license 拒绝）+ 首批 6
+  Channel reviewed（REV-064..069，SEC/SK hynix IR/TrendForce news-only/arXiv/
+  GitHub/company IR）。**132 tests**。**下一个: WP-210（P0 adapters:
+  SEC/RSS/arXiv/GitHub/IR）或 WP-220（dedup/entity/scoring）。**

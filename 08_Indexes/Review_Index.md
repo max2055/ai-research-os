@@ -169,3 +169,9 @@
 | REV-20260806-061 | 2026-08-06 | approve | COM-coreweave | max |  |
 | REV-20260806-062 | 2026-08-06 | approve | COM-openai | max | PRJ-001 |
 | REV-20260806-063 | 2026-08-06 | approve | COM-meta | max |  |
+| REV-20260806-064 | 2026-08-06 | approve | CHN-sec-edgar | max |  |
+| REV-20260806-065 | 2026-08-06 | approve | CHN-skhynix-ir | max |  |
+| REV-20260806-066 | 2026-08-06 | approve | CHN-trendforce-news | max |  |
+| REV-20260806-067 | 2026-08-06 | approve | CHN-arxiv | max |  |
+| REV-20260806-068 | 2026-08-06 | approve | CHN-github-releases | max |  |
+| REV-20260806-069 | 2026-08-06 | approve | CHN-company-ir | max |  |

@@ -18,6 +18,7 @@ from research_os.schemas.review import ReviewSchema
 from research_os.schemas.sector import SectorSchema
 from research_os.schemas.security import SecuritySchema
 from research_os.schemas.source import SourceSchema
+from research_os.schemas.source_channel import SourceChannelSchema
 from research_os.schemas.technology import TechnologySchema
 from research_os.schemas.thesis import ThesisSchema
 
@@ -43,6 +44,7 @@ SCHEMAS: dict[str, SchemaType] = {
     "product": ProductSchema,
     "technology": TechnologySchema,
     "metric": MetricSchema,
+    "source_channel": SourceChannelSchema,
     "ontology_assertion": OntologyAssertionSchema,
 }
 

@@ -403,6 +403,9 @@ def validate_refs(
             )
     elif obj.object_type == "metric":
         expect_refs(obj, "owner_entity_ids", None, by_id, findings)
+    elif obj.object_type == "source_channel":
+        expect_refs(obj, "entity_ids", "company", by_id, findings)
+        expect_refs(obj, "sector_ids", "sector", by_id, findings)
     elif obj.object_type == "ontology_assertion":
         expect_ref(obj, "subject_id", None, by_id, findings)
         expect_ref(obj, "object_id", None, by_id, findings)

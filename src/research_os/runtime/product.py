@@ -7,6 +7,12 @@ from research_os.services.actions import (
     render_actions,
 )
 from research_os.services.benchmark import run_scale_benchmark
+from research_os.services.channels import (
+    channel_rows,
+    render_channel_check,
+    render_channel_list,
+    set_channel_enabled,
+)
 from research_os.services.drafts import (
     apply_event_draft,
     prepare_assertion_draft,
@@ -107,6 +113,10 @@ __all__ = [
     "prepare_review",
     "prepare_source_draft",
     "prepare_synthesized_report",
+    "channel_rows",
+    "render_channel_check",
+    "render_channel_list",
+    "set_channel_enabled",
     "render_indexes",
     "render_impact",
     "render_metrics_comparison",

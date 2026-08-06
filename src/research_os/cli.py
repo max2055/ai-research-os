@@ -172,6 +172,27 @@ def parse_args() -> argparse.Namespace:
         "coverage", help="Universe coverage metrics (A-018)"
     )
 
+    channels = subparsers.add_parser(
+        "channels", help="manage Source Channels (B-006 Registry CLI)"
+    )
+    channels_commands = channels.add_subparsers(
+        dest="channel_command", required=True
+    )
+    channels_commands.add_parser("list", help="list channels (read-only)")
+    channels_commands.add_parser(
+        "check", help="show which channels are schedulable (reviewed + enabled)"
+    )
+    channel_enable = channels_commands.add_parser(
+        "enable", help="enable a channel for scheduling"
+    )
+    channel_enable.add_argument("--id", required=True)
+    channel_enable.add_argument("--apply", action="store_true")
+    channel_disable = channels_commands.add_parser(
+        "disable", help="disable a channel"
+    )
+    channel_disable.add_argument("--id", required=True)
+    channel_disable.add_argument("--apply", action="store_true")
+
     export = subparsers.add_parser("export", help="export derived ontology views")
     export.add_argument("--format", choices=("jsonl", "sqlite"), required=True)
     export.add_argument("--output", type=Path)
@@ -215,6 +236,7 @@ def parse_args() -> argparse.Namespace:
             "ontology_assertion",
             "product",
             "security",
+            "source_channel",
         ),
     )
     review_queue.add_argument(
@@ -626,6 +648,41 @@ def main() -> int:
             for company_id in companies:
                 print(company_id)
             return 0
+
+    if args.command == "channels":
+        try:
+            if args.channel_command == "list":
+                channel_rows_result = runtime.channel_rows(args.root.resolve())
+                print(runtime.render_channel_list(channel_rows_result), end="")
+                return 0
+            if args.channel_command == "check":
+                channel_rows_result = runtime.channel_rows(args.root.resolve())
+                print(runtime.render_channel_check(channel_rows_result), end="")
+                return 0
+            if args.channel_command in ("enable", "disable"):
+                enabled = args.channel_command == "enable"
+                path = runtime.set_channel_enabled(
+                    args.root.resolve(), args.id, enabled
+                )
+                verb = "enabled" if enabled else "disabled"
+                if args.apply:
+                    from research_os.repositories.markdown import (
+                        MarkdownDocument,
+                    )
+
+                    document = MarkdownDocument.read(path)
+                    document.set_metadata("enabled", enabled)
+                    path.write_text(document.render(), encoding="utf-8")
+                    print(f"APPLIED: {path.relative_to(args.root.resolve())}")
+                    return 0
+                print(
+                    f"DRY-RUN: would {verb} {args.id} "
+                    f"(rerun with --apply)"
+                )
+                return 0
+        except (ValueError, OSError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
 
     if args.command == "project":
         try:
