@@ -1,0 +1,52 @@
+{
+  "title": "Micron: HBM3E volume production will be part of NVIDIA H200 Tensor Core GPUs",
+  "slug": "micron-hbm3e-nvidia-h200",
+  "created_at": "2026-08-06",
+  "event_date": "2024-02-26",
+  "source_ids": [
+    "SRC-20260806-053"
+  ],
+  "companies": [
+    "COM-micron",
+    "COM-nvidia"
+  ],
+  "technologies": [],
+  "products": [],
+  "facts": [
+    {
+      "text": "Micron 宣布开始量产 HBM3E 方案，24GB 8H HBM3E 将成为 NVIDIA H200 Tensor Core GPU 的一部分，H200 将于 2024 Q2 开始出货。",
+      "source_id": "SRC-20260806-053",
+      "quote": "Micron’s 24GB 8H HBM3E will be part of NVIDIA H200 Tensor Core GPUs, which will begin shipping in the second calendar quarter of 2024.",
+      "asset_path": "01_Inbox/_assets/SRC-20260806-053/20260805233824-6466a5afc5ae.html.extracted.txt"
+    },
+    {
+      "text": "Micron 称其 HBM3E 功耗比竞品低约 30%，并提及 36GB 12-High HBM3E 样品于 2024 年 3 月推出。",
+      "source_id": "SRC-20260806-053",
+      "quote": "Micron’s HBM3E leads the industry with ~30% lower power consumption compared to competitive offerings.",
+      "asset_path": "01_Inbox/_assets/SRC-20260806-053/20260805233824-6466a5afc5ae.html.extracted.txt"
+    }
+  ],
+  "inferences": [
+    "Micron 官方点名 HBM3E 供应 NVIDIA H200 GPU，是双方点名的直接证据，支持 Micron SUPPLIES NVIDIA 关系。",
+    "Micron 声称功耗比竞品低 30% 并强调时间领先，说明其在 HBM3E 早期与 SK hynix/Samsung 存在竞争。"
+  ],
+  "research_judgment": "Micron 官方新闻稿（B 级来源，公司披露）。'will be part of NVIDIA H200 Tensor Core GPUs' 为点名式供应证据；'~30% lower power consumption compared to competitive offerings' 为营销声明，需独立验证。",
+  "thesis_impacts": [],
+  "alternative_explanations": [
+    "2024-02 的 H200 供应承诺是早期状态，后续份额与供货量可能有变化。",
+    "功耗优势为厂商自述，未经第三方基准验证。"
+  ],
+  "unknowns": [
+    "Micron 在 NVIDIA HBM 中的实际份额与后续 HBM3E/HBM4 供货量未披露。",
+    "与 SK hynix/Samsung 的具体竞争格局数据未披露。"
+  ],
+  "follow_up_indicators": [
+    "Micron 财报中 HBM 收入与 AI 存储披露。",
+    "NVIDIA 下一代 GPU 的 HBM 供应商结构。"
+  ],
+  "confidence": 0.6,
+  "tags": [],
+  "project_ids": [
+    "PRJ-001"
+  ]
+}

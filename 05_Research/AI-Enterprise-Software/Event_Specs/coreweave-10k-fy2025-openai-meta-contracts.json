@@ -1,0 +1,51 @@
+{
+  "title": "CoreWeave 10-K FY2025: OpenAI $6.5B+$11.9B and Meta $14.2B committed contracts named",
+  "slug": "coreweave-10k-fy2025-openai-meta-contracts",
+  "created_at": "2026-08-06",
+  "event_date": "2026-03-02",
+  "source_ids": ["SRC-20260806-051"],
+  "companies": ["COM-coreweave", "COM-openai", "COM-meta", "COM-microsoft"],
+  "technologies": [],
+  "products": [],
+  "facts": [
+    {
+      "text": "CoreWeave 在 FY2025 10-K 披露：2025 年 5 月与 OpenAI 签订主服务协议（MSA），2025 年 9 月签订订单，OpenAI 承诺至 2031-05-31 支付约 $6.5B；2025 年 3 月另有一份 MSA，OpenAI 承诺至 2030 年 10 月支付约 $11.9B。",
+      "source_id": "SRC-20260806-051",
+      "quote": "In May 2025, we entered into a master services agreement with OpenAI OpCo, LLC (\"OpenAI\") and in September 2025, we entered into an order form under this master services agreement pursuant to which OpenAI has committed to pay us up to approximately $6.5 billion through May 31, 2031",
+      "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt"
+    },
+    {
+      "text": "CoreWeave 在 FY2025 10-K 披露：2025 年 3 月与 OpenAI 签订主服务协议，OpenAI 承诺至 2030 年 10 月支付约 $11.9B；其他重要客户包括 Microsoft 和 Meta。",
+      "source_id": "SRC-20260806-051",
+      "quote": "in March 2025, we entered into a master services agreement with OpenAI, a private company, pursuant to which OpenAI has committed to pay us up to approximately $11.9 billion through October 2030. Other significant customers include Microsoft and Meta.",
+      "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt"
+    },
+    {
+      "text": "CoreWeave 在 FY2025 10-K 披露：2025 年 9 月与 Meta 签订订单，Meta 初步承诺至 2031 年 12 月支付约 $14.2B；2025 财年 67% 收入来自最大客户 Microsoft。",
+      "source_id": "SRC-20260806-051",
+      "quote": "in September 2025, we entered into an order form under an existing master services agreement pursuant to which Meta Platforms, Inc. (\"Meta\") initially committed to pay us up to approximately $14.2 billion through December 2031",
+      "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt"
+    }
+  ],
+  "inferences": [
+    "CoreWeave 向 OpenAI 提供算力（GPU 云）服务，合同金额 $6.5B + $11.9B 为双方点名的直接证据，支持 CoreWeave SUPPLIES OpenAI 关系。",
+    "CoreWeave 向 Meta 提供算力服务，$14.2B 承诺为双方点名的直接证据，支持 CoreWeave SUPPLIES Meta 关系。",
+    "Microsoft 是 CoreWeave 最大客户（FY2025 收入 67%），支持 CoreWeave SUPPLIES Microsoft 关系，但 Microsoft 相关 REL 不在本轮范围。"
+  ],
+  "research_judgment": "CoreWeave 10-K 为 A 级来源（SEC 归档）。合同金额为硬数据，但为'承诺支付上限'而非实际收入确认；'significant customer' 披露证明供应关系存在，实际供货量与收入占比需后续季报验证。",
+  "thesis_impacts": [],
+  "alternative_explanations": [
+    "合同金额为承诺上限，实际履约可能低于披露值；CoreWeave 可能通过第三方租赁产能供货。"
+  ],
+  "unknowns": [
+    "OpenAI/Meta 实际消耗量与收入确认节奏未披露。",
+    "CoreWeave 向 OpenAI 供货的 GPU 型号与规模未披露。"
+  ],
+  "follow_up_indicators": [
+    "CoreWeave 后续 10-Q/10-K 的收入集中度披露。",
+    "OpenAI 算力多元化公告。"
+  ],
+  "confidence": 0.8,
+  "tags": [],
+  "project_ids": ["PRJ-001"]
+}

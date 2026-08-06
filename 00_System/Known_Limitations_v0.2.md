@@ -1,7 +1,7 @@
 # AI Research OS v0.2 Known Limitations
 
 Status: reviewed for release candidate  
-Updated: 2026-07-30
+Updated: 2026-08-06
 
 ## Product boundary
 
@@ -97,3 +97,14 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   (conf 0.3-0.5), weak-inference held pending. **9 relations held
   evidence-insufficient** (sources do not name counterparty). Remaining 8
   for Gate 30 need new named-party capture (Samsung/Micron/Alibaba).
+- **Gate 30 sprint (2026-08-06)**: 6 new Sources (CoreWeave 10-K SEC A级,
+  Samsung GTC 2026, Micron HBM3E, TrendForce 1Q26 DRAM, 阿里云百炼, 百度千帆)
+  + 6 Events with citation anchors → **9 relations approved** (31 total:
+  SUPPLIES 20, COMPETES_WITH 3, DEPENDS_ON 4, ENABLES 3, PARTNERS_WITH 1).
+  **Gate 30 achieved (30/30 + 1 buffer)**. Quality: CoreWeave 10-K direct
+  (conf 0.8/0.7), Samsung/Micron HBM named-supply (conf 0.5/0.6), TrendForce
+  competitive share (conf 0.6), Aliyun/Baidu model-hosting (conf 0.5).
+  7 previously-held relations remain evidence-insufficient (Microsoft/AWS
+  ENABLES Anthropic/Meta/xAI, Supermicro COMPETES Dell). Field Gate
+  distribution still short: COMPETES_WITH 3/5, DEPENDS_ON 4/5,
+  PARTNERS_WITH 1/5.
