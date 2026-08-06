@@ -13,7 +13,7 @@
 | D1 | 接受/修改 v0.3 产品定位（AI Industry Intelligence & Decision OS） | 接受 / 修改 / 拒绝 | **接受** | Charter §1、Roadmap §1 | 阶段 0 前 | 2026-08-05 max |
 | D2 | v0.2 cadence 与 v0.3 先后 | 并行 / 先收尾 v0.2 | **并行** | Charter §10、M6 状态 | 阶段 0 前 | 2026-08-05 max |
 | D3 | 第一个 Pilot value chain | AI Compute Infra / Model-Agent-Enterprise / 其他 | **AI Compute Infrastructure Chain** | Roadmap §8 建议 Pilot | 阶段 0 前 | 2026-08-05 max |
-| D4 | Universe Core 规模上限 | 30–50 / 20–30 / 50–80 | **30–50**；上限未经批准不得扩大 | Phase 0-1 §6、Backlog 风险登记 | 阶段 1 写入前 | 2026-08-05 max |
+| D4 | Universe Core 规模上限 | 30–50 / 20–30 / 50–80 | **30–50 上限；2026-08-06 复核批准扩容至 54**（54 家均确认为 AI Compute Chain 关键节点，全保留） | Phase 0-1 §6、Backlog 风险登记 | 阶段 1 写入前 | 2026-08-06 max |
 | D5 | Candidate store 是否用 SQLite | SQLite / 先不上数据库 | **SQLite**（可重建 operational store，非事实源） | Charter §5.3 | 阶段 2 前 | 2026-08-05 max |
 | D6 | Sector ID 前缀 | `SEG` / `SEC` | **`SEG`**（避免与美国 SEC Adapter 混淆） | Charter §7 | 阶段 1 写对象前 | 2026-08-05 max |
 | D7 | Recommendation 最高权威等级 | 人工批准 / 仅 Watch | **人工批准、不得自动执行** | Charter §3、§6 | 阶段 5 前 | 2026-08-05 max |
@@ -28,7 +28,7 @@
 - [x] D1 接受产品定位（2026-08-05 max）
 - [x] D2 并行推进（2026-08-05 max）
 - [x] D3 Pilot = AI Compute Infrastructure Chain（2026-08-05 max）
-- [x] D4 Universe Core 上限 30–50（2026-08-05 max）
+- [x] D4 Universe Core 上限 30–50（2026-08-05 max）；**2026-08-06 复核批准扩容至 54**（54 家均确认为 AI Compute Chain 各环节关键节点，覆盖完整价值链，去任一家均留环节空白；D-REGION-SCOPE 中美优先 + 非中美关键节点如 ASML/TSMC/SK hynix 入 Core）
 - [x] D5 Candidate store 使用 SQLite（2026-08-05 max）
 - [x] D6 Sector ID 前缀 = SEG（2026-08-05 max）
 - [x] D7 Recommendation 最高等级 = 人工批准、不自动执行（2026-08-05 max）

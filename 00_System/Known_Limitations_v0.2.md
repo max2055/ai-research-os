@@ -144,7 +144,8 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   实体 apply→rollback 字节级恢复，0 error）+ clean-clone recovery 重跑
   （633 对象 / 55 Source / 208 资产 / 52 dirs，独立 clone + 新 venv + 加密
   恢复，doctor/validate/index/tests/ruff/mypy 全 PASS）。验收文档
-  `00_System/A020_Phase_Acceptance.md`。**Phase 0-1 Gate 清单全部达成，除
-  D4 上限复核**: Core Company 59 家超 D4 上限（30-50），需阶段 1 收口时
-  max 决策（保留并记录理由，或降级部分为 tracked/discovery）。**下一个:
-  v0.3 阶段 1 收口 + D4 复核，或 Phase 2 Candidate Pipeline（需 RCP）。**
+  `00_System/A020_Phase_Acceptance.md`。**Phase 0-1 Gate 清单全部达成**：D4 复核
+  （2026-08-06）确认 54 家 Core 全为 AI Compute Chain 关键节点，批准扩容至 54
+  （51 v0.3 + 3 v0.2 anthropic/microsoft/openai；5 家 v0.2 老公司为 tracked，
+  0 discovery），详见 WP-011 D4 更新。**下一个: v0.3 阶段 1 收口，或 Phase 2
+  Candidate Pipeline（需 RCP-v03-004）。**

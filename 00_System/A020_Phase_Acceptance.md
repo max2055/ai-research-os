@@ -88,7 +88,7 @@ A-020 验收通过。Phase 0-1 Gate 清单（§10）剩余核查项：
 - [x] RCP-v03-001～003 已批准
 - [x] v0.1 历史对象迁移无语义漂移（MIG 记录 + round-trip 测试）
 - [x] 8–10 个 Pilot 板块定义明确（9 Sector）
-- [x] 30–50 家 Core Company 注册（51 v0.3 + 8 v0.2，**超出 50 上限，需 D4 复核**）
+- [x] 30–50 家 Core Company 注册（51 v0.3 + 3 v0.2 = 54；**2026-08-06 复核批准扩容至 54**）
 - [x] Company 与 Security 分离（10 INS-* 实体）
 - [x] Product/Technology/Metric 可独立引用（5 PRD + schema 注册）
 - [x] 100+ 关系 assertion 可导出，30 条通过真实人审（260 assertion / 44 reviewed）
@@ -98,9 +98,10 @@ A-020 验收通过。Phase 0-1 Gate 清单（§10）剩余核查项：
 
 ## 4. 已知非阻塞项
 
-- **Core Company 数量 59 超出 D4 上限（30–50）**：WP-120 建了 51 家 v0.3 + 8 家
-  v0.2 = 59。D4 决策（2026-08-05）规定上限 30–50，未经批准不得扩大。需在阶段 1
-  收口时由 max 决策：保留 59（记录理由）或降级部分为 tracked/discovery。
+- **Core Company 54 家已批准**：D4 复核（2026-08-06）确认 51 v0.3 + 3 v0.2 老公司
+  （anthropic/microsoft/openai）全部为 AI Compute Chain 关键节点，批准 Core 上限
+  扩容至 54（详见 WP-011 D4 更新）。另有 5 家 v0.2 老公司
+  （oracle/palantir/salesforce/sap/servicenow）为 tracked，0 discovery。
 - **source_channel 类型未实现**（RCP-v03-003 仅 ID 占位）：59/59 Company
   source_channel_ids 空，来源核验改用 evidence_ids。待后续 RCP 实现。
 - **remote 未配置**：clean-clone 以本地 `git clone --no-local` 等价 CI 验收；
