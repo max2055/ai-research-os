@@ -202,3 +202,10 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   98 关键词 / 9 sector。**已知局限：纯关键词 classifier 对无 sector 词的标题
   （如"2Q26 财报"、"Data Center"）无法判定，需结合 entity 推断（pipeline 组合
   层）。156 tests。WP-220 剩余: B-017 scoring。**
+- **B-017 scoring v1 完成 + WP-220 全部完成 (2026-08-06)**: `src/research_os/
+  services/scoring.py`（8 维分项：6 正向维度加权和为 1.0 + duplication/
+  uncertainty 惩罚从总分扣减；reason_codes + version + weights 配置化）。
+  真实验证：NVIDIA 财报 0.81 / SK hynix HBF 代表 0.615 / 重复变体 0.135
+  （dup_pen 0.5）/ arXiv 未知 0.0（unc_pen 0.8）。**162 tests。WP-220 全部
+  完成（dedup/entity/sector/scoring）。下一个: B-018 Candidate Queue CLI /
+  B-019 promote / B-020 dismiss。**
