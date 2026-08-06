@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date
+import sqlite3
+import statistics
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 from research_os.domain.policies import REVIEW_STATUSES, is_iso_date
+from research_os.services import candidate_db
+from research_os.services.discovery import due_channels
 from research_os.services.drafts import write_new_file
 from research_os.services.indexing import (
     index_drift,
@@ -20,6 +24,10 @@ from research_os.services.validation import validate_repository
 
 METRICS_SCHEMA_VERSION = 1
 SOURCE_GRADES = frozenset({"A", "B", "C", "D"})
+
+
+def _parse_iso(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 def research_metrics(
@@ -188,6 +196,258 @@ def research_metrics(
             "index_drift_files": len(drift),
         },
     }
+
+
+def pipeline_metrics(
+    root: Path,
+    as_of: str | None = None,
+    *,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Pipeline operational metrics (B-023): freshness/yield/noise/failure.
+
+    Reads the Candidate operational store + repository to report discovery
+    throughput, duplicate/noise rate, fetch failure rate and latency, Core
+    entity coverage, triage yield (promoted/dismissed) and stale channels.
+    Token/LLM cost is not yet tracked (reported as None).
+    """
+    as_of = as_of or date.today().isoformat()
+    if not is_iso_date(as_of):
+        raise ValueError("as_of must be YYYY-MM-DD")
+    objects, _ = validate_repository(root)
+    db_path = db_path or candidate_db.candidate_db_path(root)
+
+    discovered_total = 0
+    discovered_today = 0
+    status_counts: dict[str, int] = {}
+    core_entity_ids: set[str] = set()
+    cluster_rows: list[sqlite3.Row] = []
+    run_rows: list[sqlite3.Row] = []
+    promote_rows: list[sqlite3.Row] = []
+    dismiss_rows: list[sqlite3.Row] = []
+    if db_path.exists():
+        connection = sqlite3.connect(db_path)
+        connection.row_factory = sqlite3.Row
+        try:
+            rows = connection.execute(
+                "SELECT candidate_id, discovered_at, status, "
+                "entity_proposals_json FROM candidates"
+            ).fetchall()
+            for row in rows:
+                discovered_total += 1
+                if str(row["discovered_at"]).startswith(as_of):
+                    discovered_today += 1
+                status_counts[str(row["status"])] = (
+                    status_counts.get(str(row["status"]), 0) + 1
+                )
+                entity = _proposal_json(row["entity_proposals_json"])
+                if entity.get("status") == "matched" and entity.get("entity_id"):
+                    core_entity_ids.add(str(entity["entity_id"]))
+            cluster_rows = connection.execute(
+                "SELECT duplicate_cluster_id, COUNT(*) AS members "
+                "FROM candidates WHERE duplicate_cluster_id IS NOT NULL "
+                "GROUP BY duplicate_cluster_id"
+            ).fetchall()
+            run_rows = connection.execute(
+                "SELECT status, started_at, finished_at, http_errors, "
+                "parse_errors, retries, cost_estimate FROM discovery_runs"
+            ).fetchall()
+            promote_rows = connection.execute(
+                "SELECT candidate_id, acted_at FROM candidate_actions "
+                "WHERE action = 'promote'"
+            ).fetchall()
+            dismiss_rows = connection.execute(
+                "SELECT reason, COUNT(*) AS count FROM candidate_actions "
+                "WHERE action = 'dismiss' GROUP BY reason"
+            ).fetchall()
+        finally:
+            connection.close()
+
+    cluster_members = sum(int(row["members"]) for row in cluster_rows)
+    distinct_clusters = len(cluster_rows)
+    non_representative = cluster_members - distinct_clusters
+    duplicate_rate = (
+        round(non_representative / discovered_total, 4) if discovered_total else 0.0
+    )
+
+    runs = len(run_rows)
+    succeeded = sum(1 for row in run_rows if row["status"] == "succeeded")
+    failed = sum(1 for row in run_rows if row["status"] == "failed")
+    failure_rate = round(failed / runs, 4) if runs else 0.0
+    latencies = [
+        (_parse_iso(row["finished_at"]) - _parse_iso(row["started_at"])).total_seconds()
+        for row in run_rows
+        if row["status"] == "succeeded" and row["finished_at"]
+    ]
+    median_latency = round(statistics.median(latencies), 1) if latencies else None
+    http_errors = sum(int(row["http_errors"] or 0) for row in run_rows)
+    parse_errors = sum(int(row["parse_errors"] or 0) for row in run_rows)
+    retries = sum(int(row["retries"] or 0) for row in run_rows)
+    costs = [
+        float(row["cost_estimate"]) for row in run_rows if row["cost_estimate"]
+    ]
+    cost_estimate = round(sum(costs), 6) if costs else None
+
+    tier_by_entity = {
+        obj.object_id: str(obj.metadata.get("coverage_tier") or "")
+        for obj in objects
+        if obj.object_type == "company"
+    }
+    core_matched = sum(
+        1
+        for entity_id in core_entity_ids
+        if tier_by_entity.get(entity_id) == "core"
+    )
+
+    promoted = status_counts.get("promoted", 0)
+    dismissed = status_counts.get("dismissed", 0)
+    promoted_rate = round(promoted / discovered_total, 4) if discovered_total else 0.0
+    dismissed_rate = round(dismissed / discovered_total, 4) if discovered_total else 0.0
+    top_dismiss = sorted(
+        ((str(row["reason"]), int(row["count"])) for row in dismiss_rows),
+        key=lambda item: item[1],
+        reverse=True,
+    )[:5]
+
+    core_covered = {
+        str(row["candidate_id"]): str(row["acted_at"])
+        for row in promote_rows
+    }
+    conversion_hours = []
+    if db_path.exists():
+        connection = sqlite3.connect(db_path)
+        connection.row_factory = sqlite3.Row
+        try:
+            for row in connection.execute(
+                "SELECT candidate_id, discovered_at FROM candidates "
+                "WHERE status = 'promoted' AND promoted_source_id IS NOT NULL"
+            ):
+                acted_at = core_covered.get(str(row["candidate_id"]))
+                if acted_at:
+                    hours = (
+                        _parse_iso(acted_at) - _parse_iso(str(row["discovered_at"]))
+                    ).total_seconds() / 3600
+                    conversion_hours.append(hours)
+        finally:
+            connection.close()
+    median_conversion = (
+        round(statistics.median(conversion_hours), 1) if conversion_hours else None
+    )
+
+    due = due_channels(root, as_of=f"{as_of}T23:59:59Z", db_path=db_path)
+    stale_ids = sorted(item["channel_id"] for item in due if item["last_run"])
+    never_run = sorted(item["channel_id"] for item in due if not item["last_run"])
+
+    return {
+        "schema_version": 1,
+        "as_of": as_of,
+        "discovered": {"total": discovered_total, "today": discovered_today},
+        "duplicate": {
+            "clusters": distinct_clusters,
+            "non_representative": non_representative,
+            "rate": duplicate_rate,
+        },
+        "discovery": {
+            "runs": runs,
+            "succeeded": succeeded,
+            "failed": failed,
+            "failure_rate": failure_rate,
+            "median_latency_seconds": median_latency,
+            "http_errors": http_errors,
+            "parse_errors": parse_errors,
+            "retries": retries,
+            "cost_estimate": cost_estimate,
+            "tokens": None,
+        },
+        "coverage": {
+            "matched_entities": len(core_entity_ids),
+            "core_matched": core_matched,
+            "core_rate": (
+                round(core_matched / discovered_total, 4) if discovered_total else 0.0
+            ),
+        },
+        "triage": {
+            "total": discovered_total,
+            "promoted": promoted,
+            "dismissed": dismissed,
+            "promoted_rate": promoted_rate,
+            "dismissed_rate": dismissed_rate,
+            "top_dismiss_reasons": top_dismiss,
+            "median_conversion_hours": median_conversion,
+        },
+        "stale_channels": {"stale": stale_ids, "never_run": never_run},
+    }
+
+
+def _proposal_json(value: Any) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, dict) else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def render_pipeline_metrics(metrics: dict[str, Any]) -> str:
+    discovered = metrics["discovered"]
+    duplicate = metrics["duplicate"]
+    discovery = metrics["discovery"]
+    coverage = metrics["coverage"]
+    triage = metrics["triage"]
+    stale = metrics["stale_channels"]
+    latency = discovery["median_latency_seconds"]
+    latency_text = f"{latency}s" if latency is not None else "—"
+    cost = discovery["cost_estimate"]
+    cost_text = str(cost) if cost is not None else "—"
+    token_text = (
+        "not tracked" if discovery["tokens"] is None else discovery["tokens"]
+    )
+    conversion = triage["median_conversion_hours"]
+    conversion_text = f"{conversion}h" if conversion is not None else "—"
+    reasons = triage["top_dismiss_reasons"]
+    reasons_text = (
+        ", ".join(f"{reason}×{count}" for reason, count in reasons) or "—"
+    )
+    stale_text = ", ".join(stale["stale"]) or "—"
+    never_text = ", ".join(stale["never_run"]) or "—"
+    lines = [
+        f"# Pipeline Metrics — {metrics['as_of']}",
+        "",
+        "## Discovery (freshness / failure)",
+        f"- Runs: {discovery['runs']} "
+        f"(succeeded {discovery['succeeded']}, failed {discovery['failed']})",
+        f"- Failure rate: {discovery['failure_rate']:.2%}",
+        f"- Median latency: {latency_text}",
+        f"- HTTP/parse errors, retries: "
+        f"{discovery['http_errors']}/{discovery['parse_errors']}/"
+        f"{discovery['retries']}",
+        f"- Cost estimate: {cost_text}; model tokens: {token_text}",
+        "",
+        "## Yield / noise",
+        f"- Discovered: {discovered['total']} total, "
+        f"{discovered['today']} today",
+        f"- Duplicate rate: {duplicate['rate']:.2%} "
+        f"({duplicate['non_representative']} non-rep in "
+        f"{duplicate['clusters']} clusters)",
+        f"- Core entity coverage: {coverage['core_matched']}/"
+        f"{discovered['total']} ({coverage['core_rate']:.2%}); "
+        f"{coverage['matched_entities']} distinct matched entities",
+        "",
+        "## Triage",
+        f"- Promoted: {triage['promoted']} "
+        f"({triage['promoted_rate']:.2%})",
+        f"- Dismissed: {triage['dismissed']} "
+        f"({triage['dismissed_rate']:.2%})",
+        f"- Top dismiss reasons: {reasons_text}",
+        f"- Median candidate→promote: {conversion_text}",
+        "",
+        "## Stale / coverage gap",
+        f"- Stale channels: {len(stale['stale'])} ({stale_text})",
+        f"- Never run: {len(stale['never_run'])} ({never_text})",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def render_metrics_markdown(metrics: dict[str, Any]) -> str:

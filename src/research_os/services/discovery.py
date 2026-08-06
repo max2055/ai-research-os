@@ -11,6 +11,7 @@ import hashlib
 import re
 import sqlite3
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
 from research_os.services.candidate_queue import enrich_candidates
 from research_os.services.dedup import assign_clusters, normalize_title
+from research_os.services.redaction import redact_secrets
 from research_os.services.schedule import is_due
 from research_os.services.validation import validate_repository
 
@@ -46,7 +48,10 @@ def _candidate_id() -> str:
 def _content_fingerprint(candidate: SourceCandidate) -> str:
     digest = hashlib.sha256()
     digest.update(candidate.title.encode("utf-8", errors="replace"))
-    digest.update((candidate.url or "").encode("utf-8", errors="replace"))
+    # fingerprint the redacted URL so it matches the stored canonical_url.
+    digest.update(
+        (redact_secrets(candidate.url) or "").encode("utf-8", errors="replace")
+    )
     return digest.hexdigest()
 
 
@@ -158,6 +163,24 @@ def _acquire_channel_lock(
         connection.close()
 
 
+def _candidate_records(
+    discovered: Sequence[SourceCandidate],
+) -> list[dict[str, object]]:
+    """Build insertable candidate rows; URLs are redacted (B-024)."""
+    return [
+        {
+            "candidate_id": _candidate_id(),
+            "published_at_proposal": candidate.published_at,
+            "title": candidate.title,
+            "canonical_url": redact_secrets(candidate.url),
+            "publisher": candidate.publisher,
+            "content_fingerprint": _content_fingerprint(candidate),
+            "language": None,
+        }
+        for candidate in discovered
+    ]
+
+
 def run_discovery(
     root: Path,
     channel_id: str,
@@ -221,18 +244,7 @@ def run_discovery(
             ],
         }
 
-    candidates: list[dict[str, object]] = [
-        {
-            "candidate_id": _candidate_id(),
-            "published_at_proposal": candidate.published_at,
-            "title": candidate.title,
-            "canonical_url": candidate.url,
-            "publisher": candidate.publisher,
-            "content_fingerprint": _content_fingerprint(candidate),
-            "language": None,
-        }
-        for candidate in discovered
-    ]
+    candidates = _candidate_records(discovered)
     # B-014 dedup: extend existing clusters across runs, never drop records.
     existing = candidate_db.existing_candidates(root)
     existing_index: dict[str, str] = {}

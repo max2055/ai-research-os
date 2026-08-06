@@ -161,6 +161,19 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="compare a prior JSON snapshot with current repository metrics",
     )
+    pipeline = subparsers.add_parser(
+        "pipeline", help="pipeline operational metrics (B-023)"
+    )
+    pipeline_commands = pipeline.add_subparsers(
+        dest="pipeline_command", required=True
+    )
+    pipeline_metrics_parser = pipeline_commands.add_parser(
+        "metrics", help="compute Candidate-pipeline metrics (freshness/yield/noise)"
+    )
+    pipeline_metrics_parser.add_argument("--as-of", default=date.today().isoformat())
+    pipeline_metrics_parser.add_argument(
+        "--format", choices=("markdown", "json"), default="markdown"
+    )
     universe = subparsers.add_parser(
         "universe", help="inspect the Universe (A-014 registry CLI)"
     )
@@ -745,6 +758,21 @@ def main() -> int:
             print(f"ERROR: {exc}")
             return 2
 
+    if args.command == "pipeline":
+        try:
+            if args.pipeline_command == "metrics":
+                metrics_value = runtime.pipeline_metrics(
+                    args.root.resolve(),
+                    args.as_of,
+                )
+                if args.format == "json":
+                    print(runtime.metrics_json(metrics_value), end="")
+                else:
+                    print(runtime.render_pipeline_metrics(metrics_value), end="")
+                return 0
+        except (OSError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
     if args.command == "discover":
         try:
             if args.discover_command == "run":

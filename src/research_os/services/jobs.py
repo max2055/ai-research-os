@@ -27,6 +27,7 @@ from research_os.services.metrics import (
     metrics_snapshot_path,
     research_metrics,
 )
+from research_os.services.redaction import redact_secrets
 from research_os.services.triage import expire_candidates, purge_candidates
 from research_os.services.validation import validate_repository
 
@@ -248,6 +249,7 @@ def run_job(
     except Exception as exc:
         status = "failed"
         message = f"{type(exc).__name__}: {exc}"
+    message = redact_secrets(message)
     finished = datetime.now(UTC)
     if started_at is not None:
         finished = started

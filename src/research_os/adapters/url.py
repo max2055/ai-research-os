@@ -12,6 +12,26 @@ from research_os.adapters.base import CapturedAsset
 
 DEFAULT_MAX_BYTES = 20 * 1024 * 1024
 TRACKING_PARAMETERS = frozenset({"fbclid", "gclid", "mc_cid", "mc_eid"})
+# Credential-carrying query params are dropped entirely (B-024): a token/key
+# is not part of the canonical resource identity and must never be persisted.
+SENSITIVE_PARAMETERS = frozenset(
+    {
+        "access_token",
+        "api_key",
+        "apikey",
+        "token",
+        "key",
+        "password",
+        "passwd",
+        "secret",
+        "signature",
+        "sig",
+        "auth",
+        "session",
+        "cookie",
+        "credential",
+    }
+)
 
 
 def canonicalize_url(value: str) -> str:
@@ -34,6 +54,7 @@ def canonicalize_url(value: str) -> str:
             )
             if not key.lower().startswith("utm_")
             and key.lower() not in TRACKING_PARAMETERS
+            and key.lower() not in SENSITIVE_PARAMETERS
         )
     )
     path = parsed.path or "/"

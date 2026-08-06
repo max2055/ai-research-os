@@ -77,7 +77,7 @@ Wave 0 Gate：RCP-v03-001 获批，所有关键人工选择记录，后续 WP �
 | WP-220 | B-014～017 | dedup/entity/sector/scoring | completed |
 | WP-230 | B-018～020 | Candidate Queue + promote transaction | completed |
 | WP-231 | B-021～022 | launchd + Daily Brief | completed |
-| WP-232 | B-023～024 | metrics/health/secret redaction | proposed |
+| WP-232 | B-023～024 | metrics/health/secret redaction | completed |
 | WP-240 | B-025～026 | 14-day real Pilot + acceptance | proposed |
 
 Adapter 子包接口冻结后可以并行。任何新 Adapter 先有明确 Channel、allowlist、rate、许可和

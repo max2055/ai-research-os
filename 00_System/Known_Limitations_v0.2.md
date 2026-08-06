@@ -274,3 +274,20 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   (+4)。WP-231（B-021～022）全部 completed。已知局限：反面信号是关键词/
   ambiguous 启发式（无 NLP）；论文信号仅按 arxiv channel。下一个: B-023
   metrics/health/secret redaction（WP-232）。**
+- **B-023 pipeline metrics + B-024 secret redaction 完成 + WP-232 全部完成
+  (2026-08-06)**: `metrics.py` 增 `pipeline_metrics(root, as_of)` + CLI
+  `pipeline metrics [--as-of] [--format]` + dashboard /operations Pipeline
+  health 面板。指标：discovered（total/today）、duplicate rate（非代表/
+  cluster）、discovery failure rate + 失败列表、median latency、core 覆盖、
+  promoted/dismissed rate + top dismiss reasons、median conversion hours、
+  stale/never-run channels、http/parse/retries/cost。**B-024 secret
+  redaction**：`redaction.py` redact_secrets（token/key/access_token/secret/
+  auth/session/cookie 查询参数 + Authorization/Bearer/Cookie 值→`<REDACTED>`）；
+  `canonicalize_url` 现在**丢弃**敏感查询参数（不落盘）；discovery 候选
+  canonical_url 落库前 redact；jobs 记录 message 写盘前 redact。真实验证：
+  pipeline metrics 20 候选 dup 75%（15 非代表/5 cluster）、1 core 实体、
+  CHN-skhynix-ir 标 stale；redaction 单测全过。**204 tests (+8)。WP-232
+  （B-023～024）全部 completed。已知局限：model token 未跟踪（discovery_runs
+  无 token 计数，report None）；median latency 对旧 run 为 0（旧代码
+  finished_at=started_at，新 run 才有真实值）；cost_estimate 大多未填。
+  下一个: B-025 14-day Pilot / B-026 Phase acceptance（WP-240）。**

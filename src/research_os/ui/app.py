@@ -24,6 +24,7 @@ from research_os.services.indexing import (
 from research_os.services.ingestion import verify_source_assets
 from research_os.services.metrics import (
     load_metrics_snapshot,
+    pipeline_metrics,
     render_metrics_comparison,
     research_metrics,
 )
@@ -492,6 +493,31 @@ def _metrics_page(repo: DashboardRepository, project_id: str | None) -> str:
     return shell("Metrics", content, project_id=selected)
 
 
+def pipeline_panel(root: Path) -> str:
+    try:
+        metrics = pipeline_metrics(root)
+    except (OSError, ValueError):
+        return '<p class="muted">pipeline metrics unavailable</p>'
+    discovered = metrics["discovered"]
+    duplicate = metrics["duplicate"]
+    discovery = metrics["discovery"]
+    triage = metrics["triage"]
+    stale = metrics["stale_channels"]
+    latency = discovery["median_latency_seconds"]
+    latency_text = f"{latency}s" if latency is not None else "—"
+    return (
+        f"<p>Discovered {discovered['total']} "
+        f"({discovered['today']} today)</p>"
+        f"<p>Duplicate rate {duplicate['rate']:.0%} · "
+        f"failure rate {discovery['failure_rate']:.0%}</p>"
+        f"<p>Promoted {triage['promoted']} · "
+        f"dismissed {triage['dismissed']}</p>"
+        f"<p>Stale channels {len(stale['stale'])} · "
+        f"never run {len(stale['never_run'])}</p>"
+        f'<p class="muted">median latency {latency_text}</p>'
+    )
+
+
 def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     objects, _, selected = repo.scoped(project_id)
     overdue = action_rows(
@@ -528,6 +554,9 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
 </div><div><div class="eyebrow">Overdue actions</div><h2>{len(overdue)}</h2>
 <p class="muted">As of {date.today().isoformat()}</p></div></section>
 <section class="grid">
+<div class="panel"><h3>Pipeline health</h3>
+<p class="muted">Candidate pipeline (B-023)</p>
+{pipeline_panel(repo.root)}</div>
 <div class="panel"><h3>Overdue actions</h3>
 {table(["Action", "Owner", "Due", "Status"], open_rows)}</div>
 <div class="panel"><h3>Review due</h3>
