@@ -131,3 +131,29 @@
 | SRC-20260806-124 | 8-K filing 2026-03-06 | report | NVIDIA CORP | A | captured | pending |
 | SRC-20260806-125 | v2.53.0 | other | openai/openai-python | A | captured | pending |
 | SRC-20260806-126 | v0.2.0 | other | meta-llama/llama-models | A | captured | pending |
+| SRC-20260806-127 | SparseDitto: Customizing GPU Kernels for Different Sparsity Patterns with LLM-Based Agentic System | paper | arXiv | A | captured | pending |
+| SRC-20260806-128 | MCHA: A Memory-Centric Hierarchical Architecture for Parallel-Sequential Computing | paper | arXiv | B | captured | pending |
+| SRC-20260806-129 | AFD-Ledger: Deployment Provisioning for Attention--FFN Disaggregation | paper | arXiv | B | captured | pending |
+| SRC-20260806-130 | AsymSpec: Efficient Cloud-Edge Speculative Decoding over Asymmetric Networks | paper | arXiv | B | captured | pending |
+| SRC-20260806-131 | CommBench: Can LLMs Write Correct and Efficient GPU Communication Code? | paper | arXiv | B | captured | pending |
+| SRC-20260806-132 | DiffPower: GPU-Accelerated Differentiable Switching Power Analysis and Optimization | paper | arXiv | B | captured | pending |
+| SRC-20260806-133 | Evaluating MFU as a Proxy for GPU Power for Energy-Aware Simulation of LLM Training | paper | arXiv | B | captured | pending |
+| SRC-20260806-134 | GPU-Resident CUDA Acceleration for OCUDU 5G PHY and O-RAN Fronthaul: Architecture and Preliminary Performance | paper | arXiv | B | captured | pending |
+| SRC-20260806-135 | RAC: Reference-Aware Activation Compression for Communication-Efficient Split LLM Inference | paper | arXiv | B | captured | pending |
+| SRC-20260806-136 | TAOT: Topology-Aware Optimal Transport for Dynamic Expert Replica Placement in MoE Training | paper | arXiv | B | captured | pending |
+| SRC-20260806-137 | When Does Disaggregation Pay? Simulating Prefill--Decode--Attention--FFN Specialization for Agentic LLM Inference | paper | arXiv | B | captured | pending |
+| SRC-20260806-138 | A Centralized Performance Monitoring Architecture for Heterogeneous Multicore SoCs | paper | arXiv | B | captured | pending |
+| SRC-20260806-139 | A Systolic Array Architecture for Nonlinear Activation Functions and Softmax Computation using Chebyshev Polynomials | paper | arXiv | B | captured | pending |
+| SRC-20260806-140 | Beyond Peak TOPS/W: A System-Level Perspective on Hybrid Digital, Analogue and Neuromorphic Computing | paper | arXiv | B | captured | pending |
+| SRC-20260806-141 | CAMTA: A Reconfigurable Multi-Region Activation Unit for Nonlinear Function Approximation | paper | arXiv | B | captured | pending |
+| SRC-20260806-142 | ComFuse: Fusing Complex Memory-Intensive Subgraphs with Compute-Intensive Kernels For Modern GPU Architectures | paper | arXiv | B | captured | pending |
+| SRC-20260806-143 | Deltoris: Enabling Real-time VLA Inference in Embodied AI via Bit-level Sparsity and Speculative Inference | paper | arXiv | B | captured | pending |
+| SRC-20260806-144 | Fovea: Physical-Implication-Aware Wafer-Scale DSE with Decision-Domain-Guided Cross-Fidelity Refinement | paper | arXiv | B | captured | pending |
+| SRC-20260806-145 | Hardware Design and Security in the Era of Chiplets and LLMs | paper | arXiv | B | captured | pending |
+| SRC-20260806-146 | Heterogeneity-Aware Microscaling for Efficient Low-Bit LLM Inference | paper | arXiv | B | captured | pending |
+| SRC-20260806-147 | Heterogeneous LLM Serving with General-Purpose Processing-Near-Memory for Retrieval-Based Sparse Attention | paper | arXiv | B | captured | pending |
+| SRC-20260806-148 | Interpolation of Non-Linear Functions for LLMs using Partial Reconfiguration in FPGAs | paper | arXiv | B | captured | pending |
+| SRC-20260806-149 | LACE: Large Language Model Aided Multi-Agent Framework for Agile RISC-V Instruction Extension | paper | arXiv | B | captured | pending |
+| SRC-20260806-150 | LowRank-SSM: Hardware-Software Co-Design for Rank-Reduced Mamba Acceleration on FPGA | paper | arXiv | B | captured | pending |
+| SRC-20260806-151 | On Design Principles for Efficient Heterogeneous DRAM-PIM-GPU Systems | paper | arXiv | B | captured | pending |
+| SRC-20260806-152 | Unified Lookup-Table Inference with Signed-Digit K/V Caches for Ternary LLMs | paper | arXiv | B | captured | pending |
