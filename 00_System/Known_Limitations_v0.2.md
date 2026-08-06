@@ -140,3 +140,11 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   无法引用，来源核验改用 evidence_ids/reviewed Events 支撑；59/59 Company
   source_channel_ids 留空，待实现后补登记。**下一个候选: A-020 阶段验收
   （clean-clone + migration rollback）或 v0.3 阶段 1 收口。**
+- **A-020 阶段验收通过 (2026-08-06)**: migration rollback 演练（10 Security
+  实体 apply→rollback 字节级恢复，0 error）+ clean-clone recovery 重跑
+  （633 对象 / 55 Source / 208 资产 / 52 dirs，独立 clone + 新 venv + 加密
+  恢复，doctor/validate/index/tests/ruff/mypy 全 PASS）。验收文档
+  `00_System/A020_Phase_Acceptance.md`。**Phase 0-1 Gate 清单全部达成，除
+  D4 上限复核**: Core Company 59 家超 D4 上限（30-50），需阶段 1 收口时
+  max 决策（保留并记录理由，或降级部分为 tracked/discovery）。**下一个:
+  v0.3 阶段 1 收口 + D4 复核，或 Phase 2 Candidate Pipeline（需 RCP）。**
