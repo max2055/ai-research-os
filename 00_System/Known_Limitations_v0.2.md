@@ -291,3 +291,16 @@ query bottleneck or a stable high-frequency relationship-query requirement.
   无 token 计数，report None）；median latency 对旧 run 为 0（旧代码
   finished_at=started_at，新 run 才有真实值）；cost_estimate 大多未填。
   下一个: B-025 14-day Pilot / B-026 Phase acceptance（WP-240）。**
+- **B-025 14-day Pilot 启动 + launchd 首轮真实验证 + B-026 acceptance 框架
+  (2026-08-06)**: launchd（B-021）**已装上并触发首轮**：arxiv +20 候选、
+  skhynix +10 成功；**github 失败（locator 是 `{owner}/{repo}` 占位符模板，
+  `_github_repo_from_locator` 无法解析）+ SEC 失败（locator 无 CIK，
+  entity_ids→CIK 解析未实现）**——两个"reviewed+enabled 但不可抓取"通道，
+  已记入 Pilot_Kickoff 已知缺口，需 max 决策（改 locator/实现解析/disable）。
+  顺带修复：`_build_adapter` 失败现在也记 failed discovery run（此前配置级
+  失败只进 Job 记录、pipeline failure_rate 低估）。**Pilot 基建**：
+  `pilot.py` + `pilot status [--since]`（Gate 进度：days/promoted/channels/
+  job_failures/briefs）+ `05_Research/Operations/Pilot/`（kickoff + pilot.json
+  started_at=2026-08-06 + Phase_Acceptance_B026 checklist）。**205 tests
+  (+1)。WP-240 in_progress（Day 1/14）。已知缺口：G1 4/20 channels、G4 dup
+  50%、G6 0/20 promoted——需每日 triage + 优先解决 github/SEC 配置。**

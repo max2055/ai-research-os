@@ -76,6 +76,7 @@ from research_os.services.ontology import (
     write_sqlite_export,
     write_text_export,
 )
+from research_os.services.pilot import pilot_status, render_pilot_status
 from research_os.services.projects import (
     objects_for_project,
     prepare_project_draft,
@@ -146,6 +147,8 @@ __all__ = [
     "objects_for_project",
     "pipeline_metrics",
     "render_pipeline_metrics",
+    "pilot_status",
+    "render_pilot_status",
     "prepare_action_draft",
     "prepare_assertion_draft",
     "prepare_company_update_proposal",

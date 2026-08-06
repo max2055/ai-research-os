@@ -174,6 +174,14 @@ def parse_args() -> argparse.Namespace:
     pipeline_metrics_parser.add_argument(
         "--format", choices=("markdown", "json"), default="markdown"
     )
+    pilot = subparsers.add_parser(
+        "pilot", help="14-day Pilot status (B-025)"
+    )
+    pilot_commands = pilot.add_subparsers(dest="pilot_command", required=True)
+    pilot_status_parser = pilot_commands.add_parser(
+        "status", help="show Pilot Gate progress for the window"
+    )
+    pilot_status_parser.add_argument("--since", default="")
     universe = subparsers.add_parser(
         "universe", help="inspect the Universe (A-014 registry CLI)"
     )
@@ -758,6 +766,18 @@ def main() -> int:
             print(f"ERROR: {exc}")
             return 2
 
+    if args.command == "pilot":
+        try:
+            if args.pilot_command == "status":
+                status = runtime.pilot_status(
+                    args.root.resolve(),
+                    since=args.since or None,
+                )
+                print(runtime.render_pilot_status(status), end="")
+                return 0
+        except (OSError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
     if args.command == "pipeline":
         try:
             if args.pipeline_command == "metrics":

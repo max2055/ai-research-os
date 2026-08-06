@@ -32,3 +32,6 @@ htmlcov/
 *.key
 *.crt
 *.local.json
+
+# Runtime logs (launchd sweep / scheduler output; regenerated each run)
+09_Automation/launchd/logs/

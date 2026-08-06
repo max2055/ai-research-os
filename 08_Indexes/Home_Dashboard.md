@@ -261,4 +261,5 @@
 
 ## Failed jobs
 
-- None
+- [[JOB-20260806121259-001]] — discover: ValueError: SEC channel requires a CIK in locator or entity_ids
+- [[JOB-20260806121246-001]] — discover: ValueError: GitHub channel locator must be a repository URL: https://api.github.com/repos/{owner}/{repo}/releases

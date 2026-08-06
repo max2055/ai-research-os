@@ -204,7 +204,6 @@ def run_discovery(
     db_path = db_path or candidate_db.candidate_db_path(root)
     started_at = _utc_now()
     run_id = f"RUN-{uuid.uuid4().hex[:16]}"
-    adapter = _build_adapter(meta)
     if apply:
         candidate_db.apply_migrations(db_path)
         _acquire_channel_lock(db_path, channel_id, started_at)
@@ -217,6 +216,7 @@ def run_discovery(
             software_version="0.3",
         )
     try:
+        adapter = _build_adapter(meta)
         discovered = adapter.discover()
     except Exception as exc:  # bounded failure -> close the run as failed
         if apply:
