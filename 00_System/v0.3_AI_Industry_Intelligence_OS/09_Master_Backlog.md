@@ -96,7 +96,7 @@ test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（P
 |---|---|---|---|
 | WP-300 | C-001～003 | RCP、Schema、rule map | completed |
 | WP-301 | C-004～005 | direct impact + mechanism validator | completed |
-| WP-310 | C-006～010 | temporal multi-hop/conflict/confidence | proposed |
+| WP-310 | C-006～010 | temporal multi-hop/conflict/confidence | completed |
 | WP-311 | C-011～012 | spec/renderer/review | proposed |
 | WP-312 | C-013～016 | index/CLI/UI/report integration | proposed |
 | WP-320 | C-017～018 | metrics + 20-event field Gate | proposed |
@@ -118,6 +118,8 @@ impact_type/direction → 证据锚定确定性 mechanism；pending Event 拒绝
 `PRIMARY_IMPACT_TYPE`/`DEFAULT_IMPACT_DIRECTION` 入 `domain/policies.py`。真实冒烟：
 EVT-20260225-034 → 4 提案（SUPPLIES→supply、ENABLES→technology）。258 tests 全绿。
 **CLI `impact propose` 属 C-014（WP-312），现有 `impact --id` ontology 图命令不动。Next：WP-310（C-006 path expansion 等）。**
+
+WP-310 close-out（2026-08-07）：C-006 `services/impact_path.py expand_impact_paths`（BFS 路径展开：hop1=direct，hop2+ 经 reviewed+as-of 有效 REL 前向边+对称反向边，per-path 防环、fan-out 上限、剪枝原因记录 pruned；**治理门：max_depth 默认 1=direct-only，多跳机制可测可调但不激活，待 C-018 Field Gate 后由 max 放行 2-3**）+ C-007 `is_valid_as_of`（valid_from/valid_to 窗口）+ C-008 `detect_contradictions`（同 target 正负/多 horizon 并存可见，不净额合并）+ C-009 `dedup_paths`（同序列同 REL 折叠，variant_count）+ C-010 `path_confidence`（weakest-link min，不乘，任一跳 unknown → None）。真实冒烟：EVT-20260225-034 → 4 direct + 10 两跳路径（EVT→COM-asml→COM-tsmc→COM-nvidia/AMD 传导链）。285 tests 全绿。**Next：WP-311（C-011 impact spec 契约 / C-012 review workflow）或 WP-312（C-013~014 index/CLI）。**
 
 ## 7. Wave 4：Analysis Modes
 
