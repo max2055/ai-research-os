@@ -78,3 +78,31 @@
 ### 结论
 
 C-018 可判定为：**precision 与机制锚定达标**（两项硬阈值），direction/contrary 仍须人工修正；regulation 桶为真实数据缺口。多跳保持 inactive，待完整 Gate 通过后由 max 放行。
+
+## C-018 Gate 判定（2026-08-08，agent 判定建议，待 max 拍板）
+
+15 事件样本，5 维审计（agent 初稿，`Field_Gate_20_Impact_Judgments.json`）：
+
+| 指标 | 值 | §11 阈值 | 判定 |
+|---|---|---|---|
+| 直接影响 precision | 93.3% | ≥85% | ✅ |
+| mechanism 无来源外事实 | 100% | ≥95% | ✅ |
+| horizon 合理 | 100% | — | ✅ |
+| direction 合理 | 86.7% | — | ⚠️ 2 事件待人工 |
+| 重大反面路径遗漏 | 2 | 0 | ❌ |
+
+### 判定：有条件通过（conditionally pass）
+
+- **可测量硬阈值 3/3 达标**：precision（93.3%）、mechanism 锚定（100%）、horizon（100%）。
+- **direction 2 事件待人工修正**：EVT-047（点名竞争者，price/revenue 过度，10-K 提及触发关键词门控）、EVT-044（逐 target 价格方向，三星+/SK hynix−，事件级推断丢失，手工 IMP-005/006 已正确处理）。
+- **contrary 2 处遗漏必须修复**：EVT-047（竞争对手同时是客户）、EVT-039（Azure 效率提升部分抵消毛利下降）——补 countervailing_factors 后重审。
+- **regulation 桶 0/2 为数据缺口**：需管线抓真实监管事件（出口管制等），不能编造。
+- **样本上限 ~15 事件**：26 个企业/Agent 事件无桥接 REL（第二 Pilot 范围）；要填满 20 需扩 Universe 或补事件。
+
+### 结论与后续
+
+多跳（2-3 hop）**维持 inactive**（治理门，Phase 3 §12）。建议顺序：
+1. max 复核 15 事件判断初稿（approve / 逐条改）。
+2. 修复 2 处 contrary 遗漏（补 countervailing_factors）。
+3. 抓 regulation 事件 + 补 pricing/financial-capex 事件至 20。
+4. 全绿后由 max 拍板 C-018 通过 → 放行多跳。
