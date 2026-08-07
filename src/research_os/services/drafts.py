@@ -55,13 +55,24 @@ def next_object_id(
     object_type: str,
     object_date: str,
 ) -> str:
-    if object_type not in {"source", "event", "ontology_assertion"}:
-        raise ValueError("next_object_id supports source, event and ontology_assertion")
+    if object_type not in {
+        "source",
+        "event",
+        "ontology_assertion",
+        "impact_assertion",
+    }:
+        raise ValueError(
+            "next_object_id supports source, event, ontology_assertion "
+            "and impact_assertion"
+        )
     if not is_iso_date(object_date):
         raise ValueError("object_date must be YYYY-MM-DD")
-    prefix = {"source": "SRC", "event": "EVT", "ontology_assertion": "REL"}[
-        object_type
-    ]
+    prefix = {
+        "source": "SRC",
+        "event": "EVT",
+        "ontology_assertion": "REL",
+        "impact_assertion": "IMP",
+    }[object_type]
     suffixes: list[int] = []
     for obj in objects:
         if obj.object_type != object_type:

@@ -94,7 +94,7 @@ test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（P
 
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
-| WP-300 | C-001～003 | RCP、Schema、rule map | ready（RCP-v03-006 已批准）|
+| WP-300 | C-001～003 | RCP、Schema、rule map | completed |
 | WP-301 | C-004～005 | direct impact + mechanism validator | proposed |
 | WP-310 | C-006～010 | temporal multi-hop/conflict/confidence | proposed |
 | WP-311 | C-011～012 | spec/renderer/review | proposed |
@@ -103,6 +103,13 @@ test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（P
 | WP-321 | C-019～020 | benchmark/recovery/acceptance | proposed |
 
 先通过 direct impact Field Gate，再决定是否把 2–3 hop proposal 设为 active。
+
+WP-300 close-out（2026-08-07）：C-001 RCP-v03-006 已批准（`bc3ecf5`）；C-002 Impact Schema
+落地（`IMP-YYYYMMDD-NNN` 正式对象，接入 ID_PATTERNS/OBJECT_PATTERNS/SCHEMAS/REVIEWABLE_TYPES/
+validate_refs/reviewed-evidence，`ImpactEntityReference` 含 EVT/INS 引用，ontology EntityReference
+未改动）；C-003 rule map 交付 `IMPACT_RULE_MAP.md`（12×13 allowlist + 方向/限制，**待 max 复核
+具体方向倾向后再供 C-004 使用**）。240 tests 全绿，validate 0 error。**Next：C-004 direct impact
+proposal（WP-301）。**
 
 ## 7. Wave 4：Analysis Modes
 

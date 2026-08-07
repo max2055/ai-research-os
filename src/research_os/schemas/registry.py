@@ -8,6 +8,7 @@ from research_os.schemas.action import ActionSchema
 from research_os.schemas.common import ManagedObjectSchema
 from research_os.schemas.company import CompanySchema
 from research_os.schemas.event import EventSchema
+from research_os.schemas.impact_assertion import ImpactAssertionSchema
 from research_os.schemas.job import JobSchema
 from research_os.schemas.metric import MetricSchema
 from research_os.schemas.ontology_assertion import OntologyAssertionSchema
@@ -46,6 +47,7 @@ SCHEMAS: dict[str, SchemaType] = {
     "metric": MetricSchema,
     "source_channel": SourceChannelSchema,
     "ontology_assertion": OntologyAssertionSchema,
+    "impact_assertion": ImpactAssertionSchema,
 }
 
 

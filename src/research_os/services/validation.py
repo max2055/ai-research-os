@@ -411,6 +411,11 @@ def validate_refs(
         expect_ref(obj, "object_id", None, by_id, findings)
         expect_refs(obj, "evidence_ids", "event", by_id, findings)
         expect_refs(obj, "source_ids", "source", by_id, findings)
+    elif obj.object_type == "impact_assertion":
+        expect_refs(obj, "trigger_event_ids", "event", by_id, findings)
+        expect_ref(obj, "subject_id", None, by_id, findings)
+        expect_ref(obj, "target_id", None, by_id, findings)
+        expect_refs(obj, "evidence_ids", "event", by_id, findings)
 
 
 def validate_reviewed_assertion_evidence(
@@ -419,7 +424,7 @@ def validate_reviewed_assertion_evidence(
     findings: list[Finding],
 ) -> None:
     """Phase 0-1 §5: a reviewed assertion must have >=1 reviewed Evidence."""
-    if obj.object_type != "ontology_assertion":
+    if obj.object_type not in {"ontology_assertion", "impact_assertion"}:
         return
     if obj.metadata.get("review_status") != "reviewed":
         return
@@ -430,7 +435,7 @@ def validate_reviewed_assertion_evidence(
             "error",
             "REF003",
             obj,
-            "reviewed ontology_assertion has no evidence_ids",
+            f"reviewed {obj.object_type} has no evidence_ids",
         )
         return
     for evidence_id in evidence_ids:
@@ -442,7 +447,7 @@ def validate_reviewed_assertion_evidence(
         "error",
         "REF004",
         obj,
-        "reviewed ontology_assertion has no reviewed Evidence",
+        f"reviewed {obj.object_type} has no reviewed Evidence",
     )
 
 

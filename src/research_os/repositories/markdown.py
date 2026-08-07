@@ -24,6 +24,7 @@ OBJECT_PATTERNS = (
     "02_Knowledge/Securities/INS-*.md",
     "02_Knowledge/Channels/CHN-*.md",
     "05_Research/Assertions/REL-*.md",
+    "05_Research/Assertions/IMP-*.md",
     "06_Reports/**/RPT-*.md",
     "05_Research/Projects/PRJ-*.md",
     "05_Research/Reviews/Decisions/REV-*.md",

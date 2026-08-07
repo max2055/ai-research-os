@@ -27,6 +27,7 @@ ID_PATTERNS = {
     "metric": re.compile(r"^MET-[a-z0-9]+(?:-[a-z0-9]+)*$"),
     "source_channel": re.compile(r"^CHN-[a-z0-9]+(?:-[a-z0-9]+)*$"),
     "ontology_assertion": re.compile(r"^REL-\d{8}-\d{3}$"),
+    "impact_assertion": re.compile(r"^IMP-\d{8}-\d{3}$"),
 }
 
 # Ontology assertion predicates (Phase 0-1 §5). Relation direction is explicit;
