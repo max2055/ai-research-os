@@ -73,6 +73,19 @@ def gate_sample(
         if obj.object_type == "event"
         and obj.metadata.get("review_status") == "reviewed"
     ]
+    # Merge buckets from materialized IMP objects (incl. hand-crafted price/
+    # capex/regulation IMPs) so the sample reflects actual assertions on disk.
+    imp_buckets: dict[str, set[str]] = {}
+    for imp in objects:
+        if imp.object_type != "impact_assertion":
+            continue
+        impact_type = imp.metadata.get("impact_type")
+        if impact_type not in BUCKET_BY_IMPACT:
+            continue
+        for trigger in imp.metadata.get("trigger_event_ids", []) or []:
+            imp_buckets.setdefault(str(trigger), set()).add(
+                BUCKET_BY_IMPACT[impact_type]
+            )
     for event in sorted(events, key=lambda obj: obj.object_id):
         proposals = propose_direct_impacts(objects, event_id=event.object_id)
         buckets = {
@@ -80,6 +93,7 @@ def gate_sample(
             for proposal in proposals
             if proposal["impact_type"] in BUCKET_BY_IMPACT
         }
+        buckets |= imp_buckets.get(event.object_id, set())
         if not buckets:
             continue
         best = min(buckets, key=lambda bucket: counts[bucket])

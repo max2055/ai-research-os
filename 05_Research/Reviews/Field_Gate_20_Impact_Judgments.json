@@ -1,0 +1,125 @@
+{
+  "generated_at": "2026-08-07",
+  "by": "agent (max verifies)",
+  "judgments": [
+    {
+      "event_id": "EVT-20240226-043",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": false,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "supply/mixed should be positive: HBM3E volume production expands Micron capacity and NVIDIA supply"
+    },
+    {
+      "event_id": "EVT-20260225-034",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "descriptive 20-F, low change-signal; technology/positive reasonable"
+    },
+    {
+      "event_id": "EVT-20260302-041",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": false,
+      "contrary_omitted": false,
+      "notes": "9 proposals redundant; horizon multi_year for committed contracts"
+    },
+    {
+      "event_id": "EVT-20260302-047",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": true,
+      "notes": "competitors listed are ALSO customers - contextual/contrary factor omitted"
+    },
+    {
+      "event_id": "EVT-20260302-048",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "capacity/positive correct"
+    },
+    {
+      "event_id": "EVT-20260316-042",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": false,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "HBM4 mass production = positive capacity/supply; default mixed too vague"
+    },
+    {
+      "event_id": "EVT-20260416-033",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": false,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "technology dimension missing (2nm process); supply/mixed understates"
+    },
+    {
+      "event_id": "EVT-20260429-039",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": false,
+      "horizon_ok": false,
+      "contrary_omitted": true,
+      "notes": "headline is margin DOWN to 66% - margin/negative missing; Azure efficiency offset (countervailing) omitted; 12 proposals redundant"
+    },
+    {
+      "event_id": "EVT-20260429-046",
+      "direct_precision": false,
+      "mechanism_backed": true,
+      "direction_ok": false,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "supply mislabels a distribution/demand event; model-layer ontology absent (2nd-Pilot scope)"
+    },
+    {
+      "event_id": "EVT-20260601-044",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": false,
+      "horizon_ok": false,
+      "contrary_omitted": false,
+      "notes": "pricing dimension added (Samsung ASP +93.4% positive, SK hynix HBM price decline negative); C-004 only surfaced competition"
+    },
+    {
+      "event_id": "EVT-20260610-007",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "capex/financial dimension added; uncertain direction honest"
+    },
+    {
+      "event_id": "EVT-20260731-040",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": false,
+      "contrary_omitted": false,
+      "notes": "8-year commitment -> horizon multi_year, not unknown"
+    }
+  ],
+  "metrics": {
+    "n": 12,
+    "direct_precision": 0.9166666666666666,
+    "mechanism_backed": 1.0,
+    "direction_ok": 0.5,
+    "horizon_ok": 0.6666666666666666,
+    "contrary_omissions": 2,
+    "gate_direct_precision": true,
+    "gate_mechanism_backing": true,
+    "gate_contrary_omissions": false
+  }
+}
