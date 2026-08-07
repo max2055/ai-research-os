@@ -67,6 +67,27 @@ _YEAR_RE = re.compile(
     r"(\bFY\s?\d{2,4}\b|年度|annual|yearly|全年|10-K|20-F)", re.IGNORECASE
 )
 
+# Derived impact types are proposed only when the event content signals that
+# dimension (title + Facts); core types (supply/capacity/competition/demand/
+# technology) are the relation's core meaning and are always proposed. This
+# stops over-proposal where an event merely states a relation (e.g. naming
+# competitors) yet would otherwise emit speculative price/margin/revenue claims.
+_DERIVED_IMPACT_TYPES = frozenset(
+    {"price", "margin", "revenue", "cost", "capex", "regulation", "valuation"}
+)
+_IMPACT_KEYWORDS: dict[str, re.Pattern[str]] = {
+    "price": re.compile(r"(price|pricing|价格|ASP|定价|降价|涨价|单价)", re.IGNORECASE),
+    "margin": re.compile(r"(margin|毛利|利润|盈利|净利率)", re.IGNORECASE),
+    "revenue": re.compile(r"(revenue|营收|收入|sales|record|创纪录)", re.IGNORECASE),
+    "cost": re.compile(r"(cost|成本|expenditure|资本|开销)", re.IGNORECASE),
+    "capex": re.compile(r"(capex|资本开支|capital expenditure|invest)", re.IGNORECASE),
+    "regulation": re.compile(
+        r"(regulat|监管|export control|出口管制|restriction|限制|compliance)",
+        re.IGNORECASE,
+    ),
+    "valuation": re.compile(r"(valuat|估值|market cap)", re.IGNORECASE),
+}
+
 # Placeholder/empty-mechanism tokens C-005 rejects. Kept deliberately narrow to
 # avoid false positives on real (if terse) mechanisms.
 _PLACEHOLDER_RE = re.compile(
@@ -128,6 +149,10 @@ def propose_direct_impacts(
         }
         for affected in sorted(event_entities & {subject, target}):
             for impact_type, default_direction in sorted(allowed.items()):
+                if impact_type in _DERIVED_IMPACT_TYPES and not _impact_type_relevant(
+                    event, impact_type
+                ):
+                    continue  # over-proposal gate: event does not signal dimension
                 direction = _infer_direction(event, default_direction)
                 mechanism = _build_mechanism(event, rel, by_id, impact_type, affected)
                 if validate_mechanism(mechanism):
@@ -216,6 +241,19 @@ def _facts_section(body: str) -> str:
         if in_facts and stripped:
             parts.append(stripped)
     return " ".join(parts)
+
+
+def _impact_type_relevant(event: ResearchObject, impact_type: str) -> bool:
+    """Derived-dimension gate: propose price/margin/revenue/... only if the
+    event content (title + Facts) signals that dimension."""
+    text = " ".join(
+        [
+            str(event.metadata.get("title", "")),
+            _facts_section(event.body),
+        ]
+    )
+    pattern = _IMPACT_KEYWORDS.get(impact_type)
+    return pattern is None or bool(pattern.search(text))
 
 
 def _dedup_proposals(

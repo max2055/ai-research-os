@@ -8,10 +8,10 @@
 
 | 桶 | 配额 | 已分配 |
 |---|---|---|
-| supply-capacity | 5 | 4 |
-| pricing | 3 | 3 |
+| supply-capacity | 5 | 5 |
+| pricing | 3 | 1 |
 | product-technology | 3 | 2 |
-| customer-demand | 3 | 2 |
+| customer-demand | 3 | 3 |
 | financial-capex | 2 | 1 |
 | competition | 2 | 2 |
 | regulation-other | 2 | 0 |
@@ -23,20 +23,20 @@
 
 | Event | 桶 | 事件 | 建议 direct impact（C-004 提案）| Decision |
 |---|---|---|---|---|
-| EVT-20240226-043 | pricing | Micron: HBM3E volume production will be part of NVIDIA H200 Tensor Core GPUs | COM-micron capacity (positive); COM-micron cost (positive); COM-micron price (positive); COM-micron revenue (positive); COM-micron supply (positive); COM-micron technology (positive); COM-nvidia capacity (positive); COM-nvidia cost (positive); COM-nvidia price (positive); COM-nvidia supply (positive) | ⬜ |
-| EVT-20260225-034 | customer-demand | ASML 20-F describes EUV 0.33/0.55 NA lithography platforms | COM-asml capacity (positive); COM-asml cost (mixed); COM-asml demand (positive); COM-asml price (mixed); COM-asml supply (mixed); COM-asml technology (positive); COM-tsmc capacity (positive); COM-tsmc cost (mixed); COM-tsmc demand (positive); COM-tsmc price (mixed); COM-tsmc supply (mixed); COM-tsmc technology (positive) | ⬜ |
-| EVT-20260302-041 | supply-capacity | CoreWeave 10-K FY2025: OpenAI $6.5B+$11.9B and Meta $14.2B committed contracts named | COM-coreweave capacity (positive); COM-coreweave cost (positive); COM-coreweave demand (positive); COM-coreweave price (positive); COM-coreweave revenue (positive); COM-coreweave supply (positive); COM-coreweave technology (positive); COM-meta capacity (positive); COM-meta cost (positive); COM-meta demand (positive); COM-meta price (positive); COM-meta revenue (positive); COM-meta supply (positive); COM-openai capacity (positive); COM-openai cost (positive); COM-openai demand (positive); COM-openai price (positive); COM-openai revenue (positive); COM-openai supply (positive) | ⬜ |
-| EVT-20260302-047 | competition | CoreWeave 10-K: names AWS, Google Cloud, Microsoft Azure, Oracle as key cloud competitors | COM-aws competition (mixed); COM-aws margin (negative); COM-aws price (negative); COM-aws revenue (negative); COM-google-cloud competition (mixed); COM-google-cloud margin (negative); COM-google-cloud price (negative); COM-google-cloud revenue (negative); COM-microsoft competition (mixed); COM-microsoft margin (negative); COM-microsoft price (negative); COM-microsoft revenue (negative) | ⬜ |
-| EVT-20260302-048 | product-technology | CoreWeave 10-K: deploys NVIDIA GB200/GB300 NVL72, among first to deploy NVIDIA Rubin platform | COM-coreweave capacity (positive); COM-coreweave cost (negative); COM-coreweave price (positive); COM-coreweave revenue (positive); COM-coreweave supply (positive); COM-coreweave technology (positive); COM-nvidia cost (negative); COM-nvidia supply (positive) | ⬜ |
-| EVT-20260316-042 | pricing | Samsung: HBM4 in mass production designed for NVIDIA Vera Rubin platform (GTC 2026) | COM-nvidia capacity (positive); COM-nvidia cost (positive); COM-nvidia price (positive); COM-nvidia supply (positive); COM-samsung-electronics capacity (positive); COM-samsung-electronics cost (positive); COM-samsung-electronics price (positive); COM-samsung-electronics revenue (positive); COM-samsung-electronics supply (positive); COM-samsung-electronics technology (positive) | ⬜ |
-| EVT-20260416-033 | supply-capacity | TSMC discloses advanced 2nm process and CoWoS packaging for AI accelerators | COM-nvidia capacity (positive); COM-nvidia cost (mixed); COM-nvidia price (mixed); COM-nvidia supply (mixed); COM-tsmc capacity (positive); COM-tsmc cost (mixed); COM-tsmc price (mixed); COM-tsmc supply (mixed) | ⬜ |
-| EVT-20260429-039 | customer-demand | Microsoft FY26 Q3: Azure growth with continued AI infrastructure investment | COM-microsoft capacity (positive); COM-microsoft cost (positive); COM-microsoft demand (positive); COM-microsoft price (positive); COM-microsoft revenue (positive); COM-microsoft supply (positive); COM-microsoft technology (positive); COM-openai capacity (positive); COM-openai cost (positive); COM-openai demand (positive); COM-openai price (positive); COM-openai revenue (positive); COM-openai supply (positive); COM-openai technology (positive) | ⬜ |
-| EVT-20260429-046 | pricing | 百度千帆 Day 0 适配提供 DeepSeek-V4 预览版 API 服务（2026-04-29） | COM-baidu-cloud capacity (positive); COM-baidu-cloud cost (mixed); COM-baidu-cloud price (mixed); COM-baidu-cloud supply (mixed); COM-deepseek capacity (positive); COM-deepseek cost (mixed); COM-deepseek price (mixed); COM-deepseek supply (mixed) | ⬜ |
-| EVT-20260520-032 | supply-capacity | NVIDIA discloses long lead times and capacity commitments in AI supply chain | COM-nvidia cost (negative); COM-nvidia supply (mixed); COM-sk-hynix cost (negative); COM-sk-hynix supply (mixed); COM-tsmc cost (negative); COM-tsmc supply (mixed) | ⬜ |
-| EVT-20260601-044 | competition | TrendForce 1Q26 DRAM: Samsung 38.5%, SK hynix 28.8%, Micron 22.4% market share; SK hynix highest HBM bit shipment ratio | COM-micron competition (mixed); COM-micron margin (negative); COM-micron price (negative); COM-micron revenue (negative); COM-samsung-electronics competition (mixed); COM-samsung-electronics margin (negative); COM-samsung-electronics price (negative); COM-samsung-electronics revenue (negative); COM-sk-hynix competition (mixed); COM-sk-hynix margin (negative); COM-sk-hynix price (negative); COM-sk-hynix revenue (negative) | ⬜ |
+| EVT-20240226-043 | supply-capacity | Micron: HBM3E volume production will be part of NVIDIA H200 Tensor Core GPUs | COM-micron capacity (positive); COM-micron supply (positive); COM-micron technology (positive); COM-nvidia capacity (positive); COM-nvidia supply (positive) | ⬜ |
+| EVT-20260225-034 | customer-demand | ASML 20-F describes EUV 0.33/0.55 NA lithography platforms | COM-asml capacity (positive); COM-asml demand (positive); COM-asml supply (mixed); COM-asml technology (positive); COM-tsmc capacity (positive); COM-tsmc demand (positive); COM-tsmc supply (mixed); COM-tsmc technology (positive) | ⬜ |
+| EVT-20260302-041 | product-technology | CoreWeave 10-K FY2025: OpenAI $6.5B+$11.9B and Meta $14.2B committed contracts named | COM-coreweave capacity (positive); COM-coreweave demand (positive); COM-coreweave revenue (positive); COM-coreweave supply (positive); COM-coreweave technology (positive); COM-meta capacity (positive); COM-meta demand (positive); COM-meta revenue (positive); COM-meta supply (positive); COM-openai capacity (positive); COM-openai demand (positive); COM-openai revenue (positive); COM-openai supply (positive) | ⬜ |
+| EVT-20260302-047 | competition | CoreWeave 10-K: names AWS, Google Cloud, Microsoft Azure, Oracle as key cloud competitors | COM-aws competition (mixed); COM-aws price (negative); COM-aws revenue (negative); COM-google-cloud competition (mixed); COM-google-cloud price (negative); COM-google-cloud revenue (negative); COM-microsoft competition (mixed); COM-microsoft price (negative); COM-microsoft revenue (negative) | ⬜ |
+| EVT-20260302-048 | supply-capacity | CoreWeave 10-K: deploys NVIDIA GB200/GB300 NVL72, among first to deploy NVIDIA Rubin platform | COM-coreweave capacity (positive); COM-coreweave supply (positive); COM-coreweave technology (positive); COM-nvidia supply (positive) | ⬜ |
+| EVT-20260316-042 | product-technology | Samsung: HBM4 in mass production designed for NVIDIA Vera Rubin platform (GTC 2026) | COM-nvidia capacity (positive); COM-nvidia supply (positive); COM-samsung-electronics capacity (positive); COM-samsung-electronics supply (positive); COM-samsung-electronics technology (positive) | ⬜ |
+| EVT-20260416-033 | supply-capacity | TSMC discloses advanced 2nm process and CoWoS packaging for AI accelerators | COM-nvidia capacity (positive); COM-nvidia supply (mixed); COM-tsmc capacity (positive); COM-tsmc supply (mixed) | ⬜ |
+| EVT-20260429-039 | customer-demand | Microsoft FY26 Q3: Azure growth with continued AI infrastructure investment | COM-microsoft capacity (positive); COM-microsoft demand (positive); COM-microsoft supply (positive); COM-microsoft technology (positive); COM-openai capacity (positive); COM-openai demand (positive); COM-openai supply (positive); COM-openai technology (positive) | ⬜ |
+| EVT-20260429-046 | pricing | 百度千帆 Day 0 适配提供 DeepSeek-V4 预览版 API 服务（2026-04-29） | COM-baidu-cloud capacity (positive); COM-baidu-cloud price (mixed); COM-baidu-cloud supply (mixed); COM-deepseek capacity (positive); COM-deepseek price (mixed); COM-deepseek supply (mixed) | ⬜ |
+| EVT-20260520-032 | supply-capacity | NVIDIA discloses long lead times and capacity commitments in AI supply chain | COM-nvidia supply (mixed); COM-sk-hynix supply (mixed); COM-tsmc supply (mixed) | ⬜ |
+| EVT-20260520-038 | supply-capacity | NVIDIA FY27 Q1: record Data Center revenue $75.2B, $119B supply commitments | COM-dell capacity (positive); COM-dell supply (positive); COM-nvidia capacity (positive); COM-nvidia supply (positive); COM-supermicro capacity (positive); COM-supermicro supply (positive) | ⬜ |
+| EVT-20260601-044 | competition | TrendForce 1Q26 DRAM: Samsung 38.5%, SK hynix 28.8%, Micron 22.4% market share; SK hynix highest HBM bit shipment ratio | COM-micron competition (mixed); COM-micron price (negative); COM-micron revenue (negative); COM-samsung-electronics competition (mixed); COM-samsung-electronics price (negative); COM-samsung-electronics revenue (negative); COM-sk-hynix competition (mixed); COM-sk-hynix price (negative); COM-sk-hynix revenue (negative) | ⬜ |
 | EVT-20260610-007 | financial-capex | Oracle AI 基础设施增长伴随高资本开支，云应用增速较低 | — | ⬜ |
-| EVT-20260728-036 | supply-capacity | SK hynix reports record 2Q26 on AI memory demand; HBM4 mass shipments begin | — | ⬜ |
-| EVT-20260731-040 | product-technology | AWS and OpenAI expand $38B commitment by $100B over 8 years (AWS chips) | COM-aws capacity (positive); COM-aws cost (positive); COM-aws demand (positive); COM-aws price (positive); COM-aws revenue (positive); COM-aws supply (positive); COM-aws technology (positive); COM-openai capacity (positive); COM-openai cost (positive); COM-openai demand (positive); COM-openai price (positive); COM-openai revenue (positive); COM-openai supply (positive); COM-openai technology (positive) | ⬜ |
+| EVT-20260731-040 | customer-demand | AWS and OpenAI expand $38B commitment by $100B over 8 years (AWS chips) | COM-aws capacity (positive); COM-aws demand (positive); COM-aws supply (positive); COM-aws technology (positive); COM-openai capacity (positive); COM-openai demand (positive); COM-openai supply (positive); COM-openai technology (positive) | ⬜ |
 
 ## 阈值（§11）
 
@@ -61,11 +61,11 @@
 |---|---|---|---|
 | 直接影响 precision | 93.3% | ≥85% | ✅ |
 | mechanism 无来源外事实 | 100.0% | ≥95% | ✅ |
-| direction 合理 | 73.3% | — | ⚠️ |
+| direction 合理 | 80.0% | — | ⚠️ |
 | horizon 合理 | 100.0% | — | ⚠️ |
 | 重大反面路径遗漏 | 2 | 0 | ❌ |
 
-样本组成缺口：supply-capacity: 4/5; product-technology: 2/3; customer-demand: 2/3; financial-capex: 1/2; regulation-other: 0/2
+样本组成缺口：pricing: 1/3; product-technology: 2/3; financial-capex: 1/2; regulation-other: 0/2
 
 ### 关键结论（agent 分析，C-004 改进后）
 

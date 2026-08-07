@@ -131,7 +131,30 @@ class DirectImpactProposalTests(unittest.TestCase):
     def test_proposes_all_non_conditional_allowed_types(self) -> None:
         proposals = propose_direct_impacts(self._objects(), event_id="EVT-1")
         types = {p["impact_type"] for p in proposals}
-        self.assertEqual({"supply", "capacity", "cost", "price"}, types)
+        # Core types always proposed; derived (price/cost/revenue) are gated by
+        # event content and dropped when the event does not signal them.
+        self.assertEqual({"supply", "capacity"}, types)
+
+    def test_derived_type_proposed_when_evidenced(self) -> None:
+        objects = [
+            _event(title="ASML raises EUV ASP pricing"),
+            _rel("REL-1"),
+            *_entities(),
+        ]
+        proposals = propose_direct_impacts(objects, event_id="EVT-1")
+        types = {p["impact_type"] for p in proposals}
+        self.assertIn("price", types)
+
+    def test_derived_type_dropped_without_event_signal(self) -> None:
+        objects = [
+            _event(title="ASML EUV platform ramp"),  # no price/cost signal
+            _rel("REL-1"),
+            *_entities(),
+        ]
+        proposals = propose_direct_impacts(objects, event_id="EVT-1")
+        types = {p["impact_type"] for p in proposals}
+        self.assertNotIn("price", types)
+        self.assertNotIn("cost", types)
 
     def test_dedup_collapses_same_target_type_and_merges_rels(self) -> None:
         objects = [
@@ -155,11 +178,12 @@ class DirectImpactProposalTests(unittest.TestCase):
         proposals = propose_direct_impacts(objects, event_id="EVT-1")
         by_type = {p["impact_type"]: p["direction"] for p in proposals}
         # Content-neutral event: mixed defaults stay mixed; explicit rule-map
-        # defaults (capacity positive) are respected.
+        # defaults (capacity positive) are respected. price/cost are gated out
+        # (no dimension signal).
         self.assertEqual("mixed", by_type["supply"])
-        self.assertEqual("mixed", by_type["cost"])
-        self.assertEqual("mixed", by_type["price"])
         self.assertEqual("positive", by_type["capacity"])
+        self.assertNotIn("price", by_type)
+        self.assertNotIn("cost", by_type)
 
     def test_horizon_inferred_quarter_for_earnings(self) -> None:
         objects = [

@@ -38,16 +38,16 @@
       "direction_ok": false,
       "horizon_ok": true,
       "contrary_omitted": true,
-      "notes": "Naming competitors is NOT a margin/price/revenue event; those negative proposals over-reach. Competitor-customer duality omitted."
+      "notes": "Naming competitors is NOT a margin/price/revenue event; margin now gated out but price/revenue still over-reach (10-K mentions them). Competitor-customer duality omitted."
     },
     {
       "event_id": "EVT-20260302-048",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "Deploying GB200/GB300 is positive; cost/negative is a mis-inference from 10-K risk-factor body language."
+      "notes": "Deploying GB200/GB300: capacity/supply/technology positive correct; cost/negative over-proposal now gated out by dimension keyword gate."
     },
     {
       "event_id": "EVT-20260316-042",
@@ -144,7 +144,7 @@
     "n": 15,
     "direct_precision": 0.9333333333333333,
     "mechanism_backed": 1.0,
-    "direction_ok": 0.7333333333333333,
+    "direction_ok": 0.8,
     "horizon_ok": 1.0,
     "contrary_omissions": 2,
     "gate_direct_precision": true,
