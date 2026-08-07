@@ -94,7 +94,7 @@ test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（P
 
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
-| WP-300 | C-001～003 | RCP、Schema、rule map | proposed |
+| WP-300 | C-001～003 | RCP、Schema、rule map | ready（RCP-v03-006 已批准）|
 | WP-301 | C-004～005 | direct impact + mechanism validator | proposed |
 | WP-310 | C-006～010 | temporal multi-hop/conflict/confidence | proposed |
 | WP-311 | C-011～012 | spec/renderer/review | proposed |
@@ -362,4 +362,15 @@ Revisit trigger/date:
 - Rollback: 撤销本条即恢复日历门（不涉及数据）。
 - Reviewer: max
 - Revisit trigger/date: 任一 Gate 触发条件实施遇阻，或研究者认为稳定性证据强度不足时复核。
+
+#### 批准 RCP-v03-006（2026-08-07）
+
+- Decision ID: RCP-v03-006-approval
+- Date: 2026-08-07
+- Decision: 批准 RCP-v03-006（proposed → approved）。Impact Assertion 语义与传播边界生效：`IMP-YYYYMMDD-NNN` 正式对象类型、`RELATED_TO` ≠ impact、公司经营影响与证券价格影响分离（Phase 3 默认不生成 Security/valuation 价格方向）、仅 reviewed Event 生成权威 Impact（pending → experimental）、多跳传播约束（depth 3 / fan-out 10 / as-of 有效关系 / 正负不静默合并 / 路径默认 pending）、weakest-link confidence policy。
+- Reason: 6 项人审点经 max 逐项确认采纳默认；与 Phase 3 §2/§3/§5/§6/§11 一致；前置满足（Phase 2 已积累 48 个 reviewed Event）。
+- Effective date: 2026-08-07（批准即生效；WP-300 起落地实施）。
+- Consequences: Phase 3 解除 RCP-v03-006 阻塞；WP-300（C-001～003）转 ready，待 WP-300 规划；Roadmap §9"Impact 关系类型与强度语义"决策点已落实。
+- Reviewer: max
+- Revisit trigger/date: WP-300 实施遇架构问题；任一 Impact 语义字段实施遇阻时提修改 RCP。
 
