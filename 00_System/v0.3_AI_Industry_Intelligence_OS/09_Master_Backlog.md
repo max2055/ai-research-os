@@ -73,7 +73,7 @@ Wave 0 Gate：RCP-v03-001 获批，所有关键人工选择记录，后续 WP �
 |---|---|---|---|
 | WP-200 | B-001～004 | RCP + Candidate DB ADR/migration | completed |
 | WP-201 | B-005～007 | Channel Registry + discovery orchestration | completed |
-| WP-210 | B-008～013 | P0 adapters；每个 Adapter 独立子包 | proposed |
+| WP-210 | B-008～013 | P0 adapters；每个 Adapter 独立子包 | completed |
 | WP-220 | B-014～017 | dedup/entity/sector/scoring | completed |
 | WP-230 | B-018～020 | Candidate Queue + promote transaction | completed |
 | WP-231 | B-021～022 | launchd + Daily Brief | completed |
@@ -82,6 +82,13 @@ Wave 0 Gate：RCP-v03-001 获批，所有关键人工选择记录，后续 WP �
 
 Adapter 子包接口冻结后可以并行。任何新 Adapter 先有明确 Channel、allowlist、rate、许可和
 fixture，不允许以“先抓到再治理”为理由跳过。
+
+WP-210 close-out（2026-08-07，agent 审计 + max 复核）：B-008 Adapter contract v2（DiscoveryAdapter
+Protocol + SourceCandidate）、B-009 RSS、B-010 SEC（多 CIK composite）、B-011 arXiv、B-012 GitHub
+（多 repo composite）均已实现并经 20 通道真实运行 + composite/multi-target 测试验证（test_discovery、
+test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（Phase 2 §6 P0 "IR RSS 或明确
+列表页"二选一）；独立 list-page / 本地手工 dropbox 未单独实现为 discovery adapter（`adapters/file.py`
+覆盖本地文件 capture），记 Known Limitations。
 
 ## 6. Wave 3：Impact
 
