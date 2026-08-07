@@ -38,6 +38,20 @@ from research_os.services.validation import validate_repository
 
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
 
+TYPE_LABELS = {
+    "source": "来源",
+    "event": "事件",
+    "thesis": "观点",
+    "company": "公司",
+    "report": "报告",
+}
+STATUS_LABELS = {
+    "pending": "待评审",
+    "reviewed": "已评审",
+    "rejected": "已拒绝",
+    "superseded": "已取代",
+}
+
 
 def esc(value: Any) -> str:
     if value is None:
@@ -90,7 +104,7 @@ def thesis_stale(obj: ResearchObject, *, as_of: date | None = None) -> bool:
 def table(headers: list[str], rows: list[list[str]]) -> str:
     head = "".join(f"<th>{esc(header)}</th>" for header in headers)
     if not rows:
-        rows = [['<span class="empty">No records</span>'] + ["—"] * (len(headers) - 1)]
+        rows = [['<span class="empty">无记录</span>'] + ["—"] * (len(headers) - 1)]
     body = "".join(
         "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows
     )
@@ -114,7 +128,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
     project_query = f"?project={project_id}" if project_id else ""
     timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
     return f"""<!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -128,21 +142,21 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
   <div class="shell">
     <div class="brand">
       <h1><a href="/" style="color:inherit;text-decoration:none">AI Research OS</a></h1>
-      <span>Local · Read-only · Markdown-backed</span>
+      <span>本地 · 只读 · Markdown 驱动</span>
     </div>
     <nav aria-label="Primary">
-      <a href="/{project_query}">Overview</a>
-      <a href="/reviews{project_query}">Review queue</a>
-      <a href="/metrics{project_query}">Metrics</a>
-      <a href="/operations{project_query}">Operations</a>
-      <a href="/pipeline{project_query}">Pipeline</a>
-      <a href="/health{project_query}">Health</a>
+      <a href="/{project_query}">概览</a>
+      <a href="/reviews{project_query}">评审队列</a>
+      <a href="/metrics{project_query}">指标</a>
+      <a href="/operations{project_query}">运营</a>
+      <a href="/pipeline{project_query}">管线</a>
+      <a href="/health{project_query}">健康</a>
     </nav>
   </div>
 </header>
 <main class="shell">{content}</main>
 <footer class="shell">
-  Live rebuild from Markdown at {esc(timestamp)}. No dashboard page edits research data.
+  数据由 Markdown 于 {esc(timestamp)} 实时重建。本页面不会修改任何研究数据。
 </footer>
 </body>
 </html>"""
@@ -213,16 +227,16 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
     <p>{esc(project.metadata.get("research_question"))}</p>
   </div>
   <div>
-    <div class="eyebrow">Next review</div>
+    <div class="eyebrow">下次评审</div>
     <h2>{esc(project.metadata.get("next_review_date"))}</h2>
-    <p class="muted">{esc(project.metadata.get("review_cadence"))} cadence · owner {esc(project.metadata.get("owner"))}</p>
+    <p class="muted">{esc(project.metadata.get("review_cadence"))} 节奏 · 负责人 {esc(project.metadata.get("owner"))}</p>
   </div>
 </section>
 <section class="metrics">
-  <div class="metric"><strong>{len(by_type["source"])}</strong><span>Sources</span></div>
-  <div class="metric"><strong>{len(by_type["event"])}</strong><span>Events</span></div>
-  <div class="metric"><strong>{len(pending)}</strong><span>Pending reviews</span></div>
-  <div class="metric"><strong>{len(open_actions)}</strong><span>Open actions</span></div>
+  <div class="metric"><strong>{len(by_type["source"])}</strong><span>来源</span></div>
+  <div class="metric"><strong>{len(by_type["event"])}</strong><span>事件</span></div>
+  <div class="metric"><strong>{len(pending)}</strong><span>待评审</span></div>
+  <div class="metric"><strong>{len(open_actions)}</strong><span>未决行动</span></div>
 </section>"""
     thesis_rows = [
         [
@@ -232,7 +246,7 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
             esc(len(obj.metadata.get("contradicting_evidence", []))),
             badge(obj.metadata.get("review_status")),
             badge(
-                "stale" if thesis_stale(obj) else "current",
+                "过期" if thesis_stale(obj) else "正常",
                 warning=thesis_stale(obj),
             ),
         ]
@@ -264,22 +278,22 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
         + f"""
 <section class="grid">
   <div class="panel">
-    <h3>Thesis health</h3>
-    {table(["Thesis", "Confidence", "Support", "Contradict", "Review", "Freshness"], thesis_rows)}
+    <h3>观点健康</h3>
+    {table(["观点", "置信度", "支持", "反对", "评审", "新鲜度"], thesis_rows)}
   </div>
   <div class="panel">
-    <h3>Open actions</h3>
-    {table(["Action", "Owner", "Due", "Status"], action_table)}
+    <h3>未决行动</h3>
+    {table(["行动", "负责人", "截止", "状态"], action_table)}
   </div>
   <div class="panel full">
-    <h3>Reports</h3>
-    {table(["Report", "Version", "Status", "Updated"], report_rows)}
+    <h3>报告</h3>
+    {table(["报告", "版本", "状态", "更新"], report_rows)}
   </div>
   <div class="panel full">
-    <h3>System signal</h3>
-    <p>{len([item for item in findings if item.level == "error"])} errors ·
-    {len([item for item in findings if item.level == "warning"])} warnings.
-    <a href="/health?project={esc(selected)}">Inspect health</a>.</p>
+    <h3>系统信号</h3>
+    <p>{len([item for item in findings if item.level == "error"])} 个错误 ·
+    {len([item for item in findings if item.level == "warning"])} 个警告.
+    <a href="/health?project={esc(selected)}">查看健康</a>.</p>
   </div>
 </section>"""
     )
@@ -327,32 +341,32 @@ def _review_queue(
     )
     type_options = "".join(
         f'<option value="{value}"'
-        f"{' selected' if object_type == value else ''}>{value or 'all'}</option>"
+        f"{' selected' if object_type == value else ''}>{TYPE_LABELS.get(value, value or '全部')}</option>"
         for value in ("", "source", "event", "thesis", "company", "report")
     )
     status_options = "".join(
         f'<option value="{value}"'
-        f"{' selected' if review_status == value else ''}>{value}</option>"
+        f"{' selected' if review_status == value else ''}>{STATUS_LABELS.get(value, value)}</option>"
         for value in ("pending", "reviewed", "rejected", "superseded")
     )
     content = f"""<section class="hero"><div>
-<div class="eyebrow">{esc(selected)}</div><h2>Review queue</h2>
-<p>Read-only queue. Apply decisions through the explicit review command.</p>
-</div><div><div class="eyebrow">{esc(review_status)}</div><h2>{len(rows)}</h2>
-<p class="muted">No state is changed from this page.</p></div></section>
+<div class="eyebrow">{esc(selected)}</div><h2>评审队列</h2>
+<p>只读队列。评审决定通过显式评审命令执行。</p>
+</div><div><div class="eyebrow">{esc(STATUS_LABELS.get(review_status, review_status))}</div><h2>{len(rows)}</h2>
+<p class="muted">本页不会改变任何状态。</p></div></section>
 <section class="panel" style="margin-bottom:1rem">
 <form method="get" action="/reviews">
 <input type="hidden" name="project" value="{esc(selected)}">
-<label>Type <select name="type">{type_options}</select></label>
-<label style="margin-left:1rem">Status
+<label>类型 <select name="type">{type_options}</select></label>
+<label style="margin-left:1rem">状态
 <select name="status">{status_options}</select></label>
-<button type="submit">Filter</button>
+<button type="submit">筛选</button>
 </form></section>
 <section class="panel" id="review-table"
   hx-get="/fragments/reviews?project={esc(selected)}&type={esc(object_type or "")}&status={esc(review_status)}"
   hx-trigger="refresh">
-{table(["Object", "Type", "Status", "Updated"], rows)}</section>"""
-    return shell("Review queue", content, project_id=selected)
+{table(["对象", "类型", "状态", "更新"], rows)}</section>"""
+    return shell("评审队列", content, project_id=selected)
 
 
 def _source_page(repo: DashboardRepository, source_id: str) -> str:
@@ -385,23 +399,23 @@ def _source_page(repo: DashboardRepository, source_id: str) -> str:
     asset_rows = [
         [
             f'<a href="/source-assets/{esc(source_id)}/{index}">{esc(path)}</a>',
-            esc("extracted" if str(path).endswith(".extracted.txt") else "archived"),
+            esc("已提取" if str(path).endswith(".extracted.txt") else "已归档"),
         ]
         for index, path in enumerate(source.metadata.get("asset_paths", []))
     ]
     content = f"""<section class="hero"><div>
-<div class="eyebrow">Source provenance</div>
+<div class="eyebrow">来源溯源</div>
 <h2>{esc(source.metadata.get("title"))}</h2>
 <p>{esc(source.metadata.get("publisher"))}</p></div>
-<div><div class="eyebrow">Asset integrity</div>
+<div><div class="eyebrow">资产完整性</div>
 <h2>{badge(verification.status if verification else "unknown", danger=bool(verification and verification.status not in {"ok", "registered"}))}</h2>
 <p class="muted">{esc(verification.message if verification else "")}</p></div></section>
 <section class="panel">{metadata_grid(source)}</section>
 <section class="grid" style="margin-top:1rem">
-<div class="panel"><h3>Archived versions & extracts</h3>
-{table(["Asset", "Kind"], asset_rows)}</div>
-<div class="panel"><h3>Linked Events</h3>{table(["Event", "Date", "Review"], rows)}</div>
-<div class="panel"><h3>Research note</h3><pre>{esc(source.body)}</pre></div>
+<div class="panel"><h3>归档版本与提取</h3>
+{table(["资产", "类型"], asset_rows)}</div>
+<div class="panel"><h3>关联事件</h3>{table(["事件", "日期", "评审"], rows)}</div>
+<div class="panel"><h3>研究笔记</h3><pre>{esc(source.body)}</pre></div>
 </section>"""
     return shell(source_id, content)
 
@@ -427,26 +441,26 @@ def _thesis_page(repo: DashboardRepository, thesis_id: str) -> str:
     )
     stale = thesis_stale(thesis)
     evidence_rows = [
-        [object_link(item), badge("supporting"), esc(item.metadata.get("event_date"))]
+        [object_link(item), badge("支持"), esc(item.metadata.get("event_date"))]
         for item in support
     ] + [
         [
             object_link(item),
-            badge("contradicting", warning=True),
+            badge("反对", warning=True),
             esc(item.metadata.get("event_date")),
         ]
         for item in contradict
     ]
     content = f"""<section class="hero"><div>
-<div class="eyebrow">Thesis health</div><h2>{esc(thesis.metadata.get("title"))}</h2>
-<p>{badge("stale", warning=True) if stale else badge("current")}</p></div>
-<div><div class="eyebrow">Confidence</div>
+<div class="eyebrow">观点健康</div><h2>{esc(thesis.metadata.get("title"))}</h2>
+<p>{badge("过期", warning=True) if stale else badge("正常")}</p></div>
+<div><div class="eyebrow">置信度</div>
 <h2>{esc(thesis.metadata.get("confidence"))}</h2>
-<p class="muted">Last review {esc(review_date)}</p></div></section>
+<p class="muted">上次评审 {esc(review_date)}</p></div></section>
 <section class="grid">
-<div class="panel"><h3>Evidence balance</h3>
-{table(["Event", "Relationship", "Date"], evidence_rows)}</div>
-<div class="panel"><h3>Thesis note</h3><pre>{esc(thesis.body)}</pre></div>
+<div class="panel"><h3>证据平衡</h3>
+{table(["事件", "关系", "日期"], evidence_rows)}</div>
+<div class="panel"><h3>观点说明</h3><pre>{esc(thesis.body)}</pre></div>
 </section>"""
     return shell(thesis_id, content)
 
@@ -457,8 +471,8 @@ def _generic_page(repo: DashboardRepository, object_id: str) -> str:
 <div class="eyebrow">{esc(obj.object_type)}</div>
 <h2>{esc(obj.metadata.get("title"))}</h2>
 <p>{badge(obj.metadata.get("review_status") or obj.metadata.get("status"))}</p>
-</div><div><div class="eyebrow">Permanent ID</div><h2>{esc(obj.object_id)}</h2>
-<p><a href="/impact/{esc(obj.object_id)}">Explore relationships</a></p>
+</div><div><div class="eyebrow">永久 ID</div><h2>{esc(obj.object_id)}</h2>
+<p><a href="/impact/{esc(obj.object_id)}">查看关系网络</a></p>
 </div></section><section class="panel">{metadata_grid(obj)}
 <pre>{esc(obj.body)}</pre></section>"""
     return shell(object_id, content)
@@ -477,29 +491,29 @@ def _metrics_page(repo: DashboardRepository, project_id: str | None) -> str:
         baseline_paths = sorted(
             (repo.root / "05_Research" / "Reviews" / "Snapshots").glob("METRICS-*.json")
         )
-    comparison = "No metrics snapshot is available."
+    comparison = "暂无指标快照。"
     baseline_label = "none"
     if baseline_paths:
         baseline = load_metrics_snapshot(baseline_paths[-1])
         comparison = render_metrics_comparison(baseline, metrics)
         baseline_label = str(baseline.get("as_of"))
     content = f"""<section class="hero"><div>
-<div class="eyebrow">{esc(selected)}</div><h2>Metrics & change</h2>
-<p>Current Markdown state compared with snapshot {esc(baseline_label)}.</p>
-</div><div><div class="eyebrow">Review queue</div>
+<div class="eyebrow">{esc(selected)}</div><h2>指标与变化</h2>
+<p>当前 Markdown 状态与快照 {esc(baseline_label)} 对比。</p>
+</div><div><div class="eyebrow">评审队列</div>
 <h2>{esc(metrics["review_queue_total"])}</h2>
-<p class="muted">Current, not cached.</p></div></section>
+<p class="muted">实时计算，非缓存。</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{counts["source"]["total"]}</strong><span>Sources</span></div>
-<div class="metric"><strong>{counts["event"]["total"]}</strong><span>Events</span></div>
-<div class="metric"><strong>{metrics["source_quality"]["archived"]}</strong><span>Archived Sources</span></div>
-<div class="metric"><strong>{metrics["thesis_health"]["without_contradicting"]}</strong><span>Theses lacking counterevidence</span></div>
+<div class="metric"><strong>{counts["source"]["total"]}</strong><span>来源</span></div>
+<div class="metric"><strong>{counts["event"]["total"]}</strong><span>事件</span></div>
+<div class="metric"><strong>{metrics["source_quality"]["archived"]}</strong><span>已归档来源</span></div>
+<div class="metric"><strong>{metrics["thesis_health"]["without_contradicting"]}</strong><span>缺少反证的观点</span></div>
 </section><section class="panel"><pre>{esc(comparison)}</pre></section>"""
-    return shell("Metrics", content, project_id=selected)
+    return shell("指标", content, project_id=selected)
 
 
 def _kv_table(rows: list[list[str]]) -> str:
-    return table(["Metric", "Value"], rows)
+    return table(["指标", "数值"], rows)
 
 
 def _pipeline_overview(repo: DashboardRepository) -> str:
@@ -507,30 +521,30 @@ def _pipeline_overview(repo: DashboardRepository) -> str:
     gate = status["gate"]
     candidates = status["candidates"]
     content = f"""<section class="hero"><div>
-<div class="eyebrow">Pipeline</div><h2>Machine in motion</h2>
-<p>Discovery → triage → Sources. Read-only view; decisions stay in the CLI.</p>
-</div><div><div class="eyebrow">Pilot window</div>
+<div class="eyebrow">管线</div><h2>机器运转中</h2>
+<p>发现 → 筛选 → 入库。只读视图，决定在命令行完成。</p>
+</div><div><div class="eyebrow">试点窗口</div>
 <h2>{esc(gate['days'])}/{esc(status['target_days'])}</h2>
-<p class="muted">since {esc(status['since'])}</p></div></section>
+<p class="muted">自 {esc(status['since'])}</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(candidates['discovered_since'])}</strong><span>Discovered</span></div>
-<div class="metric"><strong>{esc(candidates['promoted'])}</strong><span>Promoted</span></div>
-<div class="metric"><strong>{esc(candidates['dismissed'])}</strong><span>Dismissed</span></div>
-<div class="metric"><strong>{esc(gate['channels'])}</strong><span>Channels ready</span></div>
+<div class="metric"><strong>{esc(candidates['discovered_since'])}</strong><span>已发现</span></div>
+<div class="metric"><strong>{esc(candidates['promoted'])}</strong><span>已入库</span></div>
+<div class="metric"><strong>{esc(candidates['dismissed'])}</strong><span>已驳回</span></div>
+<div class="metric"><strong>{esc(gate['channels'])}</strong><span>通道就绪</span></div>
 </section>
 <section class="grid">
-<div class="panel"><h3>Candidate queue</h3>
-<p>New candidates awaiting triage, highest priority first.</p>
-<p><a href="/pipeline/queue">Open queue →</a></p></div>
-<div class="panel"><h3>Promoted Sources</h3>
-<p>Candidates that became authoritative Sources.</p>
-<p><a href="/pipeline/sources">View sources →</a></p></div>
-<div class="panel"><h3>Channels & metrics</h3>
-<p>Channel registry and live pipeline health.</p>
-<p><a href="/pipeline/channels">Open channels →</a></p></div>
+<div class="panel"><h3>候选队列</h3>
+<p>等待筛选的新候选，按优先级降序。</p>
+<p><a href="/pipeline/queue">打开队列 →</a></p></div>
+<div class="panel"><h3>已入库来源</h3>
+<p>晋升为正式来源的候选。</p>
+<p><a href="/pipeline/sources">查看来源 →</a></p></div>
+<div class="panel"><h3>通道与指标</h3>
+<p>通道注册表与管线实时健康。</p>
+<p><a href="/pipeline/channels">打开通道 →</a></p></div>
 </section>
-<p class="muted">Candidate data is non-authoritative and rebuildable; authoritative facts live in the repository.</p>"""
-    return shell("Pipeline", content)
+<p class="muted">候选数据为非权威、可重建；权威事实存于仓库。</p>"""
+    return shell("管线", content)
 
 
 def _pipeline_sources(repo: DashboardRepository) -> str:
@@ -547,12 +561,12 @@ def _pipeline_sources(repo: DashboardRepository) -> str:
         for row in rows
     ]
     content = f"""<section class="hero"><div>
-<div class="eyebrow">Pipeline → Sources</div><h2>Promoted Sources</h2>
-<p>Candidates that became authoritative Sources, newest first.</p>
-</div><div><div class="eyebrow">Promoted</div><h2>{len(rows)}</h2>
-<p class="muted">linking back to their originating channel</p></div></section>
-<section class="panel">{table(["Source", "Channel", "Publisher", "Entity", "Discovered"], body_rows)}</section>"""
-    return shell("Pipeline Sources", content)
+<div class="eyebrow">管线 → 来源</div><h2>已入库来源</h2>
+<p>晋升为正式来源的候选，最新优先。</p>
+</div><div><div class="eyebrow">已入库</div><h2>{len(rows)}</h2>
+<p class="muted">链接回其来源通道</p></div></section>
+<section class="panel">{table(["来源", "通道", "发布方", "实体", "发现时间"], body_rows)}</section>"""
+    return shell("管线来源", content)
 
 
 def _candidate_facts(detail: dict[str, Any]) -> str:
@@ -562,22 +576,22 @@ def _candidate_facts(detail: dict[str, Any]) -> str:
         else "—"
     )
     items = [
-        ("Status", detail.get("status")),
-        ("Channel", detail.get("channel_id")),
-        ("Discovered", detail.get("discovered_at")),
-        ("Published (proposal)", detail.get("published_at_proposal")),
-        ("Publisher", detail.get("publisher")),
+        ("状态", detail.get("status")),
+        ("通道", detail.get("channel_id")),
+        ("发现时间", detail.get("discovered_at")),
+        ("发布时间(建议)", detail.get("published_at_proposal")),
+        ("发布方", detail.get("publisher")),
         ("URL", detail.get("canonical_url")),
-        ("Duplicate cluster", detail.get("duplicate_cluster_id")),
-        ("Priority", priority),
-        ("Model", detail.get("model_version")),
+        ("重复簇", detail.get("duplicate_cluster_id")),
+        ("优先级", priority),
+        ("模型", detail.get("model_version")),
     ]
     if detail.get("existing_source_id"):
-        items.append(("Already a Source", detail["existing_source_id"]))
+        items.append(("已是正式来源", detail["existing_source_id"]))
     if detail.get("is_representative") is False and detail.get(
         "duplicate_cluster_id"
     ):
-        items.append(("Cluster role", "non-representative variant"))
+        items.append(("簇角色", "非代表变体"))
     return '<dl class="metadata">' + "".join(
         f"<div><dt>{esc(label)}</dt><dd>{esc(value)}</dd></div>"
         for label, value in items
@@ -608,20 +622,20 @@ def _pipeline_candidate(repo: DashboardRepository, candidate_id: str) -> str:
         else "—"
     )
     hero = f"""<section class="hero"><div>
-<div class="eyebrow">Candidate {esc(candidate_id)}</div><h2>{esc(detail.get("title"))}</h2>
+<div class="eyebrow">候选 {esc(candidate_id)}</div><h2>{esc(detail.get("title"))}</h2>
 <p>{badge(detail.get("status"))} · {esc(detail.get("channel_id"))}</p></div>
-<div><div class="eyebrow">Priority</div><h2>{esc(priority)}</h2>
-<p class="muted">{esc(detail.get("model_version")) or "heuristic"}</p></div></section>"""
+<div><div class="eyebrow">优先级</div><h2>{esc(priority)}</h2>
+<p class="muted">{esc(detail.get("model_version")) or "启发式打分"}</p></div></section>"""
     panels = f"""{_candidate_facts(detail)}
 <section class="grid" style="margin-top:1rem">
-<div class="panel"><h3>Entity proposal</h3><pre>{esc(json.dumps(entity, ensure_ascii=False, indent=2))}</pre></div>
-<div class="panel"><h3>Sector proposal</h3><pre>{esc(json.dumps(sector, ensure_ascii=False, indent=2))}</pre></div>
+<div class="panel"><h3>实体建议</h3><pre>{esc(json.dumps(entity, ensure_ascii=False, indent=2))}</pre></div>
+<div class="panel"><h3>板块建议</h3><pre>{esc(json.dumps(sector, ensure_ascii=False, indent=2))}</pre></div>
 </section>
 <section class="grid" style="margin-top:1rem">
-<div class="panel"><h3>Reason codes</h3>
-{table(["Code"], reason_rows)}</div>
-<div class="panel"><h3>Action history</h3>
-{table(["Acted at", "Action", "Actor", "Reason"], action_rows_html)}</div>
+<div class="panel"><h3>理由编码</h3>
+{table(["编码"], reason_rows)}</div>
+<div class="panel"><h3>操作历史</h3>
+{table(["时间", "操作", "操作者", "原因"], action_rows_html)}</div>
 </section>"""
     return shell(candidate_id, hero + panels)
 
@@ -647,12 +661,12 @@ def _pipeline_queue(
         if row.get("existing_source_id"):
             return (
                 f'<a href="/sources/{esc(row["existing_source_id"])}">'
-                f'already SRC {esc(row["existing_source_id"])}</a>'
+                f'已有来源 {esc(row["existing_source_id"])}</a>'
             )
         if row.get("dup_count"):
-            return badge(f"+{row['dup_count']} variants")
+            return badge(f"+{row['dup_count']} 个变体")
         if not row.get("is_representative", True):
-            return badge("variant", warning=True)
+            return badge("变体", warning=True)
         return "—"
 
     body_rows = [
@@ -680,21 +694,21 @@ def _pipeline_queue(
     min_value = esc(min_priority if min_priority is not None else "")
     dup_check = " checked" if show_dups else ""
     content = f"""<section class="hero"><div>
-<div class="eyebrow">Pipeline → Queue</div><h2>Candidate queue</h2>
-<p>Read-only triage list. Duplicate clusters collapse to one lead row.</p>
+<div class="eyebrow">管线 → 队列</div><h2>候选队列</h2>
+<p>只读筛选列表。重复簇折叠为单行代表。</p>
 </div><div><div class="eyebrow">{esc(status)}</div><h2>{len(rows)}</h2>
-<p class="muted">highest priority first</p></div></section>
+<p class="muted">按优先级降序</p></div></section>
 <section class="panel" style="margin-bottom:1rem">
 <form method="get" action="/pipeline/queue">
-<label>Status <select name="status">{status_options}</select></label>
-<label style="margin-left:1rem">Channel <input name="channel" value="{channel_value}"></label>
-<label style="margin-left:1rem">Min priority <input type="number" step="0.01" min="0" max="1" name="min_priority" value="{min_value}"></label>
-<label style="margin-left:1rem">Limit <input type="number" min="1" max="200" name="limit" value="{esc(limit)}"></label>
-<label style="margin-left:1rem"><input type="checkbox" name="show_dups" value="1"{dup_check}> Show duplicates</label>
-<button type="submit">Filter</button>
+<label>状态 <select name="status">{status_options}</select></label>
+<label style="margin-left:1rem">通道 <input name="channel" value="{channel_value}"></label>
+<label style="margin-left:1rem">最低优先级 <input type="number" step="0.01" min="0" max="1" name="min_priority" value="{min_value}"></label>
+<label style="margin-left:1rem">数量 <input type="number" min="1" max="200" name="limit" value="{esc(limit)}"></label>
+<label style="margin-left:1rem"><input type="checkbox" name="show_dups" value="1"{dup_check}> 显示重复</label>
+<button type="submit">筛选</button>
 </form></section>
-<section class="panel">{table(["Priority", "Status", "Dup", "Entity", "Sectors", "Channel", "Title"], body_rows)}</section>"""
-    return shell("Pipeline Queue", content)
+<section class="panel">{table(["优先级", "状态", "重复", "实体", "板块", "通道", "标题"], body_rows)}</section>"""
+    return shell("管线队列", content)
 
 
 def _pipeline_channels(repo: DashboardRepository) -> str:
@@ -706,11 +720,11 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
             esc(row["channel_type"]),
             esc(row["license_status"]),
             badge(row["review_status"]),
-            badge("enabled" if row["enabled"] else "disabled", warning=not row["enabled"]),
+            badge("启用" if row["enabled"] else "停用", warning=not row["enabled"]),
             badge(
-                "yes"
+                "是"
                 if (row["review_status"] == "reviewed" and row["enabled"])
-                else "no",
+                else "否",
                 warning=not (row["review_status"] == "reviewed" and row["enabled"]),
             ),
         ]
@@ -726,71 +740,71 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
     latency = discovery["median_latency_seconds"]
     latency_text = f"{latency}s" if latency is not None else "—"
     discovery_rows = [
-        ["Runs", esc(discovery["runs"])],
-        ["Succeeded / failed", f"{esc(discovery['succeeded'])} / {esc(discovery['failed'])}"],
-        ["Failure rate", f"{discovery['failure_rate']:.0%}"],
-        ["Median latency", esc(latency_text)],
-        ["HTTP / parse / retries", f"{esc(discovery['http_errors'])} / {esc(discovery['parse_errors'])} / {esc(discovery['retries'])}"],
-        ["Cost estimate", esc(discovery["cost_estimate"])],
+        ["运行次数", esc(discovery["runs"])],
+        ["成功 / 失败", f"{esc(discovery['succeeded'])} / {esc(discovery['failed'])}"],
+        ["失败率", f"{discovery['failure_rate']:.0%}"],
+        ["中位延迟", esc(latency_text)],
+        ["HTTP / 解析 / 重试", f"{esc(discovery['http_errors'])} / {esc(discovery['parse_errors'])} / {esc(discovery['retries'])}"],
+        ["成本估算", esc(discovery["cost_estimate"])],
     ]
     duplicate_rows = [
         [
-            "Inbound dup rate (7d)",
+            "入队重复率(7天)",
             f"{duplicate['rate']:.0%}",
         ],
         [
-            "Inbound window",
-            f"{duplicate['inbound_dups']} / {duplicate['inbound_total']} non-rep",
+            "入队窗口",
+            f"{duplicate['inbound_dups']} / {duplicate['inbound_total']} 非代表",
         ],
         [
-            "Store snapshot",
+            "库内快照",
             f"{duplicate['store_rate']:.0%} "
-            f"({duplicate['non_representative']} non-rep)",
+            f"({duplicate['non_representative']} 非代表)",
         ],
-        ["Clusters", esc(duplicate["clusters"])],
+        ["簇数", esc(duplicate["clusters"])],
     ]
     dismiss_text = ", ".join(
         f"{reason} ({count})" for reason, count in triage["top_dismiss_reasons"]
     ) or "—"
     triage_rows = [
-        ["Triaged (audit)", esc(triage["total"])],
-        ["Promoted / dismissed", f"{esc(triage['promoted'])} / {esc(triage['dismissed'])}"],
-        ["Promoted rate", f"{triage['promoted_rate']:.0%}"],
-        ["Dismissed rate", f"{triage['dismissed_rate']:.0%}"],
-        ["Median conversion hours", esc(triage["median_conversion_hours"])],
-        ["Top dismiss reasons", esc(dismiss_text)],
+        ["已处理(审计)", esc(triage["total"])],
+        ["已入库 / 已驳回", f"{esc(triage['promoted'])} / {esc(triage['dismissed'])}"],
+        ["入库率", f"{triage['promoted_rate']:.0%}"],
+        ["驳回率", f"{triage['dismissed_rate']:.0%}"],
+        ["中位入库耗时(小时)", esc(triage["median_conversion_hours"])],
+        ["主要驳回原因", esc(dismiss_text)],
     ]
     coverage_rows = [
-        ["Matched entities", esc(coverage["matched_entities"])],
-        ["Core matched", esc(coverage["core_matched"])],
-        ["Core rate", f"{coverage['core_rate']:.0%}"],
+        ["已匹配实体", esc(coverage["matched_entities"])],
+        ["核心已匹配", esc(coverage["core_matched"])],
+        ["核心覆盖率", f"{coverage['core_rate']:.0%}"],
     ]
     stale_text = ", ".join(stale["stale"]) or "—"
     never_text = ", ".join(stale["never_run"]) or "—"
     content = f"""<section class="hero"><div>
-<div class="eyebrow">Pipeline → Channels & metrics</div><h2>Channels & metrics</h2>
-<p>Channel registry and live pipeline health.</p>
-</div><div><div class="eyebrow">As of {esc(metrics["as_of"])}</div>
+<div class="eyebrow">管线 → 通道与指标</div><h2>通道与指标</h2>
+<p>通道注册表与管线实时健康。</p>
+</div><div><div class="eyebrow">截至 {esc(metrics["as_of"])}</div>
 <h2>{esc(discovered["total"])}</h2>
-<p class="muted">recomputed on every request</p></div></section>
-<section class="panel"><h3>Channels ({len(channels)})</h3>
-{table(["ID", "Name", "Type", "License", "Review", "Enabled", "Schedulable"], channel_body)}</section>
+<p class="muted">每次请求实时重算</p></div></section>
+<section class="panel"><h3>通道 ({len(channels)})</h3>
+{table(["ID", "名称", "类型", "许可", "评审", "启用", "可调度"], channel_body)}</section>
 <section class="metrics" style="margin-top:1rem">
-<div class="metric"><strong>{esc(discovered["total"])}</strong><span>Discovered total</span></div>
-<div class="metric"><strong>{esc(discovered["today"])}</strong><span>Discovered today</span></div>
-<div class="metric"><strong>{duplicate["rate"]:.0%}</strong><span>Dup rate (7d inbound)</span></div>
-<div class="metric"><strong>{discovery["failure_rate"]:.0%}</strong><span>Failure rate</span></div>
+<div class="metric"><strong>{esc(discovered["total"])}</strong><span>累计发现</span></div>
+<div class="metric"><strong>{esc(discovered["today"])}</strong><span>今日发现</span></div>
+<div class="metric"><strong>{duplicate["rate"]:.0%}</strong><span>入队重复率(7天)</span></div>
+<div class="metric"><strong>{discovery["failure_rate"]:.0%}</strong><span>失败率</span></div>
 </section>
 <section class="grid" style="margin-top:1rem">
-<div class="panel"><h3>Duplicate</h3>{_kv_table(duplicate_rows)}</div>
-<div class="panel"><h3>Discovery</h3>{_kv_table(discovery_rows)}</div>
-<div class="panel"><h3>Triage yield</h3>{_kv_table(triage_rows)}</div>
-<div class="panel"><h3>Core coverage</h3>{_kv_table(coverage_rows)}</div>
-<div class="panel"><h3>Channel freshness</h3>
-<p><strong>Stale:</strong> {esc(stale_text)}</p>
-<p><strong>Never run:</strong> {esc(never_text)}</p></div>
+<div class="panel"><h3>重复</h3>{_kv_table(duplicate_rows)}</div>
+<div class="panel"><h3>发现</h3>{_kv_table(discovery_rows)}</div>
+<div class="panel"><h3>筛选产出</h3>{_kv_table(triage_rows)}</div>
+<div class="panel"><h3>核心覆盖</h3>{_kv_table(coverage_rows)}</div>
+<div class="panel"><h3>通道新鲜度</h3>
+<p><strong>过期:</strong> {esc(stale_text)}</p>
+<p><strong>从未运行:</strong> {esc(never_text)}</p></div>
 </section>"""
-    return shell("Pipeline Channels", content)
+    return shell("管线通道", content)
 
 
 def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
@@ -824,20 +838,20 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
         for obj in due_projects
     ]
     content = f"""<section class="hero"><div>
-<div class="eyebrow">{esc(selected)}</div><h2>Operations</h2>
-<p>Overdue actions and due research reviews from structured metadata.</p>
-</div><div><div class="eyebrow">Overdue actions</div><h2>{len(overdue)}</h2>
-<p class="muted">As of {date.today().isoformat()}</p></div></section>
+<div class="eyebrow">{esc(selected)}</div><h2>运营</h2>
+<p>从结构化元数据读取逾期行动与到期的研究评审。</p>
+</div><div><div class="eyebrow">逾期行动</div><h2>{len(overdue)}</h2>
+<p class="muted">截至 {date.today().isoformat()}</p></div></section>
 <section class="grid">
-<div class="panel"><h3>Pipeline health</h3>
-<p><a href="/pipeline">Open Pipeline dashboard →</a></p>
-<p class="muted">Candidate pipeline / channels / metrics now live on the Pipeline page.</p></div>
-<div class="panel"><h3>Overdue actions</h3>
-{table(["Action", "Owner", "Due", "Status"], open_rows)}</div>
-<div class="panel"><h3>Review due</h3>
-{table(["Project", "Cadence", "Next review"], due_rows)}</div>
+<div class="panel"><h3>管线健康</h3>
+<p><a href="/pipeline">打开管线看板 →</a></p>
+<p class="muted">候选管线 / 通道 / 指标已移至管线页面。</p></div>
+<div class="panel"><h3>逾期行动</h3>
+{table(["行动", "负责人", "截止", "状态"], open_rows)}</div>
+<div class="panel"><h3>到期评审</h3>
+{table(["项目", "节奏", "下次评审"], due_rows)}</div>
 </section>"""
-    return shell("Operations", content, project_id=selected)
+    return shell("运营", content, project_id=selected)
 
 
 def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
@@ -868,18 +882,18 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
         for finding in findings
     ]
     content = f"""<section class="hero"><div>
-<div class="eyebrow">{esc(selected)}</div><h2>System health</h2>
-<p>Every value is rebuilt from repository files on request.</p></div>
-<div><div class="eyebrow">Status</div>
-<h2>{badge("healthy") if not drift and not asset_failures and not job_failures else badge("attention", warning=True)}</h2>
-<p class="muted">{len(drift)} drift · {len(asset_failures)} asset failures ·
-{len(job_failures)} failed jobs</p></div></section>
-<section class="panel"><h3>Validation findings</h3>
-{table(["Level", "Code", "Path", "Message"], finding_rows)}</section>
-<section class="panel" style="margin-top:1rem"><h3>Failed jobs</h3>
-{table(["Job", "Name", "Message"], [[object_link(job), esc(job.metadata.get("job_name")), esc(job.metadata.get("message"))] for job in job_failures])}
+<div class="eyebrow">{esc(selected)}</div><h2>系统健康</h2>
+<p>所有值均在请求时从仓库文件重建。</p></div>
+<div><div class="eyebrow">状态</div>
+<h2>{badge("健康") if not drift and not asset_failures and not job_failures else badge("注意", warning=True)}</h2>
+<p class="muted">{len(drift)} 处漂移 · {len(asset_failures)} 个资产失败 ·
+{len(job_failures)} 个失败任务</p></div></section>
+<section class="panel"><h3>校验发现</h3>
+{table(["级别", "编码", "路径", "消息"], finding_rows)}</section>
+<section class="panel" style="margin-top:1rem"><h3>失败任务</h3>
+{table(["任务", "名称", "消息"], [[object_link(job), esc(job.metadata.get("job_name")), esc(job.metadata.get("message"))] for job in job_failures])}
 </section>"""
-    return shell("Health", content, project_id=selected)
+    return shell("健康", content, project_id=selected)
 
 
 def create_app(root: Path) -> FastAPI:
@@ -1031,8 +1045,8 @@ def create_app(root: Path) -> FastAPI:
             body = render_impact(repo.root, object_id, depth)
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        content = f'<section class="panel"><h2>Impact graph</h2><pre>{esc(body)}</pre></section>'
-        return HTMLResponse(shell(f"Impact {object_id}", content))
+        content = f'<section class="panel"><h2>影响关系图</h2><pre>{esc(body)}</pre></section>'
+        return HTMLResponse(shell(f"影响 {object_id}", content))
 
     @app.get("/api/state", response_class=JSONResponse)
     def state(project: str | None = Query(default=None)) -> JSONResponse:

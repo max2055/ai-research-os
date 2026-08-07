@@ -112,7 +112,7 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(200, home.status_code)
             self.assertIn("AI Research OS", home.text)
             self.assertIn("THS-001", home.text)
-            self.assertIn("Local · Read-only", home.text)
+            self.assertIn("本地 · 只读", home.text)
 
             queue = client.get("/reviews?project=PRJ-001&type=source&status=pending")
             self.assertEqual(200, queue.status_code)
@@ -121,17 +121,17 @@ class DashboardTests(unittest.TestCase):
 
             source = client.get("/sources/SRC-20260729-001")
             self.assertEqual(200, source.status_code)
-            self.assertIn("Source provenance", source.text)
+            self.assertIn("来源溯源", source.text)
             self.assertIn("EVT-20260729-001", source.text)
 
             thesis = client.get("/theses/THS-001")
             self.assertEqual(200, thesis.status_code)
-            self.assertIn("Thesis health", thesis.text)
-            self.assertIn("current", thesis.text)
+            self.assertIn("观点健康", thesis.text)
+            self.assertIn("正常", thesis.text)
 
             company = client.get("/companies/COM-test")
             self.assertEqual(200, company.status_code)
-            self.assertIn("Explore relationships", company.text)
+            self.assertIn("查看关系网络", company.text)
             self.assertEqual(200, client.get("/impact/COM-test").status_code)
 
             state = client.get("/api/state?project=PRJ-001")
@@ -233,24 +233,24 @@ class DashboardTests(unittest.TestCase):
 
             overview = client.get("/pipeline")
             self.assertEqual(200, overview.status_code)
-            self.assertIn("Machine in motion", overview.text)
+            self.assertIn("机器运转中", overview.text)
             self.assertIn("/pipeline/queue", overview.text)
 
             sources = client.get("/pipeline/sources")
             self.assertEqual(200, sources.status_code)
-            self.assertIn("Promoted Sources", sources.text)
+            self.assertIn("已入库来源", sources.text)
             self.assertIn("SRC-20260729-001", sources.text)
             self.assertIn("CHN-test", sources.text)
             self.assertIn("COM-test", sources.text)
 
             queue = client.get("/pipeline/queue")
             self.assertEqual(200, queue.status_code)
-            self.assertIn("Candidate queue", queue.text)
+            self.assertIn("候选队列", queue.text)
             self.assertIn("CAND-new-001", queue.text)
 
             detail = client.get("/pipeline/queue/CAND-new-001")
             self.assertEqual(200, detail.status_code)
-            self.assertIn("Action history", detail.text)
+            self.assertIn("操作历史", detail.text)
             promoted_detail = client.get("/pipeline/queue/CAND-pro-001")
             self.assertEqual(200, promoted_detail.status_code)
             self.assertIn("promote", promoted_detail.text)
@@ -260,9 +260,9 @@ class DashboardTests(unittest.TestCase):
 
             channels = client.get("/pipeline/channels")
             self.assertEqual(200, channels.status_code)
-            self.assertIn("Channels & metrics", channels.text)
+            self.assertIn("通道与指标", channels.text)
             self.assertIn("CHN-test", channels.text)
-            self.assertIn("Schedulable", channels.text)
+            self.assertIn("可调度", channels.text)
 
             pipeline_methods = {
                 method
@@ -280,7 +280,7 @@ class DashboardTests(unittest.TestCase):
             client = TestClient(create_app(root))
             operations = client.get("/operations")
             self.assertEqual(200, operations.status_code)
-            self.assertIn("Open Pipeline dashboard", operations.text)
+            self.assertIn("打开管线看板", operations.text)
             self.assertNotIn("B-023", operations.text)
 
     def test_pipeline_pages_graceful_without_candidate_db(self) -> None:
@@ -374,7 +374,7 @@ class SchedulerJobTests(unittest.TestCase):
             )
             health = TestClient(create_app(root)).get("/health")
             self.assertIn(failed.job_id, health.text)
-            self.assertIn("failed jobs", health.text)
+            self.assertIn("失败任务", health.text)
 
     def test_discover_and_expire_scheduler_jobs(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
