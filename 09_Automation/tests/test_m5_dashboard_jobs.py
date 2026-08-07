@@ -274,6 +274,34 @@ class DashboardTests(unittest.TestCase):
             self.assertNotIn("PUT", pipeline_methods)
             self.assertNotIn("DELETE", pipeline_methods)
 
+    def test_intel_pages_render_and_are_read_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            client = TestClient(create_app(root))
+
+            companies = client.get("/companies")
+            self.assertEqual(200, companies.status_code)
+            self.assertIn("企业名单", companies.text)
+            self.assertIn("COM-test", companies.text)
+            self.assertIn("/sectors", companies.text)
+            self.assertIn("/reports", companies.text)
+
+            sectors = client.get("/sectors")
+            self.assertEqual(200, sectors.status_code)
+            self.assertIn("板块分类", sectors.text)
+
+            reports = client.get("/reports")
+            self.assertEqual(200, reports.status_code)
+            self.assertIn("研究报告", reports.text)
+
+            intel_methods = {
+                method
+                for route in client.app.routes
+                if route.path in {"/companies", "/sectors", "/reports"}
+                for method in getattr(route, "methods", set())
+            }
+            self.assertEqual({"GET"}, intel_methods)
+
     def test_operations_points_at_pipeline_and_drops_embedded_panel(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = prepared_root(temp)

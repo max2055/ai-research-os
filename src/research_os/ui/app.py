@@ -67,6 +67,7 @@ def object_url(obj: ResearchObject) -> str:
         "event": "events",
         "thesis": "theses",
         "company": "companies",
+        "sector": "sectors",
         "report": "reports",
         "action": "actions",
         "project": "projects",
@@ -150,6 +151,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
       <a href="/metrics{project_query}">指标</a>
       <a href="/operations{project_query}">运营</a>
       <a href="/pipeline{project_query}">管线</a>
+      <a href="/companies{project_query}">产业</a>
       <a href="/health{project_query}">健康</a>
     </nav>
   </div>
@@ -276,6 +278,9 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
     content = (
         hero
         + f"""
+<section class="panel"><h3>产业情报</h3>
+<p><a href="/companies">企业名单</a> · <a href="/sectors">板块分类</a> · <a href="/reports">研究报告</a></p>
+</section>
 <section class="grid">
   <div class="panel">
     <h3>观点健康</h3>
@@ -896,6 +901,134 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
     return shell("健康", content, project_id=selected)
 
 
+def _intel_tabs(active: str) -> str:
+    items = [
+        ("/companies", "企业", "companies"),
+        ("/sectors", "板块", "sectors"),
+        ("/reports", "报告", "reports"),
+    ]
+    tabs = "".join(
+        '<a href="{href}"{active_class}>{label}</a>'.format(
+            href=href,
+            label=label,
+            active_class=' class="active"' if active == key else "",
+        )
+        for href, label, key in items
+    )
+    return f'<nav class="tabs">{tabs}</nav>'
+
+
+def _companies_page(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    companies = [obj for obj in objects if obj.object_type == "company"]
+    sectors = {
+        obj.object_id: obj for obj in objects if obj.object_type == "sector"
+    }
+    tier_order = {"core": 0, "tracked": 1, "discovery": 2}
+    companies.sort(
+        key=lambda obj: (
+            tier_order.get(str(obj.metadata.get("coverage_tier")), 9),
+            obj.object_id,
+        )
+    )
+    rows = []
+    for company in companies:
+        sector_titles = "、".join(
+            sectors[sid].metadata.get("title", sid)
+            for sid in company.metadata.get("sector_ids", [])
+            if sid in sectors
+        ) or "—"
+        rows.append(
+            [
+                object_link(company),
+                esc(company.metadata.get("legal_name")),
+                esc(company.metadata.get("region_primary")),
+                esc(company.metadata.get("company_stage")),
+                esc(sector_titles),
+                badge(company.metadata.get("coverage_tier")),
+            ]
+        )
+    counts = {tier: 0 for tier in ("core", "tracked", "discovery")}
+    for company in companies:
+        tier = str(company.metadata.get("coverage_tier") or "")
+        if tier in counts:
+            counts[tier] += 1
+    hero = f"""<section class="hero"><div>
+<div class="eyebrow">产业情报 → 企业</div><h2>企业名单</h2>
+<p>AI 产业链企业，按覆盖分层（core / tracked / discovery）。</p>
+</div><div><div class="eyebrow">企业总数</div><h2>{len(companies)}</h2>
+<p class="muted">Core {counts['core']} · Tracked {counts['tracked']} · Discovery {counts['discovery']}</p>
+</div></section>"""
+    content = (
+        hero
+        + _intel_tabs("companies")
+        + '<section class="panel" style="margin-top:1rem">'
+        + table(
+            ["企业", "法定名称", "区域", "阶段", "板块", "分层"],
+            rows,
+        )
+        + "</section>"
+    )
+    return shell("企业名单", content)
+
+
+def _sectors_page(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    sectors = [obj for obj in objects if obj.object_type == "sector"]
+    companies = {
+        obj.object_id: obj for obj in objects if obj.object_type == "company"
+    }
+    rows = []
+    for sector in sectors:
+        core_links = "、".join(
+            f'<a href="/companies/{esc(cid)}">{esc(companies[cid].metadata.get("title", cid))}</a>'
+            for cid in sector.metadata.get("core_company_ids", [])
+            if cid in companies
+        ) or "—"
+        rows.append(
+            [
+                object_link(sector),
+                esc(sector.metadata.get("definition")),
+                esc(sector.metadata.get("value_chain_position")),
+                core_links,
+            ]
+        )
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">产业情报 → 板块</div><h2>板块分类</h2>
+<p>AI 算力基础设施价值链的板块划分与核心企业。</p>
+</div><div><div class="eyebrow">板块总数</div><h2>{len(sectors)}</h2>
+<p class="muted">覆盖 AI Compute Chain 各环节</p></div></section>
+{_intel_tabs("sectors")}
+<section class="panel" style="margin-top:1rem">{table(["板块", "定义", "价值链位置", "核心企业"], rows)}</section>"""
+    return shell("板块分类", content)
+
+
+def _reports_page(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    reports = [obj for obj in objects if obj.object_type == "report"]
+    reports.sort(
+        key=lambda obj: str(obj.metadata.get("updated_at", "")),
+        reverse=True,
+    )
+    rows = [
+        [
+            object_link(report),
+            esc(report.metadata.get("report_type")),
+            badge(report.metadata.get("status")),
+            esc(report.metadata.get("updated_at")),
+        ]
+        for report in reports
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">产业情报 → 报告</div><h2>研究报告</h2>
+<p>基于证据库产出的正式研究报告。</p>
+</div><div><div class="eyebrow">报告总数</div><h2>{len(reports)}</h2>
+<p class="muted">最新优先</p></div></section>
+{_intel_tabs("reports")}
+<section class="panel" style="margin-top:1rem">{table(["报告", "类型", "状态", "更新"], rows)}</section>"""
+    return shell("研究报告", content)
+
+
 def create_app(root: Path) -> FastAPI:
     repo = DashboardRepository(root)
     app = FastAPI(
@@ -987,6 +1120,18 @@ def create_app(root: Path) -> FastAPI:
     def pipeline_channels() -> HTMLResponse:
         return HTMLResponse(_pipeline_channels(repo))
 
+    @app.get("/companies", response_class=HTMLResponse)
+    def companies() -> HTMLResponse:
+        return HTMLResponse(_companies_page(repo))
+
+    @app.get("/sectors", response_class=HTMLResponse)
+    def sectors() -> HTMLResponse:
+        return HTMLResponse(_sectors_page(repo))
+
+    @app.get("/reports", response_class=HTMLResponse)
+    def reports() -> HTMLResponse:
+        return HTMLResponse(_reports_page(repo))
+
     @app.get("/health", response_class=HTMLResponse)
     def health(project: str | None = Query(default=None)) -> HTMLResponse:
         return HTMLResponse(_health_page(repo, project))
@@ -1028,7 +1173,7 @@ def create_app(root: Path) -> FastAPI:
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=object_id) from exc
 
-    for prefix in ("events", "companies", "reports", "actions", "projects"):
+    for prefix in ("events", "companies", "sectors", "reports", "actions", "projects"):
         app.add_api_route(
             f"/{prefix}/{{object_id}}",
             generic_detail,
