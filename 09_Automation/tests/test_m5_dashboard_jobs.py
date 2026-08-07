@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 import tempfile
 import unittest
 from datetime import UTC, datetime
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 import test_research_os_core as fixtures
+from research_os.services import candidate_db
 from research_os.services.indexing import (
     apply_indexes,
     index_drift,
@@ -18,6 +22,43 @@ from research_os.services.jobs import job_rows, run_job
 from research_os.services.validation import validate_repository
 from research_os.ui.app import create_app, run_ui
 from test_cli import run_cli
+
+CHANNEL_MD = """---
+id: CHN-test
+type: source_channel
+title: "Test Channel"
+created_at: 2026-08-06
+updated_at: '2026-08-06'
+schema_version: 2
+project_ids: []
+status: active
+review_status: reviewed
+tags: []
+name: "Test"
+channel_type: rss
+locator: "https://example.com/feed"
+allow_hosts: [example.com]
+publisher: "Test"
+source_grade_proposal: B
+entity_ids: []
+sector_ids: []
+query: ""
+schedule: "daily"
+timezone: "Asia/Shanghai"
+max_candidates_per_run: 5
+rate_limit: ""
+retention_days: 30
+license_status: reviewed
+robots_checked_at: "2026-08-06"
+enabled: true
+---
+
+# Source Channel
+
+## Channel
+
+Test.
+"""
 
 
 def prepared_root(temp: str):
@@ -118,6 +159,142 @@ class DashboardTests(unittest.TestCase):
                 client.get("/source-assets/SRC-20260729-001/0").status_code,
             )
             self.assertEqual(404, client.get("/sources/SRC-99999999-999").status_code)
+
+    def _seed_channel_and_candidates(self, root: Path) -> None:
+        channel_dir = root / "02_Knowledge" / "Channels"
+        channel_dir.mkdir(parents=True, exist_ok=True)
+        (channel_dir / "CHN-test.md").write_text(
+            CHANNEL_MD,
+            encoding="utf-8",
+        )
+        db_path = candidate_db.candidate_db_path(root)
+        candidate_db.apply_migrations(db_path)
+        candidate_db.insert_candidates(
+            db_path,
+            [
+                {
+                    "candidate_id": "CAND-new-001",
+                    "published_at_proposal": "2026-08-06",
+                    "title": "New candidate one",
+                    "canonical_url": "https://example.com/1",
+                    "publisher": "Example",
+                },
+                {
+                    "candidate_id": "CAND-new-002",
+                    "published_at_proposal": "2026-08-05",
+                    "title": "New candidate two",
+                    "canonical_url": "https://example.com/2",
+                    "publisher": "Example",
+                },
+                {
+                    "candidate_id": "CAND-pro-001",
+                    "published_at_proposal": "2026-08-04",
+                    "title": "Promoted candidate",
+                    "canonical_url": "https://example.com/3",
+                    "publisher": "Example",
+                },
+            ],
+            "CHN-test",
+            "2026-08-06T10:00:00Z",
+        )
+        connection = sqlite3.connect(db_path)
+        try:
+            connection.execute(
+                "UPDATE candidates SET status = 'promoted', "
+                "promoted_source_id = ?, entity_proposals_json = ? "
+                "WHERE candidate_id = 'CAND-pro-001'",
+                (
+                    "SRC-20260729-001",
+                    json.dumps({"status": "matched", "entity_id": "COM-test"}),
+                ),
+            )
+            connection.execute(
+                "INSERT INTO candidate_actions (action_id, candidate_id, action, "
+                "reason, actor, acted_at, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    "ACT-test-1",
+                    "CAND-pro-001",
+                    "promote",
+                    "from candidate triage",
+                    "max",
+                    "2026-08-06T12:00:00Z",
+                    "{}",
+                ),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+    def test_pipeline_pages_render_and_are_read_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            self._seed_channel_and_candidates(root)
+            client = TestClient(create_app(root))
+
+            overview = client.get("/pipeline")
+            self.assertEqual(200, overview.status_code)
+            self.assertIn("Machine in motion", overview.text)
+            self.assertIn("/pipeline/queue", overview.text)
+
+            sources = client.get("/pipeline/sources")
+            self.assertEqual(200, sources.status_code)
+            self.assertIn("Promoted Sources", sources.text)
+            self.assertIn("SRC-20260729-001", sources.text)
+            self.assertIn("CHN-test", sources.text)
+            self.assertIn("COM-test", sources.text)
+
+            queue = client.get("/pipeline/queue")
+            self.assertEqual(200, queue.status_code)
+            self.assertIn("Candidate queue", queue.text)
+            self.assertIn("CAND-new-001", queue.text)
+
+            detail = client.get("/pipeline/queue/CAND-new-001")
+            self.assertEqual(200, detail.status_code)
+            self.assertIn("Action history", detail.text)
+            promoted_detail = client.get("/pipeline/queue/CAND-pro-001")
+            self.assertEqual(200, promoted_detail.status_code)
+            self.assertIn("promote", promoted_detail.text)
+            self.assertEqual(
+                404, client.get("/pipeline/queue/CAND-nope").status_code
+            )
+
+            channels = client.get("/pipeline/channels")
+            self.assertEqual(200, channels.status_code)
+            self.assertIn("Channels & metrics", channels.text)
+            self.assertIn("CHN-test", channels.text)
+            self.assertIn("Schedulable", channels.text)
+
+            pipeline_methods = {
+                method
+                for route in client.app.routes
+                if route.path.startswith("/pipeline")
+                for method in getattr(route, "methods", set())
+            }
+            self.assertNotIn("POST", pipeline_methods)
+            self.assertNotIn("PUT", pipeline_methods)
+            self.assertNotIn("DELETE", pipeline_methods)
+
+    def test_operations_points_at_pipeline_and_drops_embedded_panel(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            client = TestClient(create_app(root))
+            operations = client.get("/operations")
+            self.assertEqual(200, operations.status_code)
+            self.assertIn("Open Pipeline dashboard", operations.text)
+            self.assertNotIn("B-023", operations.text)
+
+    def test_pipeline_pages_graceful_without_candidate_db(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            client = TestClient(create_app(root))
+            for path in (
+                "/pipeline",
+                "/pipeline/sources",
+                "/pipeline/queue",
+                "/pipeline/channels",
+            ):
+                response = client.get(path)
+                self.assertEqual(200, response.status_code, path)
 
     def test_obsidian_home_is_rebuildable_after_deletion(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -348,6 +348,49 @@ def render_candidate_detail(detail: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def promoted_rows(
+    root: Path,
+    db_path: Path | None = None,
+    *,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    """Read candidates that promoted into authoritative Sources (read-only).
+
+    Rows link back to the permanent Source id and carry the originating
+    channel and resolved entity, so the dashboard can show what the pipeline
+    produced without touching the repository.
+    """
+    db_path = db_path or candidate_db.candidate_db_path(root)
+    if not db_path.exists():
+        return []
+    connection = _connect(db_path)
+    try:
+        rows = connection.execute(
+            "SELECT candidate_id, promoted_source_id, channel_id, title, "
+            "publisher, discovered_at, entity_proposals_json FROM candidates "
+            "WHERE status = 'promoted' AND promoted_source_id IS NOT NULL "
+            "ORDER BY promoted_source_id DESC, candidate_id ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    finally:
+        connection.close()
+    promoted: list[dict[str, Any]] = []
+    for row in rows:
+        entity = _load_json(row["entity_proposals_json"])
+        promoted.append(
+            {
+                "candidate_id": str(row["candidate_id"]),
+                "promoted_source_id": str(row["promoted_source_id"]),
+                "channel_id": str(row["channel_id"]),
+                "title": str(row["title"]),
+                "publisher": str(row["publisher"] or ""),
+                "discovered_at": str(row["discovered_at"]),
+                "entity_id": entity.get("entity_id"),
+            }
+        )
+    return promoted
+
+
 def render_enrichment(enriched: list[dict[str, Any]], *, applied: bool) -> str:
     mode = "APPLIED" if applied else "DRY-RUN"
     if not enriched:
