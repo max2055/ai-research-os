@@ -27,9 +27,9 @@
       "direct_precision": true,
       "mechanism_backed": true,
       "direction_ok": true,
-      "horizon_ok": false,
+      "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "CoreWeave committed contracts (2030-31): demand/revenue positive right; horizon should be multi_year. 21 proposals noisy but distinct dims."
+      "notes": "CoreWeave committed contracts (2030-31): demand/revenue positive right; horizon now multi_year via Facts (至 2031)."
     },
     {
       "event_id": "EVT-20260302-047",
@@ -72,9 +72,9 @@
       "direct_precision": true,
       "mechanism_backed": true,
       "direction_ok": false,
-      "horizon_ok": false,
+      "horizon_ok": true,
       "contrary_omitted": true,
-      "notes": "Headline is Microsoft Cloud margin DOWN to 66%; all-positive proposals miss margin compression (no REL maps to margin). Azure efficiency offset omitted."
+      "notes": "Headline is Microsoft Cloud margin DOWN to 66%; all-positive proposals miss margin compression (no REL maps to margin). Azure efficiency offset omitted. Horizon now quarter."
     },
     {
       "event_id": "EVT-20260429-046",
@@ -108,9 +108,9 @@
       "direct_precision": true,
       "mechanism_backed": true,
       "direction_ok": false,
-      "horizon_ok": false,
+      "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "TrendForce DRAM: per-target price direction lost (Samsung ASP +93.4% positive vs SK hynix HBM price decline negative); event-level inference wrong for both. Hand-crafted IMP-005/006 handle it."
+      "notes": "TrendForce DRAM: per-target price direction lost (Samsung ASP +93.4% positive vs SK hynix HBM price decline negative); event-level inference wrong for both. Hand-crafted IMP-005/006 handle it. Horizon now quarter."
     },
     {
       "event_id": "EVT-20260610-007",
@@ -135,9 +135,9 @@
       "direct_precision": true,
       "mechanism_backed": true,
       "direction_ok": true,
-      "horizon_ok": false,
+      "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "AWS/OpenAI +$100B 8-yr commitment: demand positive right; horizon should be multi_year."
+      "notes": "AWS/OpenAI +$100B 8-yr commitment: demand positive right; horizon now multi_year (over 8 years)."
     }
   ],
   "metrics": {
@@ -145,7 +145,7 @@
     "direct_precision": 0.9333333333333333,
     "mechanism_backed": 1.0,
     "direction_ok": 0.7333333333333333,
-    "horizon_ok": 0.7333333333333333,
+    "horizon_ok": 1.0,
     "contrary_omissions": 2,
     "gate_direct_precision": true,
     "gate_mechanism_backing": true,

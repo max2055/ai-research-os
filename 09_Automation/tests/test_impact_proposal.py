@@ -161,6 +161,27 @@ class DirectImpactProposalTests(unittest.TestCase):
         self.assertEqual("mixed", by_type["price"])
         self.assertEqual("positive", by_type["capacity"])
 
+    def test_horizon_inferred_quarter_for_earnings(self) -> None:
+        objects = [
+            _event(title="NVIDIA FY27 Q1 record revenue"),
+            _rel("REL-1"),
+            *_entities(),
+        ]
+        proposals = propose_direct_impacts(objects, event_id="EVT-1")
+        self.assertTrue(proposals)
+        for proposal in proposals:
+            self.assertEqual("quarter", proposal["horizon"])
+
+    def test_horizon_multi_year_for_long_commitments(self) -> None:
+        objects = [
+            _event(title="AWS expands commitment by $100B over 8 years"),
+            _rel("REL-1"),
+            *_entities(),
+        ]
+        proposals = propose_direct_impacts(objects, event_id="EVT-1")
+        for proposal in proposals:
+            self.assertEqual("multi_year", proposal["horizon"])
+
     def test_skips_pending_relation(self) -> None:
         objects = [_event(), _rel(review_status="pending"), *_entities()]
         self.assertEqual([], propose_direct_impacts(objects, event_id="EVT-1"))

@@ -50,6 +50,23 @@ _NEGATIVE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Horizon inference (C-004): the horizon is "unknown" by default and filled from
+# temporal cues in the event title + Facts section (the evidence content, not
+# risk boilerplate). Priority: multi_year > quarter > immediate > year.
+_MULTI_YEAR_RE = re.compile(
+    r"(multi-year|multi year|多年|through 20\d\d|至 20\d\d|over \d+ ?years?|"
+    r"\d+[- ]year|长期|long[- ]term|decade|十年)",
+    re.IGNORECASE,
+)
+_QUARTER_RE = re.compile(
+    r"(\bQ[1-4]\b|[1-4]Q\s?\d{2}|\bquarter\b|quarterly|季度|财报|业绩|earnings)",
+    re.IGNORECASE,
+)
+_IMMEDIATE_RE = re.compile(r"(immediate|即日|立即|今日|today|即起)", re.IGNORECASE)
+_YEAR_RE = re.compile(
+    r"(\bFY\s?\d{2,4}\b|年度|annual|yearly|全年|10-K|20-F)", re.IGNORECASE
+)
+
 # Placeholder/empty-mechanism tokens C-005 rejects. Kept deliberately narrow to
 # avoid false positives on real (if terse) mechanisms.
 _PLACEHOLDER_RE = re.compile(
@@ -123,7 +140,7 @@ def propose_direct_impacts(
                         "impact_type": impact_type,
                         "direction": direction,
                         "magnitude": "unknown",
-                        "horizon": "unknown",
+                        "horizon": _infer_horizon(event),
                         "mechanism": mechanism,
                         "trigger_event_ids": [event_id],
                         "evidence_ids": [event_id],
@@ -156,6 +173,49 @@ def _infer_direction(event: ResearchObject, default: str) -> str:
     if neg - pos >= 1:
         return "negative"
     return default
+
+
+def _infer_horizon(event: ResearchObject) -> str:
+    """Infer horizon from temporal cues in title + Facts section.
+
+    Unlike direction, the Facts section is the right signal here (contract
+    durations, report periods) and is not polluted by risk-factor boilerplate.
+    """
+    text = " ".join(
+        [
+            str(event.metadata.get("title", "")),
+            _facts_section(event.body),
+        ]
+    )
+    if _MULTI_YEAR_RE.search(text):
+        return "multi_year"
+    if _QUARTER_RE.search(text):
+        return "quarter"
+    if _IMMEDIATE_RE.search(text):
+        return "immediate"
+    if _YEAR_RE.search(text):
+        return "year"
+    return "unknown"
+
+
+def _facts_section(body: str) -> str:
+    """Extract the ``## Facts`` section of an Event body (evidence content)."""
+    if not body:
+        return ""
+    lines = body.splitlines()
+    in_facts = False
+    parts: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## Facts"):
+            in_facts = True
+            continue
+        if stripped.startswith("##") and in_facts:
+            in_facts = False
+            continue
+        if in_facts and stripped:
+            parts.append(stripped)
+    return " ".join(parts)
 
 
 def _dedup_proposals(
