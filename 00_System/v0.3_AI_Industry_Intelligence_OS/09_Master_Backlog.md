@@ -95,7 +95,7 @@ test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（P
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
 | WP-300 | C-001～003 | RCP、Schema、rule map | completed |
-| WP-301 | C-004～005 | direct impact + mechanism validator | proposed |
+| WP-301 | C-004～005 | direct impact + mechanism validator | completed |
 | WP-310 | C-006～010 | temporal multi-hop/conflict/confidence | proposed |
 | WP-311 | C-011～012 | spec/renderer/review | proposed |
 | WP-312 | C-013～016 | index/CLI/UI/report integration | proposed |
@@ -109,6 +109,15 @@ WP-300 close-out（2026-08-07）：C-001 RCP-v03-006 已批准（`bc3ecf5`）；
 validate_refs/reviewed-evidence，`ImpactEntityReference` 含 EVT/INS 引用，ontology EntityReference
 未改动）；C-003 rule map 交付 `IMPACT_RULE_MAP.md`（12×13 allowlist + 方向/限制，2026-08-07 max 复核通过）。240 tests 全绿，validate 0 error。**Next：C-004 direct impact
 proposal（WP-301）。**
+
+WP-301 close-out（2026-08-07）：C-004 `services/impact_proposal.py propose_direct_impacts`
+（reviewed Event → pending IMP 提案：桥接 reviewed+as-of 有效 REL → event 自身命名实体 ∩
+REL 端点 为 target → 规则映射投影 PRIMARY_IMPACT_TYPE/DEFAULT_IMPACT_DIRECTION 定
+impact_type/direction → 证据锚定确定性 mechanism；pending Event 拒绝，不写文件不权威化）
++ C-005 `validate_mechanism`（空/太短/TODO-TBD-占位 拒绝）。规则映射代码投影
+`PRIMARY_IMPACT_TYPE`/`DEFAULT_IMPACT_DIRECTION` 入 `domain/policies.py`。真实冒烟：
+EVT-20260225-034 → 4 提案（SUPPLIES→supply、ENABLES→technology）。258 tests 全绿。
+**CLI `impact propose` 属 C-014（WP-312），现有 `impact --id` ontology 图命令不动。Next：WP-310（C-006 path expansion 等）。**
 
 ## 7. Wave 4：Analysis Modes
 

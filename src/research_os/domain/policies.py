@@ -52,6 +52,41 @@ ONTOLOGY_PREDICATES = frozenset(
 SYMMETRIC_PREDICATES = frozenset(
     {"COMPETES_WITH", "SUBSTITUTES", "COMPLEMENTS", "PARTNERS_WITH"}
 )
+
+# Impact rule map projection (C-003). Machine-readable view of the approved
+# policy in IMPACT_RULE_MAP.md: for each predicate, the primary impact_type
+# that C-004 direct-impact proposals default to, and that type's default
+# direction tendency. The rule map document is authoritative; these constants
+# are its projection and must not drift without updating the doc. Unknown
+# predicate/impact_type combinations never generate Impact (allowlist).
+PRIMARY_IMPACT_TYPE = {
+    "SUPPLIES": "supply",
+    "CUSTOMER_OF": "demand",
+    "COMPETES_WITH": "competition",
+    "SUBSTITUTES": "competition",
+    "COMPLEMENTS": "demand",
+    "DEPENDS_ON": "supply",
+    "ENABLES": "technology",
+    "CONSTRAINS": "capacity",
+    "OWNS": "capex",
+    "PARTNERS_WITH": "technology",
+    "PRODUCES": "capacity",
+    "USES": "cost",
+}
+DEFAULT_IMPACT_DIRECTION = {
+    "SUPPLIES": "mixed",
+    "CUSTOMER_OF": "positive",
+    "COMPETES_WITH": "mixed",
+    "SUBSTITUTES": "mixed",
+    "COMPLEMENTS": "positive",
+    "DEPENDS_ON": "mixed",
+    "ENABLES": "positive",
+    "CONSTRAINS": "negative",
+    "OWNS": "uncertain",
+    "PARTNERS_WITH": "positive",
+    "PRODUCES": "positive",
+    "USES": "mixed",
+}
 REQUIRED_HEADINGS = {
     "event": {
         "Facts",
