@@ -8,11 +8,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from research_os.adapters.discovery import (
     CompositeDiscoveryAdapter,
     GitHubReleaseDiscoveryAdapter,
     SECDiscoveryAdapter,
+    SourceCandidate,
 )
 from research_os.services import candidate_db
 from research_os.services.discovery import (
@@ -23,6 +25,7 @@ from research_os.services.discovery import (
     preflight_channel,
     run_discovery,
 )
+from research_os.services.jobs import run_job
 
 AUTOMATION = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(AUTOMATION))
@@ -128,6 +131,138 @@ class DiscoveryServiceTests(unittest.TestCase):
             # only when apply; for dry-run we raise before writing. Either way the
             # db should be absent for a never-before-initialized root.
             self.assertFalse(db_path.exists())
+
+    def _fake_adapter(self, urls: list[str]):
+        class _Fake:
+            def discover(self) -> list[SourceCandidate]:
+                return [
+                    SourceCandidate(
+                        adapter="test",
+                        external_id=f"ext-{index}",
+                        title=f"Title {index}",
+                        url=url,
+                        published_at=None,
+                        publisher="Test",
+                    )
+                    for index, url in enumerate(urls)
+                ]
+
+        return _Fake()
+
+    def test_inbound_skip_excludes_existing_source_url(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            # the fixture repo already has SRC-20260729-001 (canonical_url
+            # "https://example.com"); rediscovering it must be skipped.
+            with patch(
+                "research_os.services.discovery._build_adapter",
+                return_value=self._fake_adapter(
+                    ["https://example.com", "https://fresh.example.com/1"]
+                ),
+            ):
+                result = run_discovery(root, "CHN-test", apply=True)
+            self.assertEqual(1, result["skipped"])
+            self.assertEqual(1, result["inserted"])
+            self.assertEqual(1, result["candidate_count"])
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                urls = {
+                    str(row[0])
+                    for row in connection.execute(
+                        "SELECT canonical_url FROM candidates"
+                    )
+                }
+            finally:
+                connection.close()
+            self.assertNotIn("https://example.com", urls)
+            self.assertIn("https://fresh.example.com/1", urls)
+
+    def test_inbound_skip_excludes_promoted_candidate_url(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            db_path = candidate_db.candidate_db_path(root)
+            candidate_db.insert_candidates(
+                db_path,
+                [
+                    {
+                        "candidate_id": "CND-prom",
+                        "published_at_proposal": None,
+                        "title": "Promoted already",
+                        "canonical_url": "https://promoted.example.com",
+                        "publisher": "Test",
+                        "content_fingerprint": "fp-prom",
+                        "language": None,
+                        "duplicate_cluster_id": None,
+                    }
+                ],
+                "CHN-test",
+                "2026-08-07T00:00:00Z",
+            )
+            connection = sqlite3.connect(db_path)
+            try:
+                connection.execute(
+                    "UPDATE candidates SET status = 'promoted', "
+                    "promoted_source_id = 'SRC-20260807-001' "
+                    "WHERE candidate_id = 'CND-prom'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            with patch(
+                "research_os.services.discovery._build_adapter",
+                return_value=self._fake_adapter(
+                    ["https://promoted.example.com", "https://fresh2.example.com"]
+                ),
+            ):
+                result = run_discovery(root, "CHN-test", apply=True)
+            self.assertEqual(1, result["skipped"])
+            self.assertEqual(1, result["inserted"])
+            connection = sqlite3.connect(db_path)
+            try:
+                urls = {
+                    str(row[0])
+                    for row in connection.execute(
+                        "SELECT canonical_url FROM candidates"
+                    )
+                }
+            finally:
+                connection.close()
+            self.assertIn("https://fresh2.example.com", urls)
+
+    def test_inbound_skip_dry_run_marks_already_sourced(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            with patch(
+                "research_os.services.discovery._build_adapter",
+                return_value=self._fake_adapter(
+                    ["https://example.com", "https://fresh.example.com/2"]
+                ),
+            ):
+                result = run_discovery(root, "CHN-test", apply=False)
+            self.assertEqual(1, result["skipped"])
+            statuses = {
+                candidate["url"]: candidate["already_sourced"]
+                for candidate in result["candidates"]
+            }
+            self.assertTrue(statuses["https://example.com"])
+            self.assertFalse(statuses["https://fresh.example.com/2"])
+            self.assertFalse(candidate_db.candidate_db_path(root).exists())
+
+    def test_job_message_reports_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            with patch(
+                "research_os.services.discovery._build_adapter",
+                return_value=self._fake_adapter(
+                    ["https://example.com", "https://fresh.example.com/3"]
+                ),
+            ):
+                result = run_job(root, "discover", target="CHN-test")
+            self.assertIn("skipped (already sourced)", result.message)
 
     def test_disabled_channel_unknown_raises(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -37,12 +37,15 @@ class SchemaTests(unittest.TestCase):
     def test_all_repository_objects_pass_formal_schemas(self) -> None:
         documents, errors = validate_documents(ROOT)
         self.assertEqual([], errors)
+        counts = dict(Counter(document.metadata["type"] for document in documents))
+        # "job" is asserted as a floor, not an exact count: launchd adds Job
+        # Run records every 6h, so the exact value drifts every round.
+        job_count = counts.pop("job", 0)
         self.assertEqual(
             {
                 "action": 12,
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 48,  # EvWP: +9; Gate30 sprint: +6; Field gap: +2
-                "job": 54,  # B-021/022 + launchd pilot rounds Job Run records
                 "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
                 "product": 5,  # WP-120 Product entities
                 "project": 2,
@@ -54,8 +57,9 @@ class SchemaTests(unittest.TestCase):
                 "source_channel": 24,  # WP-201: 6 first-batch + 18 Pilot G1 batch
                 "thesis": 8,
             },
-            dict(Counter(document.metadata["type"] for document in documents)),
+            counts,
         )
+        self.assertGreaterEqual(job_count, 40)
 
     def test_noop_round_trip_is_byte_exact_for_all_objects(self) -> None:
         for document in load_documents(ROOT):

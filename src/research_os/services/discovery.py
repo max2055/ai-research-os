@@ -27,7 +27,10 @@ from research_os.adapters.discovery import (
 )
 from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
-from research_os.services.candidate_queue import enrich_candidates
+from research_os.services.candidate_queue import (
+    enrich_candidates,
+    existing_source_urls,
+)
 from research_os.services.dedup import assign_clusters, normalize_title
 from research_os.services.redaction import redact_secrets
 from research_os.services.schedule import is_due
@@ -203,6 +206,27 @@ def _candidate_records(
     ]
 
 
+def _sourced_urls(objects: list[Any], db_path: Path) -> set[str]:
+    """canonical URLs already captured as authoritative content.
+
+    Combines formal Sources (Markdown) and candidates that promoted into a
+    Source, so discovery can skip re-inserting content already in the
+    repository (inbound skip, G4).
+    """
+    urls = set(existing_source_urls(objects))
+    if db_path.exists():
+        connection = sqlite3.connect(db_path)
+        try:
+            rows = connection.execute(
+                "SELECT canonical_url FROM candidates "
+                "WHERE status = 'promoted' AND canonical_url IS NOT NULL"
+            ).fetchall()
+            urls.update(str(row[0]) for row in rows if row[0])
+        finally:
+            connection.close()
+    return urls
+
+
 def run_discovery(
     root: Path,
     channel_id: str,
@@ -251,51 +275,69 @@ def run_discovery(
         raise ValueError(f"discovery failed for {channel_id}: {exc}") from exc
 
     if not apply:
+        sourced_urls = _sourced_urls(objects, db_path)
         return {
             "run_id": run_id,
             "channel_id": channel_id,
             "candidate_count": len(discovered),
+            "skipped": sum(
+                1 for c in discovered if redact_secrets(c.url) in sourced_urls
+            ),
             "candidates": [
                 {
                     "title": candidate.title,
                     "url": candidate.url,
                     "published_at_proposal": candidate.published_at,
                     "publisher": candidate.publisher,
+                    "already_sourced": (
+                        redact_secrets(candidate.url) in sourced_urls
+                    ),
                 }
                 for candidate in discovered
             ],
         }
 
+    sourced_urls = _sourced_urls(objects, db_path)
     candidates = _candidate_records(discovered)
-    # B-014 dedup: extend existing clusters across runs, never drop records.
-    existing = candidate_db.existing_candidates(root)
-    existing_index: dict[str, str] = {}
-    for prior in existing:
-        key = prior.get("title") or ""
-        cluster = prior.get("duplicate_cluster_id")
-        if key and cluster:
-            existing_index[normalize_title(str(key))] = str(cluster)
-    candidates = assign_clusters(candidates, existing=existing_index)
-    inserted = candidate_db.insert_candidates(
-        db_path,
-        candidates,
-        channel_id,
-        started_at,
-    )
-    # B-018: score the new candidates so the review queue can sort by priority.
-    enrich_candidates(root, db_path, apply=True)
+    candidates = [
+        c
+        for c in candidates
+        if str(c.get("canonical_url") or "") not in sourced_urls
+    ]
+    skipped = len(discovered) - len(candidates)
+    if candidates:
+        # B-014 dedup: extend existing clusters across runs, never drop records.
+        existing = candidate_db.existing_candidates(root)
+        existing_index: dict[str, str] = {}
+        for prior in existing:
+            key = prior.get("title") or ""
+            cluster = prior.get("duplicate_cluster_id")
+            if key and cluster:
+                existing_index[normalize_title(str(key))] = str(cluster)
+        candidates = assign_clusters(candidates, existing=existing_index)
+        inserted = candidate_db.insert_candidates(
+            db_path,
+            candidates,
+            channel_id,
+            started_at,
+        )
+        # B-018: score the new candidates so the review queue can sort.
+        enrich_candidates(root, db_path, apply=True)
+    else:
+        inserted = 0
     candidate_db.finish_discovery_run(
         db_path,
         run_id,
         status="succeeded",
-        candidate_count=len(discovered),
+        candidate_count=len(candidates),
         finished_at=_utc_now(),
     )
     return {
         "run_id": run_id,
         "channel_id": channel_id,
-        "candidate_count": len(discovered),
+        "candidate_count": len(candidates),
         "inserted": inserted,
+        "skipped": skipped,
         "db_path": str(db_path),
     }
 
@@ -307,18 +349,25 @@ def render_discovery_result(result: dict[str, Any]) -> str:
         f"Channel: {result.get('channel_id', '')}",
         f"Candidates: {result.get('candidate_count', 0)}",
     ]
+    if result.get("skipped"):
+        lines.append(f"Skipped (already sourced): {result['skipped']}")
     if "db_path" in result:
         lines.append(f"DB: {result['db_path']}")
         lines.append(f"Inserted: {result.get('inserted', 0)}")
     else:
         lines.append("")
-        lines.append("| Title | URL | Published | Publisher |")
-        lines.append("|---|---|---|---|")
+        lines.append("| Title | URL | Published | Publisher | Status |")
+        lines.append("|---|---|---|---|---|")
         for candidate in result.get("candidates", []):
+            status = (
+                "already sourced"
+                if candidate.get("already_sourced")
+                else "new"
+            )
             lines.append(
                 f"| {candidate['title']} | {candidate['url']} | "
                 f"{candidate.get('published_at_proposal') or ''} | "
-                f"{candidate['publisher']} |"
+                f"{candidate['publisher']} | {status} |"
             )
     return "\n".join(lines) + "\n"
 

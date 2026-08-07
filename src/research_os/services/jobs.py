@@ -114,11 +114,14 @@ def _execute_job(
         if not target:
             raise ValueError("discover requires --target CHN-ID")
         result = run_discovery(root, target, apply=True)
-        return (
+        message = (
             f"discovery run {result['run_id']} for {target}: "
             f"{result['candidate_count']} candidates, "
             f"{result['inserted']} inserted"
         )
+        if result.get("skipped"):
+            message += f", {result['skipped']} skipped (already sourced)"
+        return message
     if job_name == "expire":
         expired = expire_candidates(root, apply=True)
         purged = purge_candidates(root, apply=True)
