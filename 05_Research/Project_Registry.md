@@ -2,7 +2,7 @@
 
 <!-- Generated from structured Project objects. -->
 
-更新时间：2026-08-06
+更新时间：2026-08-07
 
 | Project ID | Research question | Owner | Charter | Queue | Current Report | Review cadence | Next review | Status |
 |---|---|---|---|---|---|---|---|---|

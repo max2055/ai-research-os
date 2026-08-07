@@ -2,7 +2,7 @@
 
 <!-- Generated from structured Action objects. -->
 
-更新时间：2026-08-06
+更新时间：2026-08-07
 
 状态只使用：`open`、`in_progress`、`done`、`cancelled`。
 
