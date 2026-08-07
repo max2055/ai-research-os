@@ -66,6 +66,76 @@ def _cluster_stats(
     return stats
 
 
+def existing_source_urls(objects: list[Any]) -> dict[str, str]:
+    """Map canonical_url -> source_id for authoritative Sources.
+
+    Read-only: lets a candidate that repeats content already promoted into
+    the repository be flagged (``existing_source_id``) so a human can dismiss
+    it without a second lookup. Never writes the candidate store.
+    """
+    urls: dict[str, str] = {}
+    for obj in objects:
+        if obj.object_type != "source":
+            continue
+        url = str(obj.metadata.get("canonical_url") or "").strip()
+        if url:
+            urls.setdefault(url, obj.object_id)
+    return urls
+
+
+def _queue_rank_key(row: dict[str, Any]) -> tuple[Any, ...]:
+    """Ascending sort key: non-NULL priority first, then higher, then newer."""
+    score = row.get("priority_score")
+    return (
+        score is None,
+        -(score or 0.0),
+        row.get("discovered_at") or "",
+        row.get("candidate_id") or "",
+    )
+
+
+def _is_representative(
+    row: dict[str, Any],
+    cluster_stats: dict[str, dict[str, Any]],
+) -> bool:
+    cluster_id = row.get("duplicate_cluster_id")
+    if not cluster_id:
+        return True
+    stats = cluster_stats.get(str(cluster_id))
+    return bool(stats and str(row["candidate_id"]) == stats["representative_id"])
+
+
+def _collapse_rows(
+    rows: list[dict[str, Any]],
+    cluster_stats: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Collapse duplicate clusters to one lead row each (view-layer only).
+
+    Groups the already-filtered rows by cluster (singletons are their own
+    group), keeps the highest-priority member as the lead, and folds the
+    rest into ``dup_count``. ``already_sourced`` is OR-ed across the group so
+    a collapsed non-representative that is already a Source is not hidden.
+    """
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        groups.setdefault(row["_cluster_id"], []).append(row)
+    collapsed: list[dict[str, Any]] = []
+    for members in groups.values():
+        lead = min(members, key=_queue_rank_key)
+        lead["dup_count"] = len(members) - 1
+        lead["is_representative"] = _is_representative(lead, cluster_stats)
+        sourced = [
+            member["existing_source_id"]
+            for member in members
+            if member.get("existing_source_id")
+        ]
+        lead["already_sourced"] = bool(sourced)
+        if sourced:
+            lead["existing_source_id"] = sourced[0]
+        collapsed.append(lead)
+    return sorted(collapsed, key=_queue_rank_key)
+
+
 def enrich_candidates(
     root: Path,
     db_path: Path | None = None,
@@ -183,12 +253,19 @@ def queue_rows(
     tier: str | None = None,
     min_priority: float | None = None,
     limit: int = 50,
+    show_dups: bool = False,
 ) -> list[dict[str, Any]]:
     """Read the review queue, highest priority first.
 
     Filters are proposals-level: entity/tier resolve through the stored
     entity proposal and the Universe coverage tier. Rows carry the resolved
     entity/sector proposal so a human can triage without a second lookup.
+
+    By default duplicate clusters are collapsed to one lead row (``dup_count``
+    members folded in) so triage works on clusters, not variants; pass
+    ``show_dups`` to see every member. ``existing_source_id`` marks a
+    candidate (or a collapsed member) whose canonical URL is already an
+    authoritative Source.
     """
     db_path = db_path or candidate_db.candidate_db_path(root)
     if not db_path.exists():
@@ -213,9 +290,10 @@ def queue_rows(
             "published_at_proposal, discovered_at, status, "
             "duplicate_cluster_id, priority_score, entity_proposals_json, "
             f"sector_proposals_json FROM candidates {clause} "
-            f"{_ORDER_BY_PRIORITY} LIMIT ?",
-            (*params, limit),
+            f"{_ORDER_BY_PRIORITY}",
+            params,
         ).fetchall()
+        cluster_stats = _cluster_stats(connection)
     finally:
         connection.close()
 
@@ -225,6 +303,7 @@ def queue_rows(
         for obj in objects
         if obj.object_type == "company"
     }
+    source_urls = existing_source_urls(objects)
     queue: list[dict[str, Any]] = []
     for row in rows:
         entity = _load_json(row["entity_proposals_json"])
@@ -234,6 +313,7 @@ def queue_rows(
             continue
         if tier is not None and tier_by_entity.get(resolved_entity) != tier:
             continue
+        cluster_id = row["duplicate_cluster_id"]
         queue.append(
             {
                 "candidate_id": str(row["candidate_id"]),
@@ -243,14 +323,28 @@ def queue_rows(
                 "published_at_proposal": row["published_at_proposal"],
                 "discovered_at": str(row["discovered_at"]),
                 "status": str(row["status"]),
-                "duplicate_cluster_id": row["duplicate_cluster_id"],
+                "duplicate_cluster_id": cluster_id,
                 "priority_score": row["priority_score"],
                 "entity_status": entity.get("status", "unknown"),
                 "entity_id": resolved_entity,
                 "sector_ids": sector.get("sector_ids", []),
+                "existing_source_id": source_urls.get(
+                    str(row["canonical_url"] or "")
+                ),
+                "already_sourced": False,
+                "is_representative": False,
+                "dup_count": 0,
+                "_cluster_id": (
+                    str(cluster_id) if cluster_id else str(row["candidate_id"])
+                ),
             }
         )
-    return queue
+    if not show_dups:
+        queue = _collapse_rows(queue, cluster_stats)
+    else:
+        for row in queue:
+            row["is_representative"] = _is_representative(row, cluster_stats)
+    return queue[:limit]
 
 
 def queue_show(
@@ -276,6 +370,7 @@ def queue_show(
             "ORDER BY acted_at ASC",
             (candidate_id,),
         ).fetchall()
+        cluster_stats = _cluster_stats(connection)
     finally:
         connection.close()
     detail = dict(zip(row.keys(), row, strict=True))
@@ -287,6 +382,11 @@ def queue_show(
     )
     detail["reason_codes"] = _load_json(detail.pop("reason_codes_json", None))
     detail["actions"] = [dict(action) for action in actions]
+    objects, _ = validate_repository(root)
+    detail["existing_source_id"] = existing_source_urls(objects).get(
+        str(detail.get("canonical_url") or "")
+    )
+    detail["is_representative"] = _is_representative(detail, cluster_stats)
     return detail
 
 
@@ -296,16 +396,24 @@ def render_candidate_list(rows: list[dict[str, Any]]) -> str:
     lines = [
         "# Candidate Queue",
         "",
-        "| Priority | Status | Entity | Sectors | Channel | Title |",
-        "|---|---|---|---|---|---|",
+        "| Priority | Status | Dup | Entity | Sectors | Channel | Title |",
+        "|---|---|---|---|---|---|---|",
     ]
     for row in rows:
         priority = (
             f"{row['priority_score']:.3f}" if row["priority_score"] is not None else "—"
         )
+        if row.get("existing_source_id"):
+            dup = f"SRC:{row['existing_source_id']}"
+        elif row.get("dup_count"):
+            dup = f"+{row['dup_count']}"
+        elif not row.get("is_representative", True):
+            dup = "variant"
+        else:
+            dup = ""
         entity = row["entity_id"] or row["entity_status"]
         lines.append(
-            f"| {priority} | {row['status']} | {entity} | "
+            f"| {priority} | {row['status']} | {dup} | {entity} | "
             f"{len(row['sector_ids'])} | {row['channel_id']} | {row['title']} |"
         )
     lines.append("")

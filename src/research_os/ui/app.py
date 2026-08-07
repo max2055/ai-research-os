@@ -572,6 +572,12 @@ def _candidate_facts(detail: dict[str, Any]) -> str:
         ("Priority", priority),
         ("Model", detail.get("model_version")),
     ]
+    if detail.get("existing_source_id"):
+        items.append(("Already a Source", detail["existing_source_id"]))
+    if detail.get("is_representative") is False and detail.get(
+        "duplicate_cluster_id"
+    ):
+        items.append(("Cluster role", "non-representative variant"))
     return '<dl class="metadata">' + "".join(
         f"<div><dt>{esc(label)}</dt><dd>{esc(value)}</dd></div>"
         for label, value in items
@@ -626,6 +632,7 @@ def _pipeline_queue(
     channel: str | None,
     min_priority: float | None,
     limit: int,
+    show_dups: bool,
 ) -> str:
     rows = queue_rows(
         repo.root,
@@ -633,7 +640,21 @@ def _pipeline_queue(
         channel_id=channel or None,
         min_priority=min_priority,
         limit=limit,
+        show_dups=show_dups,
     )
+
+    def dup_cell(row: dict[str, Any]) -> str:
+        if row.get("existing_source_id"):
+            return (
+                f'<a href="/sources/{esc(row["existing_source_id"])}">'
+                f'already SRC {esc(row["existing_source_id"])}</a>'
+            )
+        if row.get("dup_count"):
+            return badge(f"+{row['dup_count']} variants")
+        if not row.get("is_representative", True):
+            return badge("variant", warning=True)
+        return "—"
+
     body_rows = [
         [
             (
@@ -642,6 +663,7 @@ def _pipeline_queue(
                 else "—"
             ),
             badge(row["status"]),
+            dup_cell(row),
             esc(row["entity_id"] or row["entity_status"]),
             esc(len(row["sector_ids"])),
             esc(row["channel_id"]),
@@ -656,9 +678,10 @@ def _pipeline_queue(
     )
     channel_value = esc(channel or "")
     min_value = esc(min_priority if min_priority is not None else "")
+    dup_check = " checked" if show_dups else ""
     content = f"""<section class="hero"><div>
 <div class="eyebrow">Pipeline → Queue</div><h2>Candidate queue</h2>
-<p>Read-only triage list. Decisions stay in the CLI.</p>
+<p>Read-only triage list. Duplicate clusters collapse to one lead row.</p>
 </div><div><div class="eyebrow">{esc(status)}</div><h2>{len(rows)}</h2>
 <p class="muted">highest priority first</p></div></section>
 <section class="panel" style="margin-bottom:1rem">
@@ -667,9 +690,10 @@ def _pipeline_queue(
 <label style="margin-left:1rem">Channel <input name="channel" value="{channel_value}"></label>
 <label style="margin-left:1rem">Min priority <input type="number" step="0.01" min="0" max="1" name="min_priority" value="{min_value}"></label>
 <label style="margin-left:1rem">Limit <input type="number" min="1" max="200" name="limit" value="{esc(limit)}"></label>
+<label style="margin-left:1rem"><input type="checkbox" name="show_dups" value="1"{dup_check}> Show duplicates</label>
 <button type="submit">Filter</button>
 </form></section>
-<section class="panel">{table(["Priority", "Status", "Entity", "Sectors", "Channel", "Title"], body_rows)}</section>"""
+<section class="panel">{table(["Priority", "Status", "Dup", "Entity", "Sectors", "Channel", "Title"], body_rows)}</section>"""
     return shell("Pipeline Queue", content)
 
 
@@ -709,6 +733,22 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
         ["HTTP / parse / retries", f"{esc(discovery['http_errors'])} / {esc(discovery['parse_errors'])} / {esc(discovery['retries'])}"],
         ["Cost estimate", esc(discovery["cost_estimate"])],
     ]
+    duplicate_rows = [
+        [
+            "Inbound dup rate (7d)",
+            f"{duplicate['rate']:.0%}",
+        ],
+        [
+            "Inbound window",
+            f"{duplicate['inbound_dups']} / {duplicate['inbound_total']} non-rep",
+        ],
+        [
+            "Store snapshot",
+            f"{duplicate['store_rate']:.0%} "
+            f"({duplicate['non_representative']} non-rep)",
+        ],
+        ["Clusters", esc(duplicate["clusters"])],
+    ]
     dismiss_text = ", ".join(
         f"{reason} ({count})" for reason, count in triage["top_dismiss_reasons"]
     ) or "—"
@@ -738,10 +778,11 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
 <section class="metrics" style="margin-top:1rem">
 <div class="metric"><strong>{esc(discovered["total"])}</strong><span>Discovered total</span></div>
 <div class="metric"><strong>{esc(discovered["today"])}</strong><span>Discovered today</span></div>
-<div class="metric"><strong>{duplicate["rate"]:.0%}</strong><span>Duplicate rate</span></div>
+<div class="metric"><strong>{duplicate["rate"]:.0%}</strong><span>Dup rate (7d inbound)</span></div>
 <div class="metric"><strong>{discovery["failure_rate"]:.0%}</strong><span>Failure rate</span></div>
 </section>
 <section class="grid" style="margin-top:1rem">
+<div class="panel"><h3>Duplicate</h3>{_kv_table(duplicate_rows)}</div>
 <div class="panel"><h3>Discovery</h3>{_kv_table(discovery_rows)}</div>
 <div class="panel"><h3>Triage yield</h3>{_kv_table(triage_rows)}</div>
 <div class="panel"><h3>Core coverage</h3>{_kv_table(coverage_rows)}</div>
@@ -913,9 +954,12 @@ def create_app(root: Path) -> FastAPI:
         channel: str | None = Query(default=None),
         min_priority: float | None = Query(default=None),
         limit: int = Query(default=50, ge=1, le=200),
+        show_dups: bool = Query(default=False),
     ) -> HTMLResponse:
         return HTMLResponse(
-            _pipeline_queue(repo, status, channel, min_priority, limit)
+            _pipeline_queue(
+                repo, status, channel, min_priority, limit, show_dups
+            )
         )
 
     @app.get("/pipeline/queue/{candidate_id}", response_class=HTMLResponse)

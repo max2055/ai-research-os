@@ -6,7 +6,7 @@ import json
 import re
 import sqlite3
 import statistics
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -220,25 +220,43 @@ def pipeline_metrics(
     discovered_total = 0
     discovered_today = 0
     core_entity_ids: set[str] = set()
+    rows: list[sqlite3.Row] = []
     cluster_rows: list[sqlite3.Row] = []
     run_rows: list[sqlite3.Row] = []
     promote_rows: list[sqlite3.Row] = []
     dismiss_rows: list[sqlite3.Row] = []
+    inbound_total = 0
+    rep_by_cluster: dict[str, tuple[str, str]] = {}
+    # 7-day window: duplicate.rate measures duplicates among newly arrived
+    # candidates (G4 "duplicate-in-queue" basis), not the store snapshot.
+    window_start = (date.fromisoformat(as_of) - timedelta(days=6)).isoformat()
     if db_path.exists():
         connection = sqlite3.connect(db_path)
         connection.row_factory = sqlite3.Row
         try:
             rows = connection.execute(
                 "SELECT candidate_id, discovered_at, status, "
-                "entity_proposals_json FROM candidates"
+                "duplicate_cluster_id, entity_proposals_json FROM candidates"
             ).fetchall()
             for row in rows:
                 discovered_total += 1
-                if str(row["discovered_at"]).startswith(as_of):
+                discovered_date = str(row["discovered_at"])[:10]
+                if discovered_date == as_of:
                     discovered_today += 1
+                if window_start <= discovered_date <= as_of:
+                    inbound_total += 1
                 entity = _proposal_json(row["entity_proposals_json"])
                 if entity.get("status") == "matched" and entity.get("entity_id"):
                     core_entity_ids.add(str(entity["entity_id"]))
+                cluster_id = row["duplicate_cluster_id"]
+                if cluster_id:
+                    cid = str(cluster_id)
+                    prior = rep_by_cluster.get(cid)
+                    if prior is None or str(row["discovered_at"]) < prior[0]:
+                        rep_by_cluster[cid] = (
+                            str(row["discovered_at"]),
+                            str(row["candidate_id"]),
+                        )
             cluster_rows = connection.execute(
                 "SELECT duplicate_cluster_id, COUNT(*) AS members "
                 "FROM candidates WHERE duplicate_cluster_id IS NOT NULL "
@@ -259,11 +277,25 @@ def pipeline_metrics(
         finally:
             connection.close()
 
+    inbound_dups = 0
+    for row in rows:
+        discovered_date = str(row["discovered_at"])[:10]
+        if not (window_start <= discovered_date <= as_of):
+            continue
+        cluster_id = row["duplicate_cluster_id"]
+        if cluster_id:
+            rep = rep_by_cluster.get(str(cluster_id))
+            if rep and rep[1] != str(row["candidate_id"]):
+                inbound_dups += 1
+
     cluster_members = sum(int(row["members"]) for row in cluster_rows)
     distinct_clusters = len(cluster_rows)
     non_representative = cluster_members - distinct_clusters
-    duplicate_rate = (
+    store_rate = (
         round(non_representative / discovered_total, 4) if discovered_total else 0.0
+    )
+    duplicate_rate = (
+        round(inbound_dups / inbound_total, 4) if inbound_total else 0.0
     )
 
     runs = len(run_rows)
@@ -344,7 +376,11 @@ def pipeline_metrics(
         "duplicate": {
             "clusters": distinct_clusters,
             "non_representative": non_representative,
+            "window_days": 7,
+            "inbound_total": inbound_total,
+            "inbound_dups": inbound_dups,
             "rate": duplicate_rate,
+            "store_rate": store_rate,
         },
         "discovery": {
             "runs": runs,
@@ -426,7 +462,11 @@ def render_pipeline_metrics(metrics: dict[str, Any]) -> str:
         "## Yield / noise",
         f"- Discovered: {discovered['total']} total, "
         f"{discovered['today']} today",
-        f"- Duplicate rate: {duplicate['rate']:.2%} "
+        f"- Duplicate rate (inbound, {duplicate['window_days']}d window): "
+        f"{duplicate['rate']:.2%} "
+        f"({duplicate['inbound_dups']}/{duplicate['inbound_total']} "
+        f"non-rep in window)",
+        f"- Store snapshot: {duplicate['store_rate']:.2%} "
         f"({duplicate['non_representative']} non-rep in "
         f"{duplicate['clusters']} clusters)",
         f"- Core entity coverage: {coverage['core_matched']}/"

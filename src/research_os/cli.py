@@ -252,6 +252,12 @@ def parse_args() -> argparse.Namespace:
         "--min-priority", type=float, help="only candidates at/above this score"
     )
     candidates_list.add_argument("--limit", type=int, default=50)
+    candidates_list.add_argument(
+        "--show-dups",
+        action="store_true",
+        help="show every duplicate-cluster member instead of collapsing "
+        "clusters to one lead row",
+    )
     candidates_show = candidates_commands.add_parser(
         "show", help="show one candidate in detail"
     )
@@ -875,6 +881,7 @@ def main() -> int:
                     tier=args.tier,
                     min_priority=args.min_priority,
                     limit=args.limit,
+                    show_dups=args.show_dups,
                 )
                 print(runtime.render_candidate_list(queue), end="")
                 return 0

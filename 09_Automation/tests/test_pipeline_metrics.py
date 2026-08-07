@@ -294,6 +294,46 @@ class PipelineMetricsTests(unittest.TestCase):
             self.assertEqual(1, metrics["triage"]["total"])
             self.assertEqual(1.0, metrics["triage"]["dismissed_rate"])
 
+    def test_pipeline_metrics_duplicate_rate_is_inbound_window(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            db_path = candidate_db.candidate_db_path(root)
+            specs = [
+                ("CND-0000", "2026-08-01T00:00:00Z", "CLU-y"),  # rep, outside window
+                ("CND-0001", "2026-08-06T00:00:00Z", "CLU-y"),  # in-window non-rep
+                ("CND-0002", "2026-08-08T00:00:00Z", "CLU-y"),  # in-window non-rep
+                ("CND-0003", "2026-08-07T00:00:00Z", None),  # in-window singleton
+            ]
+            for candidate_id, discovered_at, cluster_id in specs:
+                candidate_db.insert_candidates(
+                    db_path,
+                    [
+                        {
+                            "candidate_id": candidate_id,
+                            "published_at_proposal": None,
+                            "title": f"Title {candidate_id}",
+                            "canonical_url": f"https://example.com/{candidate_id}",
+                            "publisher": "P",
+                            "content_fingerprint": f"fp-{candidate_id}",
+                            "language": None,
+                            "duplicate_cluster_id": cluster_id,
+                        }
+                    ],
+                    "CHN-test",
+                    discovered_at,
+                )
+            # window 2026-08-04..2026-08-10: 3 inbound, 2 are cluster non-reps
+            duplicate = pipeline_metrics(root, "2026-08-10")["duplicate"]
+            self.assertEqual(3, duplicate["inbound_total"])
+            self.assertEqual(2, duplicate["inbound_dups"])
+            self.assertEqual(round(2 / 3, 4), duplicate["rate"])
+            # store: 4 candidates, CLU-y has 3 members -> 2 non-reps
+            self.assertEqual(0.5, duplicate["store_rate"])
+            # window with no inbound -> rate 0
+            empty = pipeline_metrics(root, "2026-08-15")["duplicate"]
+            self.assertEqual(0, empty["inbound_total"])
+            self.assertEqual(0.0, empty["rate"])
+
     def test_pipeline_metrics_empty_store(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = self._make_root(temp)

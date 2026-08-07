@@ -303,6 +303,57 @@ class CandidateQueueTests(unittest.TestCase):
                 " ".join(variant["reason_codes"]),
             )
 
+    def test_queue_collapses_duplicate_clusters_to_lead(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(
+                root,
+                [
+                    "Test Co HBM Production",
+                    "Test Co HBM Production",
+                    "Test Co HBM Production",
+                    "Other Announcement",
+                ],
+                discovered_at="2026-08-06T00:00:00Z",
+                cluster_ids=["CLU-x", "CLU-x", "CLU-x", None],
+            )
+            enrich_candidates(root, apply=True)
+            collapsed = queue_rows(root)
+            self.assertEqual(2, len(collapsed))
+            by_id = {row["candidate_id"]: row for row in collapsed}
+            self.assertEqual(2, by_id["CND-0000"]["dup_count"])
+            self.assertTrue(by_id["CND-0000"]["is_representative"])
+            self.assertEqual(0, by_id["CND-0003"]["dup_count"])
+            self.assertTrue(by_id["CND-0003"]["is_representative"])
+            expanded = queue_rows(root, show_dups=True)
+            self.assertEqual(4, len(expanded))
+            rep = {row["candidate_id"]: row["is_representative"] for row in expanded}
+            self.assertTrue(rep["CND-0000"])
+            self.assertFalse(rep["CND-0001"])
+            self.assertFalse(rep["CND-0002"])
+            self.assertTrue(rep["CND-0003"])
+
+    def test_queue_marks_already_sourced_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            # the fixture repo already has SRC-20260729-001 with
+            # canonical_url "https://example.com"; make a candidate repeat it.
+            self._insert(root, ["Duplicate of existing source"])
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                connection.execute(
+                    "UPDATE candidates SET canonical_url = ? "
+                    "WHERE candidate_id = 'CND-0000'",
+                    ("https://example.com",),
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            rows = queue_rows(root)
+            self.assertEqual(1, len(rows))
+            self.assertEqual("SRC-20260729-001", rows[0]["existing_source_id"])
+            self.assertTrue(rows[0]["already_sourced"])
+
 
 if __name__ == "__main__":
     unittest.main()
