@@ -17,10 +17,10 @@
       "event_id": "EVT-20260225-034",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "ASML 20-F is DESCRIPTIVE not a change event; all-positive inference over-claims. Low materiality sample."
+      "notes": "ASML 20-F is DESCRIPTIVE (low materiality); directions now honest mixed after title-only scoring (no all-positive over-claim)."
     },
     {
       "event_id": "EVT-20260302-041",
@@ -80,19 +80,19 @@
       "event_id": "EVT-20260429-046",
       "direct_precision": false,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "Baidu DeepSeek-V4 is a distribution/demand event; supply/negative mislabels it and the negative direction is unsupported."
+      "notes": "Baidu DeepSeek-V4 is a distribution/demand event; target still mislabeled as supply, but directions are now honest mixed (negative misfire fixed)."
     },
     {
       "event_id": "EVT-20260520-032",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "Long lead times = supply CONSTRAINT (negative), but inference said supply positive (capacity commitments keyword). Mixed-signal event, direction wrong."
+      "notes": "Long lead times: supply now honest mixed (was wrongly positive); cost/negative from DEPENDS_ON default is defensible for lead-time pressure."
     },
     {
       "event_id": "EVT-20260520-038",
@@ -144,7 +144,7 @@
     "n": 15,
     "direct_precision": 0.9333333333333333,
     "mechanism_backed": 1.0,
-    "direction_ok": 0.5333333333333333,
+    "direction_ok": 0.7333333333333333,
     "horizon_ok": 0.7333333333333333,
     "contrary_omissions": 2,
     "gate_direct_precision": true,

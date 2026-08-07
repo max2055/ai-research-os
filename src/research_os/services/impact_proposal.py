@@ -46,7 +46,7 @@ _POSITIVE_RE = re.compile(
 _NEGATIVE_RE = re.compile(
     r"(下滑|下降|降低|短缺|制约|延迟|中断|放缓|亏损|削减|负增长|decline|decreased|"
     r"reduce|reduced|shortage|constraint|delay|cut|lost|loss|negative|fail|"
-    r"contract price decline)",
+    r"long lead time|long lead times|backlog|contract price decline)",
     re.IGNORECASE,
 )
 
@@ -139,10 +139,16 @@ def propose_direct_impacts(
 
 
 def _infer_direction(event: ResearchObject, default: str) -> str:
-    """Override a "mixed" default with a clear event-content valence."""
+    """Override a "mixed" default with a clear event-content valence.
+
+    Scores the event TITLE only: research-authored titles capture the event's
+    essence and are free of the boilerplate risk-factor language that pollutes
+    body text (e.g. 10-K/8-K filings), which misfired direction inference on
+    deployment/availability events.
+    """
     if default != "mixed":
         return default
-    text = f"{event.metadata.get('title', '')} {event.body}"
+    text = str(event.metadata.get("title", ""))
     pos = len(_POSITIVE_RE.findall(text))
     neg = len(_NEGATIVE_RE.findall(text))
     if pos - neg >= 1:
