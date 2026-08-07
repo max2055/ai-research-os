@@ -84,7 +84,7 @@ Candidate 数据量预计远大于正式研究对象，因此不能把每条候�
 |---|---|---:|---|---|---|
 | 0 | 产品重定义与治理准备 | 1–2 周 | Charter、RCP、边界获批 | v0.2 基线 | ✅ 完成（2026-08-05）|
 | 1 | AI Taxonomy、Ontology 与 Universe | 3–5 周 | 8–10 板块、30–50 Core Company、关系可验证 | 阶段 0 | ✅ 完成（2026-08-06）|
-| 2 | 每日情报发现与 Candidate Pipeline | 5–7 周 | 连续 14 天稳定运行、无静默丢失、可控噪声 | 阶段 1 | ⬜ proposed |
+| 2 | 每日情报发现与 Candidate Pipeline | 5–7 周 | 连续稳定运行、无静默丢失、可控噪声（触发条件见 B-026 §触发条件，非固定日期，见 D-CALENDAR-DECOUPLE）| 阶段 1 | ⬜ in_progress |
 | 3 | Impact Assertion 与跨板块传导 | 4–6 周 | 20 个真实事件的人工影响路径 Gate | 阶段 1–2 | ⬜ proposed |
 | 4 | Analysis Mode Framework | 4–6 周 | 6 个模式、同证据可复现、差异可解释 | 阶段 3 | ⬜ proposed |
 | 5 | Forecast、Valuation 与 Recommendation Draft | 5–7 周 | 可解析预测、三情景、人工建议 Gate | 阶段 4 | ⬜ proposed |

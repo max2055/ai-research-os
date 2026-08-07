@@ -1,7 +1,7 @@
 # B-026 Phase 2 Acceptance Checklist
 
-状态：`in_progress`（14-day Pilot 结束后由 max 判定）
-开始：2026-08-06；目标完成：2026-08-20（Day 14）
+状态：`in_progress`（满足 §触发条件 后由 max 判定）
+开始：2026-08-06；无固定日历截止（触发条件见 §触发条件）
 
 每个 Gate 项映射到证据源；除注明"人工"外均由 CLI/自动化产生。
 
@@ -20,9 +20,23 @@
 | G9 | 每日 triage 中位耗时 ≤45min | 每日记录耗时 | ⬜ | 人工 |
 | G10 | 失败与许可限制写入 Known Limitations | Known_Limitations_v0.2.md | ⬜ | github/SEC 缺口已记 |
 
+## 触发条件（取代固定 Day 14 日期）
+
+验收触发以状态与证据判定，不依赖日历日期（治理依据：Master Backlog 决策 `D-CALENDAR-DECOUPLE`，2026-08-07）。全部满足后即可随时验收，含早于 2026-08-20。
+
+1. **G1/G6/G7 已达成**：20/20 channels、96/20 promoted、提升 Source 资产/hash 检查 OK。
+2. **G2/G3 稳定性证据**：累计 ≥N 轮连续干净调度（launchd 每 6h 一轮，约 4 轮/日；原 14 天 ≈ 56 轮为默认 N，可在验收时由 max 复核并记录实际轮次），期间：
+   - 无未修复 job 失败（失败须明确记录并在后续轮次修复）；
+   - 无 stale/never-run Channel 未处理；
+   - 每日 brief 正常生成。
+   任何未修复失败从修复后重新累计。
+3. **G4 重复入队率**：最近 7 天滚动窗口持续 <15%（`pipeline metrics` duplicate rate，inbound-skip 生效后口径）。
+4. **G5/G9 人工项**：研究者按日常 triage 记录判定（Top-20 相关性 ≥75%、中位耗时 ≤45min），不设日期。
+5. 以上全部满足即运行下方判定流程完成 WP-240 验收。
+
 ## 判定流程
 
-1. Day 14（或提前满足全部条件）跑：
+1. 当 §触发条件 全部满足时（不设固定日期）跑：
    ```bash
    research-os pilot status --since 2026-08-06
    research-os pipeline metrics --as-of $(date +%F)

@@ -39,7 +39,7 @@ WP-000 Baseline
 | WP | 包含任务 | 交付 | 依赖 | 状态 |
 |---|---|---|---|---|
 | WP-000 | baseline audit | v0.2 commit/object/test/release snapshot | 无 | proposed |
-| WP-001 | v0.2 cadence completion | 真实 Weekly/Monthly/final decision | 日期和研究者 | blocked until dates |
+| WP-001 | v0.2 cadence completion | 真实 Weekly/Monthly/final decision | 研究者（2 期 cadence 记录 + 最终发布决定；日期不再阻塞，见 D-CALENDAR-DECOUPLE）| blocked until researcher decision |
 | WP-010 | A-001 | RCP-v03-001 产品/Candidate 边界 | WP-000 | proposed |
 | WP-011 | charter decisions | Pilot、Core 上限、Sector ID、Recommendation ceiling | WP-010 | proposed |
 | WP-012 | RCP schedule | RCP-v03-002～010 owner/date | WP-010 | proposed |
@@ -342,4 +342,24 @@ Revisit trigger/date:
 - Consequences: Metadata_Schema_v0.3_Proposal 转 authoritative；v0.2 Metadata_Schema 仍存作历史参考；WP-102 起进入代码实现（Pydantic schemas + validator + ID parser + index + migration）。不创建任何实体（实体创建属后续 WP-120，需人工席位审）。
 - Reviewer: max
 - Revisit trigger/date: WP-102 实现遇架构问题；任一新实体 Schema 字段实施遇阻时提修改 RCP。
+
+#### D-CALENDAR-DECOUPLE 开发进度与日历解耦（2026-08-07）
+
+- Decision ID: D-CALENDAR-DECOUPLE
+- Date: 2026-08-07
+- Question: 开发进度是否应被具体时间/日期阻塞（Pilot Day 14 = 2026-08-20、v0.2 Weekly/Monthly cadence、RCP 排期"到点"）？
+- Options considered: A) 维持日历门（到期再判定，日期即阻塞）；B) 门改以状态与证据判定，日期仅作记录（推荐）；C) 完全无门。
+- Decision: 采用 B。进度门改以依赖就绪与证据质量判定，日期不再作为阻塞条件：
+  1. **B-026 / WP-240 Pilot 验收**：触发从"Day 14（2026-08-20）"改为"G1–G10 全部满足 + 稳定性证据达最小连续干净轮次"（`Phase_Acceptance_B026.md` §触发条件）。全部满足即可随时验收，含早于 2026-08-20。
+  2. **WP-001 v0.2 发布决定**：不再以 Weekly/Monthly 日期为阻塞；release check 达成 18/18 即进入最终发布决定。cadence 记录仍按真实工作产出，但发布判定看状态不看日历。
+  3. **RCP-v03-006~010 排期（D9 的"对应阶段开始前"）**：以依赖就绪/前置 Gate 达成为触发，不由日历日期决定。
+  4. **真时间依赖保留**：仅 WP-530 预测自然到期解析（E-022~023）保持真实时间依赖，不得用回填或合成 outcome 提前完成——该依赖是观测真实世界结果，与本决定不冲突。
+  5. **后继阶段**：Phase 3–6 及未来 Pilot 的验收 Gate 沿用同一"状态触发"语义，在其规划时明确，不再写固定日期。
+- Reason: 进度应由依赖就绪与证据质量决定；固定日期会不必要地阻塞已完成工程的状态推进（Phase 2 全部工程 WP completed 却卡 8-20）。稳定性证据以"轮次"而非"自然日"计量，观察强度不降。
+- Evidence/benchmark: Phase 2 工程 WP（200/201/210/220/230/231/232）全部 completed；B-026 Day-2 已 G1/G6/G7 达成（20/20 channels、96/20 promoted）。
+- Consequences: 本决定取代 Roadmap §4 Phase 2 Gate"连续 14 天稳定运行"与 §9 相关日期语义；B-026 验收可早于 8-20；WP-001 解日期阻塞。实施载体为 `Phase_Acceptance_B026.md` §触发条件。
+- Migration: 无数据迁移；仅 Gate 触发语义变更。
+- Rollback: 撤销本条即恢复日历门（不涉及数据）。
+- Reviewer: max
+- Revisit trigger/date: 任一 Gate 触发条件实施遇阻，或研究者认为稳定性证据强度不足时复核。
 

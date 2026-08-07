@@ -309,7 +309,7 @@ Candidate ID 可为 DB-local UUID/ULID；一旦提升必须记录永久 Source I
 - Daily Brief 分区；
 - scheduler 时区和 missed run。
 
-### 真实 14 天 Gate
+### 真实运行 Gate（无固定日期；触发条件见 B-026 §触发条件）
 
 - 至少 20 个 reviewed/enabled Channel；
 - 每日任务按计划完成或留下明确失败；
