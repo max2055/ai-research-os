@@ -49,3 +49,99 @@
 | SRC-20260806-054 | TrendForce: contract prices rise rapidly, 1Q26 DRAM industry revenue up 81% QoQ | report | TrendForce | B | processed | reviewed |
 | SRC-20260806-055 | 阿里云百炼 Token Plan 优化升级：Qwen3.8-Max 首发尝鲜、上新 deepseek-v4-flash | documentation | 阿里云开发者社区 | B | processed | reviewed |
 | SRC-20260806-056 | 百度千帆 Day 0 适配提供 DeepSeek-V4 预览版 API 服务 | documentation | 百度千帆 (qianfan.cloud.baidu.com) | B | processed | reviewed |
+| SRC-20260806-057 | 10-Q filing 2026-04-30 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-058 | 10-K filing 2026-02-06 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-059 | 10-Q filing 2025-10-31 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-060 | 10-Q filing 2025-08-01 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-061 | 10-Q filing 2026-07-30 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-062 | 10-Q filing 2026-04-30 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-063 | 10-K filing 2026-01-29 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-064 | 10-Q filing 2025-10-30 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-065 | 10-Q filing 2025-07-31 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-066 | 10-Q filing 2025-05-01 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-067 | 10-Q filing 2026-06-25 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-068 | 10-Q filing 2026-03-19 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-069 | 10-Q filing 2025-12-18 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-070 | 10-K filing 2025-10-03 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-071 | 10-Q filing 2025-06-26 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-072 | 10-Q filing 2025-03-21 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-073 | 10-K filing 2026-07-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-074 | 10-Q filing 2026-01-28 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-075 | 10-Q filing 2025-10-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-076 | 10-K filing 2025-07-30 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-077 | 10-Q filing 2025-04-30 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-078 | 10-Q filing 2025-01-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-079 | 10-K filing 2026-02-25 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-080 | 10-Q filing 2025-11-19 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-081 | 10-Q filing 2025-08-27 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-082 | 10-Q filing 2025-05-28 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-083 | 8-K filing 2026-02-27 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-084 | 8-K filing 2026-06-10 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-085 | 8-K filing 2025-04-30 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-086 | 8-K filing 2025-07-30 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-087 | 8-K filing 2025-10-29 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-088 | 8-K filing 2026-01-28 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-089 | 8-K filing 2026-04-29 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-090 | 8-K filing 2026-07-29 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-091 | 8-K filing 2025-04-29 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-092 | 8-K filing 2025-06-25 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-093 | 8-K filing 2025-08-11 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-094 | 8-K filing 2025-09-23 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-095 | 8-K filing 2025-12-17 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-096 | 8-K filing 2026-03-18 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-097 | 8-K filing 2026-06-24 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-098 | 8-K filing 2025-01-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-099 | 8-K filing 2025-04-30 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-100 | 8-K filing 2025-07-30 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-101 | 8-K filing 2025-10-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-102 | 8-K filing 2026-01-28 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-103 | 8-K filing 2026-04-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-104 | 8-K filing 2026-07-29 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-105 | 8-K filing 2025-05-28 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-106 | 8-K filing 2025-08-27 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-107 | 8-K filing 2025-11-19 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-108 | 8-K filing 2026-02-25 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-109 | 8-K filing 2025-11-20 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-110 | 8-K filing 2026-03-13 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-111 | 8-K filing 2026-03-16 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-112 | 8-K filing 2026-04-14 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-113 | 8-K filing 2026-06-12 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-114 | 8-K filing 2026-07-09 | report | AMAZON COM INC | A | captured | pending |
+| SRC-20260806-115 | 8-K filing 2025-11-03 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-116 | 8-K filing 2025-12-12 | report | Meta Platforms, Inc. | A | captured | pending |
+| SRC-20260806-117 | 8-K filing 2025-09-30 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-118 | 8-K filing 2026-06-05 | report | MICROSOFT CORP | A | captured | pending |
+| SRC-20260806-119 | 8-K filing 2025-06-12 | report | MICRON TECHNOLOGY INC | A | captured | pending |
+| SRC-20260806-120 | 8-K filing 2025-04-15 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-121 | 8-K filing 2026-06-18 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-122 | 8-K filing 2025-08-05 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-123 | 8-K filing 2026-01-23 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-124 | 8-K filing 2026-03-06 | report | NVIDIA CORP | A | captured | pending |
+| SRC-20260806-125 | v2.53.0 | other | openai/openai-python | A | captured | pending |
+| SRC-20260806-126 | v0.2.0 | other | meta-llama/llama-models | A | captured | pending |
+| SRC-20260806-127 | SparseDitto: Customizing GPU Kernels for Different Sparsity Patterns with LLM-Based Agentic System | paper | arXiv | A | captured | pending |
+| SRC-20260806-128 | MCHA: A Memory-Centric Hierarchical Architecture for Parallel-Sequential Computing | paper | arXiv | B | captured | pending |
+| SRC-20260806-129 | AFD-Ledger: Deployment Provisioning for Attention--FFN Disaggregation | paper | arXiv | B | captured | pending |
+| SRC-20260806-130 | AsymSpec: Efficient Cloud-Edge Speculative Decoding over Asymmetric Networks | paper | arXiv | B | captured | pending |
+| SRC-20260806-131 | CommBench: Can LLMs Write Correct and Efficient GPU Communication Code? | paper | arXiv | B | captured | pending |
+| SRC-20260806-132 | DiffPower: GPU-Accelerated Differentiable Switching Power Analysis and Optimization | paper | arXiv | B | captured | pending |
+| SRC-20260806-133 | Evaluating MFU as a Proxy for GPU Power for Energy-Aware Simulation of LLM Training | paper | arXiv | B | captured | pending |
+| SRC-20260806-134 | GPU-Resident CUDA Acceleration for OCUDU 5G PHY and O-RAN Fronthaul: Architecture and Preliminary Performance | paper | arXiv | B | captured | pending |
+| SRC-20260806-135 | RAC: Reference-Aware Activation Compression for Communication-Efficient Split LLM Inference | paper | arXiv | B | captured | pending |
+| SRC-20260806-136 | TAOT: Topology-Aware Optimal Transport for Dynamic Expert Replica Placement in MoE Training | paper | arXiv | B | captured | pending |
+| SRC-20260806-137 | When Does Disaggregation Pay? Simulating Prefill--Decode--Attention--FFN Specialization for Agentic LLM Inference | paper | arXiv | B | captured | pending |
+| SRC-20260806-138 | A Centralized Performance Monitoring Architecture for Heterogeneous Multicore SoCs | paper | arXiv | B | captured | pending |
+| SRC-20260806-139 | A Systolic Array Architecture for Nonlinear Activation Functions and Softmax Computation using Chebyshev Polynomials | paper | arXiv | B | captured | pending |
+| SRC-20260806-140 | Beyond Peak TOPS/W: A System-Level Perspective on Hybrid Digital, Analogue and Neuromorphic Computing | paper | arXiv | B | captured | pending |
+| SRC-20260806-141 | CAMTA: A Reconfigurable Multi-Region Activation Unit for Nonlinear Function Approximation | paper | arXiv | B | captured | pending |
+| SRC-20260806-142 | ComFuse: Fusing Complex Memory-Intensive Subgraphs with Compute-Intensive Kernels For Modern GPU Architectures | paper | arXiv | B | captured | pending |
+| SRC-20260806-143 | Deltoris: Enabling Real-time VLA Inference in Embodied AI via Bit-level Sparsity and Speculative Inference | paper | arXiv | B | captured | pending |
+| SRC-20260806-144 | Fovea: Physical-Implication-Aware Wafer-Scale DSE with Decision-Domain-Guided Cross-Fidelity Refinement | paper | arXiv | B | captured | pending |
+| SRC-20260806-145 | Hardware Design and Security in the Era of Chiplets and LLMs | paper | arXiv | B | captured | pending |
+| SRC-20260806-146 | Heterogeneity-Aware Microscaling for Efficient Low-Bit LLM Inference | paper | arXiv | B | captured | pending |
+| SRC-20260806-147 | Heterogeneous LLM Serving with General-Purpose Processing-Near-Memory for Retrieval-Based Sparse Attention | paper | arXiv | B | captured | pending |
+| SRC-20260806-148 | Interpolation of Non-Linear Functions for LLMs using Partial Reconfiguration in FPGAs | paper | arXiv | B | captured | pending |
+| SRC-20260806-149 | LACE: Large Language Model Aided Multi-Agent Framework for Agile RISC-V Instruction Extension | paper | arXiv | B | captured | pending |
+| SRC-20260806-150 | LowRank-SSM: Hardware-Software Co-Design for Rank-Reduced Mamba Acceleration on FPGA | paper | arXiv | B | captured | pending |
+| SRC-20260806-151 | On Design Principles for Efficient Heterogeneous DRAM-PIM-GPU Systems | paper | arXiv | B | captured | pending |
+| SRC-20260806-152 | Unified Lookup-Table Inference with Signed-Digit K/V Caches for Ternary LLMs | paper | arXiv | B | captured | pending |
