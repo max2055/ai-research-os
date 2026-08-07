@@ -317,9 +317,28 @@ def parse_args() -> argparse.Namespace:
         help="backfill entity/sector/score proposals for unscored candidates",
     )
     candidates_enrich.add_argument("--apply", action="store_true")
-    impact = subparsers.add_parser("impact", help="show ontology relationships")
-    impact.add_argument("--id", required=True)
-    impact.add_argument("--depth", type=int, default=1)
+    impact = subparsers.add_parser("impact", help="Impact Assertions (C-014)")
+    impact_commands = impact.add_subparsers(dest="impact_command", required=True)
+    impact_graph = impact_commands.add_parser(
+        "graph", help="show ontology relationships"
+    )
+    impact_graph.add_argument("--id", required=True)
+    impact_graph.add_argument("--depth", type=int, default=1)
+    impact_propose = impact_commands.add_parser(
+        "propose",
+        help="preview/create pending Impact Assertions from a reviewed Event",
+    )
+    impact_propose.add_argument("--event", required=True)
+    impact_propose.add_argument("--date", default=date.today().isoformat())
+    impact_propose.add_argument("--apply", action="store_true")
+    impact_queue = impact_commands.add_parser(
+        "queue", help="list Impact Assertions by review status"
+    )
+    impact_queue.add_argument(
+        "--status",
+        choices=("pending", "reviewed", "rejected", "superseded"),
+        default="pending",
+    )
     subparsers.add_parser("scale", help="assess scale triggers and storage mode")
 
     project = subparsers.add_parser("project", help="manage research Projects")
@@ -354,6 +373,7 @@ def parse_args() -> argparse.Namespace:
             "report",
             "sector",
             "ontology_assertion",
+            "impact_assertion",
             "product",
             "security",
             "source_channel",
@@ -1419,15 +1439,45 @@ def main() -> int:
         print(runtime.render_scale_assessment(args.root.resolve()), end="")
         return 0
     if args.command == "impact":
-        try:
-            print(
-                runtime.render_impact(args.root.resolve(), args.id, args.depth),
-                end="",
-            )
-            return 0
-        except (OSError, TransactionError, ValueError) as exc:
-            print(f"ERROR: {exc}")
-            return 2
+        if args.impact_command == "graph":
+            try:
+                print(
+                    runtime.render_impact(args.root.resolve(), args.id, args.depth),
+                    end="",
+                )
+                return 0
+            except (OSError, TransactionError, ValueError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
+        if args.impact_command == "propose":
+            try:
+                print(
+                    runtime.prepare_impact_batch(
+                        args.root.resolve(),
+                        event_id=args.event,
+                        created_at=args.date,
+                        apply=args.apply,
+                    ),
+                    end="",
+                )
+                return 0
+            except (OSError, TransactionError, ValueError, FileExistsError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
+        if args.impact_command == "queue":
+            try:
+                print(
+                    runtime.render_review_queue(
+                        args.root.resolve(),
+                        object_type="impact_assertion",
+                        review_status=args.status,
+                    ),
+                    end="",
+                )
+                return 0
+            except (OSError, TransactionError, ValueError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
     if args.command == "export":
         try:
             root = args.root.resolve()

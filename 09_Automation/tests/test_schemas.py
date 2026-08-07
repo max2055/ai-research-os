@@ -41,6 +41,9 @@ class SchemaTests(unittest.TestCase):
         # "job" is asserted as a floor, not an exact count: launchd adds Job
         # Run records every 6h, so the exact value drifts every round.
         job_count = counts.pop("job", 0)
+        # "impact_assertion" is a floor too: max materializes pending IMPs from
+        # C-004 proposals as the C-018 loop runs, so the exact value grows.
+        impact_count = counts.pop("impact_assertion", 0)
         self.assertEqual(
             {
                 "action": 12,
@@ -60,6 +63,7 @@ class SchemaTests(unittest.TestCase):
             counts,
         )
         self.assertGreaterEqual(job_count, 40)
+        self.assertGreaterEqual(impact_count, 4)
 
     def test_noop_round_trip_is_byte_exact_for_all_objects(self) -> None:
         for document in load_documents(ROOT):

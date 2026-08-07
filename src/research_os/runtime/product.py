@@ -42,6 +42,24 @@ from research_os.services.drafts import (
     split_values,
     write_new_file,
 )
+from research_os.services.impact_draft import (
+    apply_impact_draft,
+    prepare_impact_batch,
+    prepare_impact_draft,
+)
+from research_os.services.impact_gate import (
+    gate_metrics,
+    gate_metrics_from_reviews,
+    gate_sample,
+    render_gate_packet,
+)
+from research_os.services.impact_path import (
+    dedup_paths,
+    detect_contradictions,
+    expand_impact_paths,
+    path_confidence,
+)
+from research_os.services.impact_proposal import propose_direct_impacts
 from research_os.services.indexing import (
     apply_indexes,
     index_drift,
@@ -122,11 +140,15 @@ __all__ = [
     "apply_event_draft",
     "apply_company_update_proposal",
     "apply_indexes",
+    "apply_impact_draft",
     "apply_review",
     "action_rows",
     "close_action",
     "brief_path",
     "daily_brief",
+    "dedup_paths",
+    "detect_contradictions",
+    "expand_impact_paths",
     "render_daily_brief",
     "write_daily_brief",
     "capture_existing_source",
@@ -134,6 +156,9 @@ __all__ = [
     "confirm_published_date",
     "count_by_type",
     "enrich_candidates",
+    "gate_metrics",
+    "gate_metrics_from_reviews",
+    "gate_sample",
     "AlreadyPromoted",
     "commit_promote",
     "prepare_promote",
@@ -151,6 +176,10 @@ __all__ = [
     "render_pilot_status",
     "prepare_action_draft",
     "prepare_assertion_draft",
+    "path_confidence",
+    "prepare_impact_batch",
+    "prepare_impact_draft",
+    "propose_direct_impacts",
     "prepare_company_update_proposal",
     "prepare_entity_draft",
     "prepare_event_draft",
@@ -180,6 +209,7 @@ __all__ = [
     "queue_show",
     "render_indexes",
     "render_impact",
+    "render_gate_packet",
     "render_metrics_comparison",
     "render_metrics_markdown",
     "render_universe_coverage",

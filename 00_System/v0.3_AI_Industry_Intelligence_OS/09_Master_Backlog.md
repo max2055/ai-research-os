@@ -121,6 +121,15 @@ EVT-20260225-034 → 4 提案（SUPPLIES→supply、ENABLES→technology）。25
 
 WP-310 close-out（2026-08-07）：C-006 `services/impact_path.py expand_impact_paths`（BFS 路径展开：hop1=direct，hop2+ 经 reviewed+as-of 有效 REL 前向边+对称反向边，per-path 防环、fan-out 上限、剪枝原因记录 pruned；**治理门：max_depth 默认 1=direct-only，多跳机制可测可调但不激活，待 C-018 Field Gate 后由 max 放行 2-3**）+ C-007 `is_valid_as_of`（valid_from/valid_to 窗口）+ C-008 `detect_contradictions`（同 target 正负/多 horizon 并存可见，不净额合并）+ C-009 `dedup_paths`（同序列同 REL 折叠，variant_count）+ C-010 `path_confidence`（weakest-link min，不乘，任一跳 unknown → None）。真实冒烟：EVT-20260225-034 → 4 direct + 10 两跳路径（EVT→COM-asml→COM-tsmc→COM-nvidia/AMD 传导链）。285 tests 全绿。**Next：WP-311（C-011 impact spec 契约 / C-012 review workflow）或 WP-312（C-013~014 index/CLI）。**
 
+C-018 最小闭环 enablement（2026-08-07）：打通「物化 → review → Gate 评估」闭环，C-018 现在可执行。
+- **C-011 物化**：`services/impact_draft.py`（prepare/apply impact draft，镜像 REL 先例；extra 字段 relation_id/predicate 追踪）。
+- **C-012 review**：已验证可用（impact_assertion 已在 REVIEWABLE_TYPES，`review apply --targets IMP-x` 原子写 REV-* + 翻转 status），无需改 review 系统。
+- **C-014 impact CLI**：`impact` 叶→组（`impact graph` 保留旧行为 / `impact propose --event [--apply]` / `impact queue`）；`review --type` 加 impact_assertion。
+- **C-018 工具**：`services/impact_gate.py`（gate_sample §11 分桶 + 缺口诚实报告 / render_gate_packet / gate_metrics §11 阈值 / gate_metrics_from_reviews）。
+- 真实演示：EVT-20260225-034 → 4 个 pending IMP 落盘（IMP-20260807-001..004），validate 0 error；review dry-run 证明 pending→reviewed 翻转；评估包 `05_Research/Reviews/Field_Gate_20_Impact_Packet.md` 落盘（11 events 采样，**缺口：pricing 0/3、financial-capex 0/2、regulation-other 0/2、product-technology 2/3、customer-demand 2/3**——当前 48 reviewed Event 不足以填满 §11 组成，需补这些类型的事件或说明样本偏差）。
+- 修 bug：`prepare_impact_batch` 原先全量算 ID 后统一写盘致 ID 撞车，改为逐提案 prepare+apply + 已存在跳过。
+- 299 tests 全绿。**未完成（留待 WP-311/312/320）：C-011 完整 spec 契约模板、C-013 index、C-015 UI、C-016 report 集成、C-017 metrics 全量、20-event 人工 judgment（max 用评估包开始）。多跳仍待 C-018 通过后由 max 放行。**
+
 ## 7. Wave 4：Analysis Modes
 
 | WP | 包含任务 | 主要交付 | 状态 |
