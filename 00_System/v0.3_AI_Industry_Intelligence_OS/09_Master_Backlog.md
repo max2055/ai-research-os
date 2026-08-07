@@ -171,7 +171,8 @@ WP-530 不能用回填或合成 outcome 提前完成。
 - 取消任务保留 ID 和理由；
 - 任务拆分后原 ID 变 parent，不复用；
 - 每次 Weekly review 更新完成、阻断、风险、coverage 和下周 WP；
-- 每次 Monthly review评估是否扩大 Universe 或改变存储，不由 Agent 自动决定。
+- 每次 Monthly review评估是否扩大 Universe 或改变存储，不由 Agent 自动决定；
+- 每条 RCP 批准需同步 `05_Research/Reviews/Rule_Change_Log.md` 汇总行（Date/Target/Decision/Summary/Validation 齐备），Backlog §13 记决策细节；v0.3 曾只有 §13 无汇总，001–006 已补录。
 
 ## 12. 全局风险登记
 
