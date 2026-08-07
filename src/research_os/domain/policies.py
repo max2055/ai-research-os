@@ -87,6 +87,88 @@ DEFAULT_IMPACT_DIRECTION = {
     "PRODUCES": "positive",
     "USES": "mixed",
 }
+
+# Full predicate -> impact_type allowlist (C-003, machine projection of
+# IMPACT_RULE_MAP.md). value = (default_direction, conditional). Conditional
+# entries require an explicit mechanism/human confirmation and are NOT emitted
+# automatically by C-004 (e.g. OWNS->capex, CONSTRAINS->regulation). The rule
+# map document is authoritative; these constants must not drift without updating
+# it. Unknown predicate/impact_type combinations never generate Impact.
+IMPACT_RULE_MAP: dict[str, dict[str, tuple[str, bool]]] = {
+    "SUPPLIES": {
+        "supply": ("mixed", False),
+        "capacity": ("positive", False),
+        "cost": ("mixed", False),
+        "price": ("mixed", False),
+        "capex": ("uncertain", True),
+    },
+    "CUSTOMER_OF": {
+        "demand": ("positive", False),
+        "revenue": ("positive", False),
+        "capex": ("uncertain", True),
+    },
+    "COMPETES_WITH": {
+        "competition": ("mixed", False),
+        "price": ("negative", False),
+        "margin": ("negative", False),
+        "revenue": ("negative", False),
+    },
+    "SUBSTITUTES": {
+        "competition": ("mixed", False),
+        "demand": ("negative", False),
+        "revenue": ("negative", False),
+        "price": ("negative", False),
+    },
+    "COMPLEMENTS": {
+        "demand": ("positive", False),
+        "revenue": ("positive", False),
+        "technology": ("positive", False),
+    },
+    "DEPENDS_ON": {
+        "supply": ("mixed", False),
+        "cost": ("negative", False),
+        "technology": ("uncertain", True),
+    },
+    "ENABLES": {
+        "technology": ("positive", False),
+        "capacity": ("positive", False),
+        "demand": ("positive", False),
+        "revenue": ("uncertain", True),
+    },
+    "CONSTRAINS": {
+        "capacity": ("negative", False),
+        "supply": ("negative", False),
+        "technology": ("negative", False),
+        "regulation": ("uncertain", True),
+        "price": ("uncertain", True),
+    },
+    "OWNS": {
+        "capex": ("uncertain", True),
+        "technology": ("uncertain", True),
+        "revenue": ("uncertain", True),
+        "valuation": ("uncertain", True),
+    },
+    "PARTNERS_WITH": {
+        "technology": ("positive", False),
+        "supply": ("positive", False),
+        "demand": ("positive", False),
+        "revenue": ("uncertain", True),
+    },
+    "PRODUCES": {
+        "capacity": ("positive", False),
+        "supply": ("positive", False),
+        "technology": ("positive", False),
+        "price": ("mixed", False),
+        "revenue": ("positive", False),
+        "margin": ("uncertain", True),
+    },
+    "USES": {
+        "cost": ("mixed", False),
+        "technology": ("positive", False),
+        "demand": ("uncertain", True),
+        "capacity": ("uncertain", True),
+    },
+}
 REQUIRED_HEADINGS = {
     "event": {
         "Facts",

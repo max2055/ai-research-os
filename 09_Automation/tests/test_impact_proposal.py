@@ -22,13 +22,16 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class _Fake:
-    def __init__(self, object_id: str, object_type: str, metadata: dict) -> None:
+    def __init__(self, object_id: str, object_type: str, metadata: dict,
+                 body: str = "") -> None:
         self.object_id = object_id
         self.object_type = object_type
         self.metadata = metadata
+        self.body = body
 
 
 def _event(**extra: object) -> _Fake:
+    body = str(extra.pop("body", ""))
     meta: dict[str, object] = {
         "id": "EVT-1",
         "type": "event",
@@ -41,12 +44,12 @@ def _event(**extra: object) -> _Fake:
         "event_date": "2026-08-01",
     }
     meta.update(extra)
-    return _Fake("EVT-1", "event", meta)
+    return _Fake("EVT-1", "event", meta, body=body)
 
 
-def _rel(**extra: object) -> _Fake:
+def _rel(rel_id: str = "REL-1", **extra: object) -> _Fake:
     meta: dict[str, object] = {
-        "id": "REL-1",
+        "id": rel_id,
         "type": "ontology_assertion",
         "subject_id": "COM-asml",
         "predicate": "SUPPLIES",
@@ -56,7 +59,7 @@ def _rel(**extra: object) -> _Fake:
         "valid_to": None,
     }
     meta.update(extra)
-    return _Fake("REL-1", "ontology_assertion", meta)
+    return _Fake(rel_id, "ontology_assertion", meta)
 
 
 def _entities() -> list[_Fake]:
@@ -104,11 +107,15 @@ class DirectImpactProposalTests(unittest.TestCase):
 
     def test_proposes_both_event_named_endpoints(self) -> None:
         proposals = propose_direct_impacts(self._objects(), event_id="EVT-1")
-        targets = sorted(p["target_id"] for p in proposals)
+        targets = sorted({p["target_id"] for p in proposals})
         self.assertEqual(["COM-asml", "COM-tsmc"], targets)
         for proposal in proposals:
-            self.assertEqual("supply", proposal["impact_type"])  # SUPPLIES primary
-            self.assertEqual("mixed", proposal["direction"])  # SUPPLIES default
+            # SUPPLIES allows supply/capacity/cost/price (non-conditional).
+            self.assertIn(
+                proposal["impact_type"], {"supply", "capacity", "cost", "price"}
+            )
+            # "ramp" in the event title -> positive valence overrides "mixed".
+            self.assertEqual("positive", proposal["direction"])
             self.assertEqual("unknown", proposal["magnitude"])
             self.assertEqual("unknown", proposal["horizon"])
             self.assertEqual("pending", proposal["review_status"])
@@ -116,11 +123,43 @@ class DirectImpactProposalTests(unittest.TestCase):
             self.assertEqual("EVT-1", proposal["subject_id"])
             self.assertEqual(["EVT-1"], proposal["trigger_event_ids"])
             self.assertEqual(["EVT-1"], proposal["evidence_ids"])
-            self.assertEqual("REL-1", proposal["relation_id"])
             self.assertEqual("SUPPLIES", proposal["predicate"])
             self.assertEqual(0.7, proposal["confidence"])
             self.assertEqual("2026-08-01", proposal["valid_from"])
             self.assertEqual([], validate_mechanism(proposal["mechanism"]))
+
+    def test_proposes_all_non_conditional_allowed_types(self) -> None:
+        proposals = propose_direct_impacts(self._objects(), event_id="EVT-1")
+        types = {p["impact_type"] for p in proposals}
+        self.assertEqual({"supply", "capacity", "cost", "price"}, types)
+
+    def test_dedup_collapses_same_target_type_and_merges_rels(self) -> None:
+        objects = [
+            _event(),
+            _rel("REL-1"),  # COM-a SUPPLIES COM-b
+            _rel("REL-2"),  # COM-a SUPPLIES COM-b (duplicate relation)
+            *_entities(),
+        ]
+        proposals = propose_direct_impacts(objects, event_id="EVT-1")
+        supply = [p for p in proposals if p["impact_type"] == "supply"]
+        self.assertTrue(supply)
+        for proposal in supply:
+            self.assertEqual(["REL-1", "REL-2"], proposal["relation_ids"])
+
+    def test_direction_stays_mixed_without_content_signal(self) -> None:
+        objects = [
+            _event(title="Quarterly report", body=""),  # no valence keywords
+            _rel("REL-1"),
+            *_entities(),
+        ]
+        proposals = propose_direct_impacts(objects, event_id="EVT-1")
+        by_type = {p["impact_type"]: p["direction"] for p in proposals}
+        # Content-neutral event: mixed defaults stay mixed; explicit rule-map
+        # defaults (capacity positive) are respected.
+        self.assertEqual("mixed", by_type["supply"])
+        self.assertEqual("mixed", by_type["cost"])
+        self.assertEqual("mixed", by_type["price"])
+        self.assertEqual("positive", by_type["capacity"])
 
     def test_skips_pending_relation(self) -> None:
         objects = [_event(), _rel(review_status="pending"), *_entities()]
