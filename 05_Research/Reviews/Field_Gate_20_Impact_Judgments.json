@@ -1,24 +1,26 @@
 {
   "generated_at": "2026-08-07",
   "by": "agent (max verifies)",
+  "sample_size": 15,
+  "note": "Refreshed after C-004 improvements (full impact-type proposal + content-direction inference).",
   "judgments": [
     {
       "event_id": "EVT-20240226-043",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "supply/mixed should be positive: HBM3E volume production expands Micron capacity and NVIDIA supply"
+      "notes": "Micron HBM3E volume production for H200: positive supply/capacity/price correct; targets Micron+NVIDIA right."
     },
     {
       "event_id": "EVT-20260225-034",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": true,
+      "direction_ok": false,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "descriptive 20-F, low change-signal; technology/positive reasonable"
+      "notes": "ASML 20-F is DESCRIPTIVE not a change event; all-positive inference over-claims. Low materiality sample."
     },
     {
       "event_id": "EVT-20260302-041",
@@ -27,43 +29,43 @@
       "direction_ok": true,
       "horizon_ok": false,
       "contrary_omitted": false,
-      "notes": "9 proposals redundant; horizon multi_year for committed contracts"
+      "notes": "CoreWeave committed contracts (2030-31): demand/revenue positive right; horizon should be multi_year. 21 proposals noisy but distinct dims."
     },
     {
       "event_id": "EVT-20260302-047",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": true,
+      "direction_ok": false,
       "horizon_ok": true,
       "contrary_omitted": true,
-      "notes": "competitors listed are ALSO customers - contextual/contrary factor omitted"
+      "notes": "Naming competitors is NOT a margin/price/revenue event; those negative proposals over-reach. Competitor-customer duality omitted."
     },
     {
       "event_id": "EVT-20260302-048",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": true,
+      "direction_ok": false,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "capacity/positive correct"
+      "notes": "Deploying GB200/GB300 is positive; cost/negative is a mis-inference from 10-K risk-factor body language."
     },
     {
       "event_id": "EVT-20260316-042",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "HBM4 mass production = positive capacity/supply; default mixed too vague"
+      "notes": "Samsung HBM4 mass production for Vera Rubin: positive capacity/supply correct."
     },
     {
       "event_id": "EVT-20260416-033",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "technology dimension missing (2nm process); supply/mixed understates"
+      "notes": "TSMC 2nm/CoWoS: positive supply/capacity correct; bucketed pricing by SUPPLIES->price is a classification artifact (really product-technology)."
     },
     {
       "event_id": "EVT-20260429-039",
@@ -72,7 +74,7 @@
       "direction_ok": false,
       "horizon_ok": false,
       "contrary_omitted": true,
-      "notes": "headline is margin DOWN to 66% - margin/negative missing; Azure efficiency offset (countervailing) omitted; 12 proposals redundant"
+      "notes": "Headline is Microsoft Cloud margin DOWN to 66%; all-positive proposals miss margin compression (no REL maps to margin). Azure efficiency offset omitted."
     },
     {
       "event_id": "EVT-20260429-046",
@@ -81,7 +83,25 @@
       "direction_ok": false,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "supply mislabels a distribution/demand event; model-layer ontology absent (2nd-Pilot scope)"
+      "notes": "Baidu DeepSeek-V4 is a distribution/demand event; supply/negative mislabels it and the negative direction is unsupported."
+    },
+    {
+      "event_id": "EVT-20260520-032",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": false,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "Long lead times = supply CONSTRAINT (negative), but inference said supply positive (capacity commitments keyword). Mixed-signal event, direction wrong."
+    },
+    {
+      "event_id": "EVT-20260520-038",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "NVIDIA record DC revenue +92%: positive correct; bucketed pricing artifact (really financial)."
     },
     {
       "event_id": "EVT-20260601-044",
@@ -90,7 +110,7 @@
       "direction_ok": false,
       "horizon_ok": false,
       "contrary_omitted": false,
-      "notes": "pricing dimension added (Samsung ASP +93.4% positive, SK hynix HBM price decline negative); C-004 only surfaced competition"
+      "notes": "TrendForce DRAM: per-target price direction lost (Samsung ASP +93.4% positive vs SK hynix HBM price decline negative); event-level inference wrong for both. Hand-crafted IMP-005/006 handle it."
     },
     {
       "event_id": "EVT-20260610-007",
@@ -99,7 +119,16 @@
       "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "capex/financial dimension added; uncertain direction honest"
+      "notes": "Oracle capex IMP-007: FCF -23.7B high AI capex, uncertain direction honest."
+    },
+    {
+      "event_id": "EVT-20260728-036",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "SK hynix HBM4 mass shipments: positive capacity IMP-009 correct."
     },
     {
       "event_id": "EVT-20260731-040",
@@ -108,15 +137,15 @@
       "direction_ok": true,
       "horizon_ok": false,
       "contrary_omitted": false,
-      "notes": "8-year commitment -> horizon multi_year, not unknown"
+      "notes": "AWS/OpenAI +$100B 8-yr commitment: demand positive right; horizon should be multi_year."
     }
   ],
   "metrics": {
-    "n": 12,
-    "direct_precision": 0.9166666666666666,
+    "n": 15,
+    "direct_precision": 0.9333333333333333,
     "mechanism_backed": 1.0,
-    "direction_ok": 0.5,
-    "horizon_ok": 0.6666666666666666,
+    "direction_ok": 0.5333333333333333,
+    "horizon_ok": 0.7333333333333333,
     "contrary_omissions": 2,
     "gate_direct_precision": true,
     "gate_mechanism_backing": true,
