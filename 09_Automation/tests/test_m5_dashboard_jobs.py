@@ -274,6 +274,38 @@ class DashboardTests(unittest.TestCase):
             self.assertNotIn("PUT", pipeline_methods)
             self.assertNotIn("DELETE", pipeline_methods)
 
+    def test_impact_page_and_index_render(self) -> None:
+        from research_os.domain.models import ResearchObject
+        from research_os.services.indexing import render_impact_assertion_index
+
+        imp = ResearchObject(
+            path=Path("05_Research/Assertions/IMP-test-001.md"),
+            metadata={
+                "id": "IMP-test-001",
+                "type": "impact_assertion",
+                "subject_id": "EVT-20260729-001",
+                "target_id": "COM-test",
+                "impact_type": "supply",
+                "direction": "positive",
+                "horizon": "quarter",
+                "confidence": 0.6,
+                "review_status": "pending",
+                "updated_at": "2026-08-08",
+            },
+            body="",
+        )
+        rendered = render_impact_assertion_index([imp])
+        self.assertIn("Impact Assertion Index", rendered)
+        self.assertIn("IMP-test-001", rendered)
+        self.assertIn("COM-test", rendered)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            client = TestClient(create_app(root))
+            page = client.get("/impact")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("影响引擎", page.text)
+
     def test_intel_pages_render_and_are_read_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = prepared_root(temp)

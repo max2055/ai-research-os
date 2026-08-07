@@ -375,7 +375,7 @@ class IndexTests(unittest.TestCase):
             first = render_indexes(objects)
             second = render_indexes(objects)
             self.assertEqual(first, second)
-            self.assertEqual(8, len(index_drift(root, first)))
+            self.assertEqual(9, len(index_drift(root, first)))
             apply_indexes(root, first)
             self.assertEqual([], index_drift(root, first))
 
@@ -543,7 +543,7 @@ class StatusTests(unittest.TestCase):
                 ),
             )
             self.assertIn("Validation errors: 0", status)
-            self.assertIn("Index drift files: 8", status)
+            self.assertIn("Index drift files: 9", status)
 
 
 class EndToEndTests(unittest.TestCase):

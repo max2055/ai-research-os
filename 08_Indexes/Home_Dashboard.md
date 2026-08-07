@@ -19,6 +19,11 @@
 | [[IMP-20260807-002]] | impact_assertion | 2026-08-07 |
 | [[IMP-20260807-003]] | impact_assertion | 2026-08-07 |
 | [[IMP-20260807-004]] | impact_assertion | 2026-08-07 |
+| [[IMP-20260807-005]] | impact_assertion | 2026-08-07 |
+| [[IMP-20260807-006]] | impact_assertion | 2026-08-07 |
+| [[IMP-20260807-007]] | impact_assertion | 2026-08-07 |
+| [[IMP-20260807-008]] | impact_assertion | 2026-08-07 |
+| [[IMP-20260807-009]] | impact_assertion | 2026-08-07 |
 | [[REL-20260805-004]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-005]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-006]] | ontology_assertion | 2026-08-05 |

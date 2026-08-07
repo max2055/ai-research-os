@@ -152,6 +152,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
       <a href="/operations{project_query}">运营</a>
       <a href="/pipeline{project_query}">管线</a>
       <a href="/companies{project_query}">产业</a>
+      <a href="/impact{project_query}">影响</a>
       <a href="/health{project_query}">健康</a>
     </nav>
   </div>
@@ -1029,6 +1030,45 @@ def _reports_page(repo: DashboardRepository) -> str:
     return shell("研究报告", content)
 
 
+def _impact_page(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    impacts = sorted(
+        (obj for obj in objects if obj.object_type == "impact_assertion"),
+        key=lambda obj: obj.object_id,
+    )
+    pending = sum(1 for o in impacts if o.metadata.get("review_status") == "pending")
+    reviewed = sum(1 for o in impacts if o.metadata.get("review_status") == "reviewed")
+    events_covered = len({o.metadata.get("subject_id") for o in impacts})
+    rows = [
+        [
+            f"{esc(o.object_id)}<br><span class='muted'>{esc(o.metadata.get('title', ''))}</span>",
+            esc(o.metadata.get("subject_id", "")),
+            esc(o.metadata.get("target_id", "")),
+            esc(o.metadata.get("impact_type", "")),
+            badge(o.metadata.get("direction", "")),
+            esc(o.metadata.get("horizon", "")),
+            esc(o.metadata.get("confidence", "")),
+            badge(o.metadata.get("review_status", ""),
+                  warning=o.metadata.get("review_status") == "pending"),
+        ]
+        for o in impacts
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">影响引擎</div><h2>事件 → 影响断言</h2>
+<p>仅 reviewed Event 生成；提案默认 pending，人工 review 后转 reviewed。多跳待 C-018 通过后激活。</p>
+</div><div><div class="eyebrow">Gate 样本</div>
+<h2>{esc(events_covered)}</h2>
+<p class="muted">事件覆盖</p></div></section>
+<section class="metrics">
+<div class="metric"><strong>{esc(len(impacts))}</strong><span>影响断言</span></div>
+<div class="metric"><strong>{esc(pending)}</strong><span>待审</span></div>
+<div class="metric"><strong>{esc(reviewed)}</strong><span>已审</span></div>
+</section>
+<section class="panel">{table(["Impact ID", "触发 Event", "Target", "类型", "方向", "Horizon", "置信度", "状态"], rows) if rows else "<p class='muted'>尚无影响断言。</p>"}</section>
+<p class="muted"><a href="/reports" style="display:none"></a>C-018 评估包见 <code>05_Research/Reviews/Field_Gate_20_Impact_Packet.md</code>。</p>"""
+    return shell("影响", content)
+
+
 def create_app(root: Path) -> FastAPI:
     repo = DashboardRepository(root)
     app = FastAPI(
@@ -1131,6 +1171,10 @@ def create_app(root: Path) -> FastAPI:
     @app.get("/reports", response_class=HTMLResponse)
     def reports() -> HTMLResponse:
         return HTMLResponse(_reports_page(repo))
+
+    @app.get("/impact", response_class=HTMLResponse)
+    def impact_assertions(project: str | None = Query(default=None)) -> HTMLResponse:
+        return HTMLResponse(_impact_page(repo))
 
     @app.get("/health", response_class=HTMLResponse)
     def health(project: str | None = Query(default=None)) -> HTMLResponse:

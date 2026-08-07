@@ -69,8 +69,8 @@ class ProjectServicesTests(unittest.TestCase):
             root = fixtures.RepositoryValidationTests().make_root(temp)
             objects, _ = validate_repository(root)
             rendered = render_project_indexes(objects, "PRJ-001")
-            self.assertEqual(8, len(rendered))
-            self.assertEqual(8, len(index_drift(root, rendered)))
+            self.assertEqual(9, len(rendered))
+            self.assertEqual(9, len(index_drift(root, rendered)))
             apply_indexes(root, rendered)
             self.assertEqual([], index_drift(root, rendered))
 

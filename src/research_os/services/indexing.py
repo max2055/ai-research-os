@@ -15,6 +15,7 @@ INDEX_PATHS = {
     "event": Path("08_Indexes/Event_Index.md"),
     "thesis": Path("08_Indexes/Thesis_Index.md"),
     "company": Path("08_Indexes/Company_Index.md"),
+    "impact_assertion": Path("08_Indexes/Impact_Index.md"),
 }
 
 
@@ -99,6 +100,37 @@ def render_event_index(objects: list[ResearchObject]) -> str:
                     display(meta.get("event_date")),
                     display(meta.get("title")),
                     display(meta.get("thesis_links")),
+                    display(meta.get("confidence")),
+                    display(meta.get("review_status")),
+                )
+            )
+            + " |"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def render_impact_assertion_index(objects: list[ResearchObject]) -> str:
+    rows = sorted(
+        (obj for obj in objects if obj.object_type == "impact_assertion"),
+        key=lambda obj: obj.object_id,
+    )
+    lines = index_header("Impact Assertion Index", rows)
+    lines += [
+        "| Impact ID | 触发 Event | Target | 类型 | 方向 | Horizon | 置信度 | 状态 |",
+        "|---|---|---|---|---|---|---:|---|",
+    ]
+    for obj in rows:
+        meta = obj.metadata
+        lines.append(
+            "| "
+            + " | ".join(
+                (
+                    obj.object_id,
+                    display(meta.get("subject_id")),
+                    display(meta.get("target_id")),
+                    display(meta.get("impact_type")),
+                    display(meta.get("direction")),
+                    display(meta.get("horizon")),
                     display(meta.get("confidence")),
                     display(meta.get("review_status")),
                 )
@@ -400,6 +432,7 @@ def render_indexes(objects: list[ResearchObject]) -> dict[Path, str]:
         INDEX_PATHS["event"]: render_event_index(objects),
         INDEX_PATHS["thesis"]: render_thesis_index(objects),
         INDEX_PATHS["company"]: render_company_index(objects),
+        INDEX_PATHS["impact_assertion"]: render_impact_assertion_index(objects),
         Path("05_Research/Project_Registry.md"): render_project_registry(objects),
         Path("05_Research/Reviews/Action_Register.md"): render_action_register(objects),
         Path("08_Indexes/Review_Index.md"): render_review_index(objects),
