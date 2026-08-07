@@ -219,7 +219,6 @@ def pipeline_metrics(
 
     discovered_total = 0
     discovered_today = 0
-    status_counts: dict[str, int] = {}
     core_entity_ids: set[str] = set()
     cluster_rows: list[sqlite3.Row] = []
     run_rows: list[sqlite3.Row] = []
@@ -237,9 +236,6 @@ def pipeline_metrics(
                 discovered_total += 1
                 if str(row["discovered_at"]).startswith(as_of):
                     discovered_today += 1
-                status_counts[str(row["status"])] = (
-                    status_counts.get(str(row["status"]), 0) + 1
-                )
                 entity = _proposal_json(row["entity_proposals_json"])
                 if entity.get("status") == "matched" and entity.get("entity_id"):
                     core_entity_ids.add(str(entity["entity_id"]))
@@ -299,10 +295,13 @@ def pipeline_metrics(
         if tier_by_entity.get(entity_id) == "core"
     )
 
-    promoted = status_counts.get("promoted", 0)
-    dismissed = status_counts.get("dismissed", 0)
-    promoted_rate = round(promoted / discovered_total, 4) if discovered_total else 0.0
-    dismissed_rate = round(dismissed / discovered_total, 4) if discovered_total else 0.0
+    # Triage counts come from the append-only action audit, which survives the
+    # retention purge of dismissed/expired candidate rows (B-020/ADR retention).
+    promoted = len(promote_rows)
+    dismissed = sum(int(row["count"]) for row in dismiss_rows)
+    triaged = promoted + dismissed
+    promoted_rate = round(promoted / triaged, 4) if triaged else 0.0
+    dismissed_rate = round(dismissed / triaged, 4) if triaged else 0.0
     top_dismiss = sorted(
         ((str(row["reason"]), int(row["count"])) for row in dismiss_rows),
         key=lambda item: item[1],
@@ -367,7 +366,7 @@ def pipeline_metrics(
             ),
         },
         "triage": {
-            "total": discovered_total,
+            "total": triaged,
             "promoted": promoted,
             "dismissed": dismissed,
             "promoted_rate": promoted_rate,
@@ -435,6 +434,7 @@ def render_pipeline_metrics(metrics: dict[str, Any]) -> str:
         f"{coverage['matched_entities']} distinct matched entities",
         "",
         "## Triage",
+        f"- Triaged: {triage['total']}",
         f"- Promoted: {triage['promoted']} "
         f"({triage['promoted_rate']:.2%})",
         f"- Dismissed: {triage['dismissed']} "

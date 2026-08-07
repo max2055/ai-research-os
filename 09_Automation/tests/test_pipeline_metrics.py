@@ -233,10 +233,66 @@ class PipelineMetricsTests(unittest.TestCase):
             self.assertEqual(600, metrics["discovery"]["median_latency_seconds"])
             self.assertEqual(1, metrics["triage"]["promoted"])
             self.assertEqual(1, metrics["triage"]["dismissed"])
+            self.assertEqual(2, metrics["triage"]["total"])
+            self.assertEqual(0.5, metrics["triage"]["promoted_rate"])
+            self.assertEqual(0.5, metrics["triage"]["dismissed_rate"])
             self.assertIn(("noise", 1), metrics["triage"]["top_dismiss_reasons"])
             self.assertEqual(2.0, metrics["triage"]["median_conversion_hours"])
             self.assertGreaterEqual(1, metrics["coverage"]["core_matched"])
             self.assertIn("Pipeline Metrics", render_pipeline_metrics(metrics))
+            self.assertIn("Triaged: 2", render_pipeline_metrics(metrics))
+
+    def test_pipeline_metrics_counts_audit_after_purge(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            db_path = candidate_db.candidate_db_path(root)
+            candidate_db.insert_candidates(
+                db_path,
+                [
+                    {
+                        "candidate_id": "CND-0000",
+                        "published_at_proposal": None,
+                        "title": "Purged dismiss",
+                        "canonical_url": "https://example.com/a",
+                        "publisher": "P",
+                        "content_fingerprint": "fp-a",
+                        "language": None,
+                        "duplicate_cluster_id": None,
+                    }
+                ],
+                "CHN-test",
+                f"{DATE}T00:00:00Z",
+            )
+            connection = sqlite3.connect(db_path)
+            try:
+                connection.execute(
+                    "UPDATE candidates SET status = 'dismissed' "
+                    "WHERE candidate_id = 'CND-0000'"
+                )
+                connection.execute(
+                    "INSERT INTO candidate_actions (action_id, candidate_id, "
+                    "action, reason, actor, acted_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    ("CA-dis", "CND-0000", "dismiss", "noise", "max",
+                     f"{DATE}T01:00:00Z"),
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            # simulate the retention purge of a terminal dismissed row
+            connection = sqlite3.connect(db_path)
+            try:
+                connection.execute(
+                    "DELETE FROM candidates WHERE candidate_id = 'CND-0000'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            metrics = pipeline_metrics(root, DATE)
+            self.assertEqual(0, metrics["discovered"]["total"])
+            self.assertEqual(0, metrics["triage"]["promoted"])
+            self.assertEqual(1, metrics["triage"]["dismissed"])
+            self.assertEqual(1, metrics["triage"]["total"])
+            self.assertEqual(1.0, metrics["triage"]["dismissed_rate"])
 
     def test_pipeline_metrics_empty_store(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

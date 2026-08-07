@@ -713,7 +713,7 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
         f"{reason} ({count})" for reason, count in triage["top_dismiss_reasons"]
     ) or "—"
     triage_rows = [
-        ["Total discovered", esc(triage["total"])],
+        ["Triaged (audit)", esc(triage["total"])],
         ["Promoted / dismissed", f"{esc(triage['promoted'])} / {esc(triage['dismissed'])}"],
         ["Promoted rate", f"{triage['promoted_rate']:.0%}"],
         ["Dismissed rate", f"{triage['dismissed_rate']:.0%}"],

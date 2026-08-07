@@ -67,19 +67,24 @@ def pilot_status(
     )
 
     discovered_since = 0
-    status_counts: dict[str, int] = {}
+    action_counts: dict[str, int] = {"promote": 0, "dismiss": 0}
     if db_path.exists():
         connection = sqlite3.connect(db_path)
         connection.row_factory = sqlite3.Row
         try:
             for row in connection.execute(
-                "SELECT discovered_at, status FROM candidates"
+                "SELECT discovered_at FROM candidates"
             ):
                 if str(row["discovered_at"]).startswith(since_value):
                     discovered_since += 1
-                    status_counts[str(row["status"])] = (
-                        status_counts.get(str(row["status"]), 0) + 1
-                    )
+            # Triage counts from the action audit so purged dismissed/expired
+            # candidate rows (retention) still count toward the window.
+            for row in connection.execute(
+                "SELECT action, acted_at FROM candidate_actions "
+                "WHERE action IN ('promote', 'dismiss')"
+            ):
+                if str(row["acted_at"]).startswith(since_value):
+                    action_counts[str(row["action"])] += 1
         finally:
             connection.close()
 
@@ -110,13 +115,13 @@ def pilot_status(
         "job_failures": job_failures,
         "candidates": {
             "discovered_since": discovered_since,
-            "promoted": status_counts.get("promoted", 0),
-            "dismissed": status_counts.get("dismissed", 0),
+            "promoted": action_counts["promote"],
+            "dismissed": action_counts["dismiss"],
         },
         "briefs": brief_dates,
         "gate": {
             "days": elapsed,
-            "promoted": status_counts.get("promoted", 0),
+            "promoted": action_counts["promote"],
             "channels": len(channels),
             "duplicate_target": "duplicate rate <15% (see pipeline metrics)",
             "relevance_target": "Top-20 human relevance >=75% (manual)",
