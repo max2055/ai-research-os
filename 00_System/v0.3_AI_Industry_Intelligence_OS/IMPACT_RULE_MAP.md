@@ -45,6 +45,7 @@ predicate（`REL-*` 的 12 个值）可以产生哪些 `impact_type`（13 个值
 | capacity | positive | 仅当机制涉及产能增减（扩产/停产/爬坡）|
 | cost | mixed（供给充足→B 成本下行=正）| 需 mechanism 链接到 B 的成本结构 |
 | price | mixed | 需 mechanism 显式（供需失衡→价格）|
+| margin | mixed | 需 mechanism 链接到 B 的毛利结构（供给/成本变化→毛利）；2026-08-08 结构性补（C-018 EVT-039 毛利率事件）|
 | capex | C | 仅当机制明确 A 的资本开支计划（扩产投资）|
 | revenue | ✗ | §2.4：供应关系不自动意味着对收入重要 |
 
@@ -55,7 +56,7 @@ predicate（`REL-*` 的 12 个值）可以产生哪些 `impact_type`（13 个值
 | demand | positive | 需 mechanism 指明 A 的需求变化 |
 | revenue | positive | 需 mechanism 链接到 B 的收入（客户规模/集中度/采购量）|
 | capex | C | 仅当机制明确 A 的下单/资本开支信号 |
-| margin | ✗ | 需显式 pricing，不自动派生 |
+| margin | mixed | 需 mechanism（客户结构/议价变化→毛利）；2026-08-08 结构性补（C-018 EVT-039 毛利率事件）|
 | price | ✗ | 客户议价需 mechanism 显式 |
 
 ### COMPETES_WITH（A 与 B 竞争）

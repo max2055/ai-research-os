@@ -44,7 +44,7 @@ _POSITIVE_RE = re.compile(
     re.IGNORECASE,
 )
 _NEGATIVE_RE = re.compile(
-    r"(下滑|下降|降低|短缺|制约|延迟|中断|放缓|亏损|削减|负增长|decline|decreased|"
+    r"(下滑|下降|降低|降至|短缺|制约|延迟|中断|放缓|亏损|削减|负增长|decline|decreased|"
     r"reduce|reduced|shortage|constraint|delay|cut|lost|loss|negative|fail|"
     r"long lead time|long lead times|backlog|contract price decline)",
     re.IGNORECASE,
@@ -74,6 +74,16 @@ _YEAR_RE = re.compile(
 # competitors) yet would otherwise emit speculative price/margin/revenue claims.
 _DERIVED_IMPACT_TYPES = frozenset(
     {"price", "margin", "revenue", "cost", "capex", "regulation", "valuation"}
+)
+# Margin direction keys on the modifier adjacent to the margin keyword (毛利率降至
+# = negative), not the overall event valence which may be growth-driven.
+_MARGIN_DECLINE_RE = re.compile(
+    r"(毛利率|毛利|margin)\S{0,15}(降至|下滑|下降|decline|down|fell|decrease|压缩)",
+    re.IGNORECASE,
+)
+_MARGIN_INCREASE_RE = re.compile(
+    r"(毛利率|毛利|margin)\S{0,15}(提升|上升|increase|improve|up|growth)",
+    re.IGNORECASE,
 )
 _IMPACT_KEYWORDS: dict[str, re.Pattern[str]] = {
     "price": re.compile(r"(price|pricing|价格|ASP|定价|降价|涨价|单价)", re.IGNORECASE),
@@ -153,7 +163,7 @@ def propose_direct_impacts(
                     event, impact_type
                 ):
                     continue  # over-proposal gate: event does not signal dimension
-                direction = _infer_direction(event, default_direction)
+                direction = _infer_direction(event, default_direction, impact_type)
                 mechanism = _build_mechanism(event, rel, by_id, impact_type, affected)
                 if validate_mechanism(mechanism):
                     continue  # defensive: never emit an invalid mechanism
@@ -180,17 +190,26 @@ def propose_direct_impacts(
     return _dedup_proposals(proposals)
 
 
-def _infer_direction(event: ResearchObject, default: str) -> str:
+def _infer_direction(event: ResearchObject, default: str, impact_type: str) -> str:
     """Override a "mixed" default with a clear event-content valence.
 
-    Scores the event TITLE only: research-authored titles capture the event's
-    essence and are free of the boilerplate risk-factor language that pollutes
-    body text (e.g. 10-K/8-K filings), which misfired direction inference on
-    deployment/availability events.
+    Core types score the event TITLE only (research titles are clean, free of
+    the boilerplate risk-factor language that polluted full-body scoring).
+    Derived types (price/margin/revenue/cost/...) additionally score the Facts
+    section, where their dimension evidence lives (e.g. ``毛利率降至 66%`` for a
+    margin-compression event).
     """
     if default != "mixed":
         return default
-    text = str(event.metadata.get("title", ""))
+    parts = [str(event.metadata.get("title", ""))]
+    if impact_type in _DERIVED_IMPACT_TYPES:
+        parts.append(_facts_section(event.body))
+    text = " ".join(parts)
+    if impact_type == "margin":
+        if _MARGIN_DECLINE_RE.search(text):
+            return "negative"
+        if _MARGIN_INCREASE_RE.search(text):
+            return "positive"
     pos = len(_POSITIVE_RE.findall(text))
     neg = len(_NEGATIVE_RE.findall(text))
     if pos - neg >= 1:

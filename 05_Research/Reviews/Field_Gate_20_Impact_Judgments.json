@@ -71,10 +71,10 @@
       "event_id": "EVT-20260429-039",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": true,
-      "notes": "Headline is Microsoft Cloud margin DOWN to 66%; all-positive proposals miss margin compression (no REL maps to margin). Azure efficiency offset omitted. Horizon now quarter."
+      "notes": "Margin now surfaced negative via SUPPLIES/CUSTOMER_OF->margin rule-map extension (毛利率降至 66%); supply/demand/capacity/technology positive correct for Azure growth. Azure efficiency offset (countervailing) still omitted."
     },
     {
       "event_id": "EVT-20260429-046",
@@ -144,7 +144,7 @@
     "n": 15,
     "direct_precision": 0.9333333333333333,
     "mechanism_backed": 1.0,
-    "direction_ok": 0.8,
+    "direction_ok": 0.8666666666666667,
     "horizon_ok": 1.0,
     "contrary_omissions": 2,
     "gate_direct_precision": true,

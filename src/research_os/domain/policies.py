@@ -100,11 +100,13 @@ IMPACT_RULE_MAP: dict[str, dict[str, tuple[str, bool]]] = {
         "capacity": ("positive", False),
         "cost": ("mixed", False),
         "price": ("mixed", False),
+        "margin": ("mixed", False),
         "capex": ("uncertain", True),
     },
     "CUSTOMER_OF": {
         "demand": ("positive", False),
         "revenue": ("positive", False),
+        "margin": ("mixed", False),
         "capex": ("uncertain", True),
     },
     "COMPETES_WITH": {
