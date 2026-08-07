@@ -107,8 +107,7 @@ test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（P
 WP-300 close-out（2026-08-07）：C-001 RCP-v03-006 已批准（`bc3ecf5`）；C-002 Impact Schema
 落地（`IMP-YYYYMMDD-NNN` 正式对象，接入 ID_PATTERNS/OBJECT_PATTERNS/SCHEMAS/REVIEWABLE_TYPES/
 validate_refs/reviewed-evidence，`ImpactEntityReference` 含 EVT/INS 引用，ontology EntityReference
-未改动）；C-003 rule map 交付 `IMPACT_RULE_MAP.md`（12×13 allowlist + 方向/限制，**待 max 复核
-具体方向倾向后再供 C-004 使用**）。240 tests 全绿，validate 0 error。**Next：C-004 direct impact
+未改动）；C-003 rule map 交付 `IMPACT_RULE_MAP.md`（12×13 allowlist + 方向/限制，2026-08-07 max 复核通过）。240 tests 全绿，validate 0 error。**Next：C-004 direct impact
 proposal（WP-301）。**
 
 ## 7. Wave 4：Analysis Modes

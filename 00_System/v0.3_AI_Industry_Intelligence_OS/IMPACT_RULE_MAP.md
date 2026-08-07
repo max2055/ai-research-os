@@ -1,8 +1,16 @@
 # Impact 规则映射（C-003）：predicate → impact_type allowlist
 
-状态：`proposed`（领域审核策略，待 max 复核；批准后成为 WP-300 交付的一部分）
+状态：`approved`（2026-08-07，reviewer：max）
 
 依据：RCP-v03-006（2026-08-07 approved）；`04_Phase_3_Impact_Engine.md` §2/§6
+
+## 复核记录
+
+- Decision：批准（2026-08-07，max 逐 predicate 复核方向/限制，全部采纳默认；allowlist
+  语义、机制必填、valuation 门禁沿用 RCP-v03-006 已批准边界，未改动）
+- 生效：批准即生效；C-004 direct impact proposal 可引用本表
+- Revisit trigger：任一 predicate 的机制映射遇实施困难，或 20-event Field Gate 暴露
+  方向判断偏差时，提修订并记录
 
 ## 用途与语义
 
