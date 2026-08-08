@@ -17,6 +17,7 @@ from unittest import mock
 try:
     from research_os.adapters.model import EchoAdapter, build_adapter
     from research_os.domain.models import ResearchObject
+    from research_os.repositories.markdown import MarkdownDocument
     from research_os.services.analysis_registry import (
         ModeNotRunnable,
         UnknownMode,
@@ -582,6 +583,67 @@ def _parse_frontmatter(content: str) -> dict[str, object]:
         key, value = line.split(": ", 1)
         meta[key] = value.strip('"')
     return meta
+
+
+class ModeDefinitionsTests(unittest.TestCase):
+    """D-010: the 9 first-batch mode definitions exist in the repo, are drafted
+    as proposed/pending, share the output contract, and are not runnable until
+    max reviews and activates them (RCP-v03-007 point 6)."""
+
+    EXPECTED = [
+        "MOD-ANL-value-chain-v1",
+        "MOD-ANL-supply-demand-v1",
+        "MOD-ANL-technology-curve-v1",
+        "MOD-ANL-company-fundamental-v1",
+        "MOD-ANL-competitive-dynamics-v1",
+        "MOD-ANL-expectations-valuation-v1",
+        "MOD-ANL-scenario-v1",
+        "MOD-ANL-red-team-v1",
+        "MOD-ANL-open-discovery-v1",
+    ]
+
+    def _repo_objects(self) -> list[ResearchObject]:
+        from research_os.services.validation import validate_repository
+
+        objects, findings = validate_repository(ROOT)
+        assert not [f for f in findings if f.level == "error"]
+        return objects
+
+    def test_nine_modes_registered(self) -> None:
+        objects = self._repo_objects()
+        modes = sorted(
+            obj.object_id
+            for obj in objects
+            if obj.object_type == "analysis_mode"
+        )
+        self.assertEqual(sorted(self.EXPECTED), modes)
+        for mode_id in self.EXPECTED:
+            self.assertIsNotNone(find_mode(objects, mode_id))
+
+    def test_modes_are_proposed_and_not_runnable(self) -> None:
+        objects = self._repo_objects()
+        for mode_id in self.EXPECTED:
+            mode = find_mode(objects, mode_id)
+            self.assertEqual("proposed", mode.metadata["status"])
+            self.assertEqual("pending", mode.metadata["review_status"])
+            with self.assertRaises(ModeNotRunnable):
+                require_runnable(objects, mode_id)
+
+    def test_modes_share_output_contract(self) -> None:
+        objects = self._repo_objects()
+        for mode_id in self.EXPECTED:
+            mode = find_mode(objects, mode_id)
+            self.assertEqual(
+                "00_System/Analysis_Modes/output_contract_schema.json",
+                mode.metadata.get("output_schema_path"),
+            )
+            self.assertNotEqual([], mode.metadata.get("required_questions"))
+
+    def test_mode_files_round_trip_byte_exact(self) -> None:
+        for mode_id in self.EXPECTED:
+            path = ROOT / "02_Knowledge/Modes" / f"{mode_id}.md"
+            doc = MarkdownDocument.read(path)
+            self.assertEqual(doc.original_text, doc.render())
 
 
 if __name__ == "__main__":

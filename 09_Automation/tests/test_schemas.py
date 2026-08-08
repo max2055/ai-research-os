@@ -44,9 +44,13 @@ class SchemaTests(unittest.TestCase):
         # "impact_assertion" is a floor too: max materializes pending IMPs from
         # C-004 proposals as the C-018 loop runs, so the exact value grows.
         impact_count = counts.pop("impact_assertion", 0)
+        # "analysis_run" is a floor too: max runs analyses (WP-410+) so the
+        # exact value grows as runs are materialized.
+        run_count = counts.pop("analysis_run", 0)
         self.assertEqual(
             {
                 "action": 12,
+                "analysis_mode": 9,  # WP-410 first batch of 9 mode definitions
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 50,  # EvWP: +9; Gate30 sprint: +6; Field gap: +2
                 "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
@@ -64,6 +68,7 @@ class SchemaTests(unittest.TestCase):
         )
         self.assertGreaterEqual(job_count, 40)
         self.assertGreaterEqual(impact_count, 4)
+        self.assertGreaterEqual(run_count, 0)
 
     def test_noop_round_trip_is_byte_exact_for_all_objects(self) -> None:
         for document in load_documents(ROOT):
