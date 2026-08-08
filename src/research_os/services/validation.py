@@ -20,6 +20,8 @@ from research_os.domain.policies import (
 )
 from research_os.repositories.markdown import MarkdownDocument, object_paths
 from research_os.services.analysis_contract import validate_run_contract
+from research_os.services.discovery_sandbox import validate_discovery_sandbox
+from research_os.services.red_team_enforcement import validate_red_team_enforcement
 
 
 def add(
@@ -920,6 +922,8 @@ def validate_repository(
         validate_analysis_mode_semantics(root, obj, findings)
         validate_analysis_run_fingerprint(obj, findings)
         validate_run_contract(obj, by_id, findings)
+        validate_red_team_enforcement(obj, by_id, findings)
+        validate_discovery_sandbox(obj, by_id, findings)
     validate_source_processing(objects, by_id, findings)
     validate_source_assets(root, objects, findings)
     validate_generation_fingerprints(objects, findings)

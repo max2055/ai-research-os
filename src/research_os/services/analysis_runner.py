@@ -33,6 +33,7 @@ from research_os.services.analysis_registry import (
     mode_metadata,
     require_runnable,
 )
+from research_os.services.discovery_sandbox import validate_discovery_sandbox
 from research_os.services.drafts import (
     next_object_id,
     write_new_file,
@@ -44,6 +45,7 @@ from research_os.services.input_resolver import (
     resolve_inputs,
 )
 from research_os.services.prompt_renderer import PromptError, render_prompt
+from research_os.services.red_team_enforcement import validate_red_team_enforcement
 from research_os.services.validation import validate_repository
 
 _ANL_PATH = "05_Research/Analysis"
@@ -182,6 +184,8 @@ def _contract_findings(
 ) -> list[str]:
     findings: list[Any] = []
     validate_run_contract(run_obj, by_id, findings)
+    validate_red_team_enforcement(run_obj, by_id, findings)
+    validate_discovery_sandbox(run_obj, by_id, findings)
     return [str(finding.message) for finding in findings]
 
 

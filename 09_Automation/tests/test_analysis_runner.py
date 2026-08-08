@@ -573,6 +573,118 @@ class RunTransactionTests(unittest.TestCase):
             )
         self.assertEqual("provider-failure", ctx.exception.error_type)
 
+    def test_red_team_boilerplate_rejected_at_creation(self) -> None:
+        # D-012 wired into the run transaction: a completed red-team run whose
+        # counter-evidence is a bare denial fails the contract (no write).
+        red_team = ResearchObject(
+            path=ROOT / "02_Knowledge/Modes/MOD-ANL-red-team-v1.md",
+            metadata={
+                **_mode().metadata,
+                "id": "MOD-ANL-red-team-v1",
+                "required_output_sections": [],
+            },
+            body="",
+        )
+        body = """\
+## Facts used
+EVT-20260225-034
+
+## Inferences
+x
+
+## Judgments
+y
+
+## Contradicting evidence
+None found.
+
+## Alternative explanations
+None.
+
+## Unknowns
+u
+
+## Indicators
+i
+
+## Mode-specific output
+o
+
+## Limitations
+l
+"""
+        with self.assertRaises(RunError) as ctx, self._patch_repo(
+            [red_team, _event()]
+        ):
+            prepare_run(
+                ROOT,
+                mode_id="MOD-ANL-red-team-v1",
+                input_event_ids=["EVT-20260225-034"],
+                as_of="2026-08-08",
+                created_at="2026-08-08",
+                adapter=_adapter_from(body),
+            )
+        self.assertEqual("output-contract-failed", ctx.exception.error_type)
+
+    def test_open_discovery_leakage_rejected_at_creation(self) -> None:
+        # D-013 wired into the run transaction: an open-discovery run that
+        # asserts an authoritative Recommendation fails the contract (no write).
+        discovery = ResearchObject(
+            path=ROOT / "02_Knowledge/Modes/MOD-ANL-open-discovery-v1.md",
+            metadata={
+                **_mode().metadata,
+                "id": "MOD-ANL-open-discovery-v1",
+                "required_output_sections": [],
+            },
+            body="",
+        )
+        body = """\
+## Facts used
+EVT-20260225-034
+
+## Hypothesis proposal
+H: 存储议价权转移快于预期。
+
+## Inferences
+x
+
+## Judgments
+y
+
+## Contradicting evidence
+无。
+
+## Alternative explanations
+需求或放缓。
+
+## Unknowns
+u
+
+## Indicators
+i
+
+## Mode-specific output
+o
+
+## Limitations
+l
+
+## Recommendation
+建议买入。
+"""
+        with self.assertRaises(RunError) as ctx, self._patch_repo(
+            [discovery, _event()]
+        ):
+            prepare_run(
+                ROOT,
+                mode_id="MOD-ANL-open-discovery-v1",
+                input_event_ids=["EVT-20260225-034"],
+                as_of="2026-08-08",
+                created_at="2026-08-08",
+                adapter=_adapter_from(body),
+            )
+        self.assertEqual("output-contract-failed", ctx.exception.error_type)
+
 
 def _parse_frontmatter(content: str) -> dict[str, object]:
     block = content.split("---\n", 2)[1]
