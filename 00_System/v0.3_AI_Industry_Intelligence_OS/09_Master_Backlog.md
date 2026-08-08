@@ -134,7 +134,7 @@ C-018 最小闭环 enablement（2026-08-07）：打通「物化 → review → G
 
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
-| WP-400 | D-001～004 | RCP、Mode/Run Schema、contract | proposed |
+| WP-400 | D-001～004 | RCP、Mode/Run Schema、contract | ready（RCP-v03-007 已批准）|
 | WP-401 | D-005～009 | registry、resolver、runner transaction | proposed |
 | WP-410 | D-010 | 9 mode definitions；可按 mode 分包 | proposed |
 | WP-411 | D-011～013 | compare、Red Team、discovery sandbox | proposed |
@@ -411,3 +411,14 @@ C-018 APPROVED（2026-08-08，max 拍板）：14 个 in-scope 事件五维全部
 - **capex**：hyperscaler capex（Microsoft FY26 10-Q 的 AI 基建投资）已含于 EVT-039/040，可拆独立 capex 事件但重叠。
 - **regulation**：无任何监管源/候选——需**新采集通道**（如出口管制/芯片法规新闻源）或手工 capture，不能编造。
 - **结论**：补满 20 需 (a) 建监管采集通道 + (b) 从现有 SEC 源建 capex/pricing 事件（人工 review）。**建议列为 WP-240 之后的采集扩展项**，C-018 判定不受其阻塞（硬阈值已达标）。
+
+#### 批准 RCP-v03-007（2026-08-08）
+
+- Decision ID: RCP-v03-007-approval
+- Date: 2026-08-08
+- Decision: 批准 RCP-v03-007（proposed → approved）。Analysis Mode Framework 生效：`analysis_mode`（MOD-ANL-<slug>-vN）与 `analysis_run`（ANL-YYYYMMDD-NNN）正式对象类型；模式版本化契约；Run 冻结输入/模式/模型/参数/输出；Run ≠ Thesis/Recommendation（仅 reviewed run 进 Report）；Open Discovery 只产候选 Hypothesis；首批 9 模式。
+- Reason: 6 项人审点经 max 逐项确认采纳默认；与 Phase 4 §1-§4 一致。
+- Effective date: 2026-08-08（WP-400 起落地）。
+- Consequences: Phase 4 解除 RCP 阻塞；WP-400（D-001~004）转 ready。
+- Reviewer: max
+- Revisit trigger/date: WP-400 实施遇架构问题；任一模式契约字段实施遇阻时提修改 RCP。

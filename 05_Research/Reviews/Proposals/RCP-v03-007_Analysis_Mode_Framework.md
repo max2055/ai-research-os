@@ -2,7 +2,7 @@
 
 Proposal ID：RCP-v03-007
 
-状态：proposed（草稿，待 max 批准）
+状态：approved（2026-08-08，reviewer：max）
 
 创建日期：2026-08-08
 
@@ -39,26 +39,26 @@ Proposal ID：RCP-v03-007
 - 不用自由 Prompt 冒充版本化契约。
 - 不用模型 confidence 冒充客观概率。
 
-## Review points（reviewer：max，待批准）
+## Review points（reviewer：max，2026-08-08，全部采纳默认）
 
-1. `analysis_mode`（MOD-ANL-<slug>-vN）与 `analysis_run`（ANL-YYYYMMDD-NNN）落为正式对象类型
-2. 模式版本化契约（升级版本、不静默修改已运行模式）
-3. Run 冻结输入/模式/模型/参数/输出（snapshot + prompt_hash + output_hash）
-4. Analysis Run ≠ Thesis/Recommendation；仅 reviewed run 可进 Report
-5. Open Discovery 只产候选 Hypothesis，不直接权威化
-6. 首批 9 模式清单
+1. ✅ `analysis_mode`（MOD-ANL-<slug>-vN）与 `analysis_run`（ANL-YYYYMMDD-NNN）落为正式对象类型
+2. ✅ 模式版本化契约（升级版本、不静默修改已运行模式）
+3. ✅ Run 冻结输入/模式/模型/参数/输出（snapshot + prompt_hash + output_hash）
+4. ✅ Analysis Run ≠ Thesis/Recommendation；仅 reviewed run 可进 Report
+5. ✅ Open Discovery 只产候选 Hypothesis，不直接权威化
+6. ✅ 首批 9 模式清单
 
-- Decision：待 max 批准
+- Decision：批准（accept RCP-v03-007 as drafted，6 项人审点全部采纳默认）
 - Reviewer：max
 - Date：2026-08-08
 - Reason：与 Phase 4 §1-§4 草案一致；"版本化契约 + Run 冻结 + 非权威化"防分析不可复现与 AI 判断混排。
 
 ## Implementation record
 
-- Changed files：本文件（proposed）；生效后由 WP-400（D-001~004）起落地 schema + registry + contract
+- Changed files：本文件（proposed → approved）；生效后由 WP-400（D-001~004）起落地 schema + registry + contract
 - Test result：not run（治理边界批准，无代码变更）
 - Validation result：`research-os validate` 0 errors / 0 warnings（无对象变更）
-- Effective date：待 max 批准
+- Effective date：2026-08-08（批准即生效；WP-400 起实施）
 
 ## 参考
 
