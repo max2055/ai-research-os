@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-08-07",
   "by": "agent (max verifies)",
-  "sample_size": 15,
+  "sample_size": 14,
   "note": "Refreshed after C-004 improvements (full impact-type proposal + content-direction inference).",
   "judgments": [
     {
@@ -77,15 +77,6 @@
       "notes": "Margin now surfaced negative via SUPPLIES/CUSTOMER_OF->margin rule-map extension (毛利率降至 66%). Countervailing factor now captured: margin decline partially offset by Azure efficiency improvements."
     },
     {
-      "event_id": "EVT-20260429-046",
-      "direct_precision": false,
-      "mechanism_backed": true,
-      "direction_ok": true,
-      "horizon_ok": true,
-      "contrary_omitted": false,
-      "notes": "Baidu DeepSeek-V4 is a distribution/demand event; target still mislabeled as supply, but directions are now honest mixed (negative misfire fixed)."
-    },
-    {
       "event_id": "EVT-20260520-032",
       "direct_precision": true,
       "mechanism_backed": true,
@@ -141,8 +132,8 @@
     }
   ],
   "metrics": {
-    "n": 15,
-    "direct_precision": 0.9333333333333333,
+    "n": 14,
+    "direct_precision": 1.0,
     "mechanism_backed": 1.0,
     "direction_ok": 1.0,
     "horizon_ok": 1.0,
@@ -150,5 +141,15 @@
     "gate_direct_precision": true,
     "gate_mechanism_backing": true,
     "gate_contrary_omissions": true
+  },
+  "excluded": {
+    "event_id": "EVT-20260429-046",
+    "reason": "second-Pilot (Model-Agent-Enterprise) scope, not AI Compute Infrastructure chain",
+    "decision": "excluded by max 2026-08-08"
+  },
+  "approved": {
+    "by": "max",
+    "date": "2026-08-08",
+    "decision": "approve all 14 in-scope events; EVT-046 excluded"
   }
 }
