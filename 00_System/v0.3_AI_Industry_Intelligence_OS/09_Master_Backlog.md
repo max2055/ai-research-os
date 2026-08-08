@@ -404,3 +404,10 @@ Revisit trigger/date:
 C-018 Gate 判定（2026-08-08，agent 判定建议，待 max 拍板）：15 事件样本 **有条件通过**——可测量硬阈值 3/3 达标（direct precision 93.3%、mechanism 锚定 100%、horizon 100%）；direction 86.7%（EVT-047 过度提案 / EVT-044 逐 target 价格 2 事件待人工修正）；contrary 已修复（C-004 从事件 Facts 自动提取 countervailing_factors：EVT-047 竞争-客户二重性、EVT-039 Azure 效率抵消，反面遗漏 0）；direction 87%（EVT-047/044 待 max 人工修正）；regulation 桶 0/2 为数据缺口。**多跳维持 inactive**（Phase 3 §12 治理门），待 max 复核判断初稿 + 修复 contrary + 补事件至 20 + 全绿后拍板放行。判定包：`05_Research/Reviews/Field_Gate_20_Impact_Packet.md`。
 
 C-018 APPROVED（2026-08-08，max 拍板）：14 个 in-scope 事件五维全部通过（direct precision 100%、mechanism 锚定 100%、direction 100%、horizon 100%、contrary 0）；EVT-046（Baidu DeepSeek-V4）按 max 决定剔除出样本（第二 Pilot 模型-平台-企业范围）。**多跳（2-3 hop）已激活（2026-08-08 max 放行，`expand_impact_paths` 默认 max_depth 1→3）**。判定包：`05_Research/Reviews/Field_Gate_20_Impact_Packet.md`；判断初稿 `Field_Gate_20_Impact_Judgments.json`。
+
+数据补充评估（2026-08-08，agent）：样本 14/20、regulation 桶 0/2、pricing/capex 桶缺口。
+- **候选库 0 条** pricing/capex/regulation 候选（SEC/arXiv/GitHub/skhynix 通道未产出算力链价格/监管内容）。
+- **pricing**：agent 软件定价源（Salesforce/Cursor/GitHub Copilot 定价 SRC-20260729-003/021/024）属第二 Pilot 范围，非算力链。算力链定价（DRAM ASP、GPU 定价）仅 TrendForce EVT-044。
+- **capex**：hyperscaler capex（Microsoft FY26 10-Q 的 AI 基建投资）已含于 EVT-039/040，可拆独立 capex 事件但重叠。
+- **regulation**：无任何监管源/候选——需**新采集通道**（如出口管制/芯片法规新闻源）或手工 capture，不能编造。
+- **结论**：补满 20 需 (a) 建监管采集通道 + (b) 从现有 SEC 源建 capex/pricing 事件（人工 review）。**建议列为 WP-240 之后的采集扩展项**，C-018 判定不受其阻塞（硬阈值已达标）。
