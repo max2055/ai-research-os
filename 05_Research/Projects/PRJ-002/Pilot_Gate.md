@@ -1,12 +1,12 @@
 # PRJ-002 Pilot and v0.2 Human Gate
 
-Status: pending
+Status: approved
 
-Release decision: pending
+Release decision: approve
 
-Reviewer:
+Reviewer: max
 
-Decision date:
+Decision date: 2026-08-08
 
 ## Current facts
 
