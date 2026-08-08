@@ -100,7 +100,7 @@ test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（P
 | WP-311 | C-011～012 | spec/renderer/review | proposed |
 | WP-312 | C-013～016 | index/CLI/UI/report integration | proposed |
 | WP-320 | C-017～018 | metrics + 20-event field Gate | proposed |
-| WP-321 | C-019～020 | benchmark/recovery/acceptance | proposed |
+| WP-321 | C-019～020 | benchmark/recovery/acceptance | completed |
 
 先通过 direct impact Field Gate，再决定是否把 2–3 hop proposal 设为 active。
 

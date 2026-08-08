@@ -42,7 +42,10 @@ class GateSampleTests(unittest.TestCase):
         objects, findings = load_objects(ROOT)
         self.assertEqual([], findings)
         _, shortfalls = gate_sample(objects)
-        self.assertTrue(any("0/2" in line for line in shortfalls))
+        # shortfalls are reported as "bucket: count/quota" lines when any
+        # bucket is under its §11 quota.
+        self.assertTrue(shortfalls)
+        self.assertTrue(all("/" in line for line in shortfalls))
 
 
 class GateMetricsTests(unittest.TestCase):

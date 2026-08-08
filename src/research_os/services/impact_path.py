@@ -149,7 +149,10 @@ def expand_impact_paths(
             )
 
     # Hops 2+: traverse adjacency level by level (per-path cycle control).
-    frontier = paths
+    # Copy `frontier` so the BFS iterates only the current level — aliasing the
+    # growing `paths` list would pick up appended paths and explode past
+    # max_depth (C-019 benchmark caught this on dense graphs).
+    frontier = list(paths)
     for depth in range(2, max_depth + 1):
         next_frontier: list[dict[str, Any]] = []
         for path in frontier:
