@@ -121,12 +121,10 @@ class TemporalFilterTests(unittest.TestCase):
 class PathExpansionTests(unittest.TestCase):
     """C-006: BFS expansion, cycle/fan-out control, pruning records."""
 
-    def test_default_max_depth_1_is_direct_only(self) -> None:
+    def test_default_max_depth_3_is_multi_hop_active(self) -> None:
         paths, pruned = expand_impact_paths(_three_hop_graph(), event_id="EVT-1")
-        targets = sorted(p["terminal_id"] for p in paths)
-        self.assertEqual(["COM-a", "COM-b"], targets)
-        for path in paths:
-            self.assertEqual(1, len(path["hops"]))
+        depths = sorted(len(p["hops"]) for p in paths)
+        self.assertIn(3, depths)  # multi-hop active since C-018 approval
         self.assertIsInstance(pruned, list)
 
     def test_max_depth_2_expands_neighbors(self) -> None:
@@ -338,15 +336,23 @@ class PathConfidenceTests(unittest.TestCase):
 class RealRepositorySmokeTests(unittest.TestCase):
     """Real data: EVT-20260225-034 direct paths; depth-2 on real REL graph."""
 
-    def test_real_event_direct_paths(self) -> None:
+    def test_real_event_multi_hop_paths(self) -> None:
         from research_os.services.validation import load_objects
 
         objects, findings = load_objects(ROOT)
         self.assertEqual([], findings)
+        # default max_depth=3 (multi-hop active since C-018 approval)
         paths, pruned = expand_impact_paths(objects, event_id="EVT-20260225-034")
         self.assertTrue(paths)
-        for path in paths:
+        # direct (depth 1) paths still reach the event's own entities
+        direct = [p for p in paths if len(p["hops"]) == 1]
+        self.assertTrue(direct)
+        for path in direct:
             self.assertIn(path["terminal_id"], {"COM-asml", "COM-tsmc"})
+        # and multi-hop extends beyond them
+        multi = [p for p in paths if len(p["hops"]) >= 2]
+        self.assertTrue(multi)
+        for path in paths:
             for hop in path["hops"]:
                 self.assertEqual([], validate_mechanism(hop["mechanism"]))
         self.assertIsInstance(pruned, list)

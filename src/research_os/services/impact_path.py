@@ -6,11 +6,9 @@ entities that are also an endpoint of a bridging assertion), hops 2+ traverse
 reviewed, as-of-valid relations (forward edge + symmetric reverse) up to
 ``max_depth``.
 
-Governance gate (Phase 3 §12, Backlog §6): multi-hop proposals become ACTIVE
-only after the direct-impact 20-event Field Gate (C-018) passes. Therefore
-``max_depth`` defaults to 1 (direct-only); 2-3 are built and callable for
-evaluation but are not the default — flipping to multi-hop is a reviewer
-decision after C-018.
+Governance gate (Phase 3 §12, Backlog §6): multi-hop proposals were ACTIVE
+only after the direct-impact 20-event Field Gate (C-018) passes. **C-018
+APPROVED 2026-08-08** — ``max_depth`` now defaults to 3 (multi-hop active).
 
 C-006 path expansion: max depth 3 / fan-out 10 / per-path cycle control /
 pruning reasons recorded (Phase 3 §6).
@@ -60,7 +58,7 @@ def expand_impact_paths(
     *,
     event_id: str,
     as_of: str | None = None,
-    max_depth: int = 1,
+    max_depth: int = 3,
     fan_out: int = 10,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """C-006: reviewed Event -> (impact paths, pruning reasons) (pure, no writes)."""
