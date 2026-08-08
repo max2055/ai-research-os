@@ -19,6 +19,7 @@ from research_os.domain.policies import (
     is_iso_date,
 )
 from research_os.repositories.markdown import MarkdownDocument, object_paths
+from research_os.services.analysis_contract import validate_run_contract
 
 
 def add(
@@ -233,6 +234,111 @@ def validate_type_semantics(
                 obj,
                 "superseded_by requires superseded status and review_status",
             )
+
+
+def validate_analysis_mode_semantics(
+    root: Path,
+    obj: ResearchObject,
+    findings: list[Finding],
+) -> None:
+    """D-002 contract (RCP-v03-007, Phase 4 §2): version/status/path rules.
+
+    A mode is a versioned contract; ``active`` requires human approval
+    (reviewed) and an effective date, and any template/output-schema paths must
+    resolve inside the repository. Version immutability is structural: a run's
+    ``mode_id`` is the full ``MOD-ANL-<slug>-vN`` id, so a run pins the exact
+    contract version it ran under (validate_refs enforces the id resolves).
+    """
+    if obj.object_type != "analysis_mode":
+        return
+    status = obj.metadata.get("status")
+    review_status = obj.metadata.get("review_status")
+    if status == "active" and review_status != "reviewed":
+        add(
+            findings,
+            "error",
+            "MOD001",
+            obj,
+            "active Analysis Mode requires review_status reviewed",
+        )
+    if status == "active" and not obj.metadata.get("valid_from"):
+        add(
+            findings,
+            "error",
+            "MOD002",
+            obj,
+            "active Analysis Mode requires valid_from",
+        )
+    for field in ("prompt_template_path", "output_schema_path"):
+        value = obj.metadata.get(field)
+        if not value:
+            continue
+        relative = Path(str(value))
+        target = (root / relative).resolve()
+        if relative.is_absolute() or not target.is_relative_to(root):
+            add(
+                findings,
+                "error",
+                "MOD003",
+                obj,
+                f"{field} escapes repository: {value}",
+            )
+        elif not target.is_file():
+            add(
+                findings,
+                "error",
+                "MOD004",
+                obj,
+                f"{field} does not exist: {value}",
+            )
+
+
+def validate_analysis_run_fingerprint(
+    obj: ResearchObject,
+    findings: list[Finding],
+) -> None:
+    """D-003 contract (RCP-v03-007, Phase 4 §3): immutable input/output fingerprint.
+
+    A frozen run (completed, or superseded which retains its history) must carry
+    the full input snapshot + prompt + output hashes and model provenance so it
+    is reproducible; a draft or failed run must not carry a frozen output hash
+    (Phase 4 §5: a failed run records the error but leaves no half-finished
+    formal object).
+    """
+    if obj.object_type != "analysis_run":
+        return
+    status = obj.metadata.get("status")
+    if status in {"completed", "superseded"}:
+        missing = [
+            field
+            for field in (
+                "input_snapshot_hash",
+                "prompt_hash",
+                "output_hash",
+                "model_provider",
+                "model_id",
+                "generation_method",
+            )
+            if not obj.metadata.get(field)
+        ]
+        if missing:
+            add(
+                findings,
+                "error",
+                "RUN001",
+                obj,
+                f"{status} Analysis Run requires frozen fingerprint: "
+                + ", ".join(missing),
+            )
+    if status in {"draft", "failed"} and obj.metadata.get("output_hash"):
+        add(
+            findings,
+            "error",
+            "RUN002",
+            obj,
+            "draft/failed Analysis Run must not set output_hash "
+            "(no half-frozen output)",
+        )
 
 
 def validate_taxonomy(
@@ -811,6 +917,9 @@ def validate_repository(
         validate_generated_report(obj, by_id, findings)
         validate_report_supersession(obj, by_id, findings)
         validate_reviewed_assertion_evidence(obj, by_id, findings)
+        validate_analysis_mode_semantics(root, obj, findings)
+        validate_analysis_run_fingerprint(obj, findings)
+        validate_run_contract(obj, by_id, findings)
     validate_source_processing(objects, by_id, findings)
     validate_source_assets(root, objects, findings)
     validate_generation_fingerprints(objects, findings)

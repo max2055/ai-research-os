@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "research-os/analysis-run/output-contract",
+  "title": "Analysis Run Output Contract",
+  "description": "Common body contract every completed Analysis Run (ANL-*) must satisfy (Phase 4 §3, RCP-v03-007). Enforced natively by research_os.services.analysis_contract.validate_run_contract; the required section list here must stay in sync with REQUIRED_SECTIONS there.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "Facts used",
+    "Inferences",
+    "Judgments",
+    "Contradicting evidence",
+    "Alternative explanations",
+    "Unknowns",
+    "Indicators",
+    "Mode-specific output",
+    "Limitations"
+  ],
+  "patternProperties": {
+    "^[A-Za-z][A-Za-z ]+$": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "not": {
+    "pattern": "TODO|TBD|TBA|TBC|FIXME|PLACEHOLDER|XXX|to be (determined|announced|decided|completed)"
+  }
+}

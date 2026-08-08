@@ -1,6 +1,8 @@
 """Typed schemas for research objects."""
 
 from research_os.schemas.action import ActionSchema
+from research_os.schemas.analysis_mode import AnalysisModeSchema
+from research_os.schemas.analysis_run import AnalysisRunSchema
 from research_os.schemas.common import (
     ManagedObjectSchema,
     ResearchObjectSchema,
@@ -28,6 +30,8 @@ from research_os.schemas.thesis import ThesisSchema
 
 __all__ = [
     "ActionSchema",
+    "AnalysisModeSchema",
+    "AnalysisRunSchema",
     "CompanySchema",
     "EventSchema",
     "JobSchema",
