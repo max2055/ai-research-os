@@ -135,3 +135,104 @@ def mode_metadata(mode: ResearchObject) -> dict[str, Any]:
         "valid_from": str(meta.get("valid_from", "") or ""),
         "review_status": str(meta.get("review_status", "")),
     }
+
+
+def render_mode_list(objects: list[ResearchObject]) -> str:
+    """D-014 ``modes list``: table of every mode with its version/status gate."""
+    modes = sorted(
+        (obj for obj in objects if obj.object_type == "analysis_mode"),
+        key=lambda obj: obj.object_id,
+    )
+    if not modes:
+        return "no analysis modes registered"
+    header = (
+        f"{'MODE':<38} {'NAME':<18} {'SCOPE':<34} {'STATUS':<10} "
+        f"{'REVIEW':<10} V"
+    )
+    lines = [header, "-" * len(header)]
+    for mode in modes:
+        meta = mode_metadata(mode)
+        scopes = ",".join(meta["applicable_scopes"])
+        lines.append(
+            f"{mode.object_id:<38} {meta['name'][:18]:<18} {scopes[:34]:<34} "
+            f"{meta['status']:<10} {meta['review_status']:<10} "
+            f"{mode_version(mode.object_id)}"
+        )
+    return "\n".join(lines)
+
+
+def render_mode_detail(mode: ResearchObject, objects: list[ResearchObject]) -> str:
+    """D-014 ``modes show``: the full versioned contract of one mode."""
+    meta = mode_metadata(mode)
+    lines = [
+        f"# {mode.object_id}",
+        f"name: {meta['name']}",
+        f"status: {meta['status']}  (review: {meta['review_status']}, "
+        f"valid_from: {meta['valid_from'] or '—'})",
+        f"purpose: {meta['purpose']}",
+        f"applicable_scopes: {', '.join(meta['applicable_scopes'])}",
+        f"required_input_types: {', '.join(meta['required_input_types']) or '—'}",
+        f"optional_input_types: {', '.join(meta['optional_input_types']) or '—'}",
+        f"time_horizons: {', '.join(meta['time_horizons']) or '—'}",
+        "",
+        "## Required questions",
+    ]
+    lines.extend(f"- {q}" for q in meta["required_questions"])
+    lines.append("")
+    lines.append("## Required output sections")
+    lines.extend(f"- {s}" for s in meta["required_output_sections"])
+    lines.append("")
+    lines.append("## Assumption policy")
+    lines.append(meta["assumption_policy"] or "—")
+    lines.append("")
+    lines.append("## Evidence policy")
+    lines.append(meta["evidence_policy"] or "—")
+    lines.append("")
+    lines.append("## Counterevidence policy")
+    lines.append(meta["counterevidence_policy"] or "—")
+    lines.append("")
+    lines.append("## Prohibited conclusions")
+    lines.extend(f"- {c}" for c in meta["prohibited_conclusions"])
+    lines.append("")
+    lines.append("## Prompt / output contract")
+    lines.append(
+        f"- prompt_template_path: {meta['prompt_template_path'] or '(default)'}"
+    )
+    lines.append(f"- output_schema_path: {meta['output_schema_path'] or '—'}")
+    lines.append(f"- evaluator_version: {meta['evaluator_version'] or '—'}")
+    lines.append("")
+    versions = [o for o in mode_versions(objects, mode_slug(mode.object_id))]
+    lines.append(f"## Versions of {mode_slug(mode.object_id)}")
+    for version in versions:
+        lines.append(
+            f"- {version.object_id}  (status={version.metadata.get('status')}, "
+            f"review={version.metadata.get('review_status')}, "
+            f"valid_from={version.metadata.get('valid_from') or '—'})"
+        )
+    if mode.metadata.get("review_status") == "reviewed":
+        lines.append(f"\nCurrent: runnable via `analyze run --mode {mode.object_id}`")
+    else:
+        lines.append(
+            f"\nBlocked: review_status={mode.metadata.get('review_status')} — "
+            "require_runnable refuses new authoritative runs"
+        )
+    return "\n".join(lines)
+
+
+def render_mode_check(objects: list[ResearchObject]) -> str:
+    """D-014 ``modes check``: which modes may produce a new authoritative run."""
+    modes = sorted(
+        (obj for obj in objects if obj.object_type == "analysis_mode"),
+        key=lambda obj: obj.object_id,
+    )
+    lines: list[str] = []
+    for mode in modes:
+        try:
+            require_runnable(objects, mode.object_id)
+            lines.append(f"OK       {mode.object_id}")
+        except ModeError as exc:
+            lines.append(f"BLOCKED  {mode.object_id}  ({exc})")
+    blocked = [line for line in lines if line.startswith("BLOCKED")]
+    ok = len(lines) - len(blocked)
+    lines.append(f"\n{ok} runnable / {len(lines)} modes")
+    return "\n".join(lines)

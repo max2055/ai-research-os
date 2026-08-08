@@ -134,15 +134,24 @@ C-018 最小闭环 enablement（2026-08-07）：打通「物化 → review → G
 
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
-| WP-400 | D-001～004 | RCP、Mode/Run Schema、contract | ready（RCP-v03-007 已批准）|
-| WP-401 | D-005～009 | registry、resolver、runner transaction | proposed |
-| WP-410 | D-010 | 9 mode definitions；可按 mode 分包 | proposed |
-| WP-411 | D-011～013 | compare、Red Team、discovery sandbox | proposed |
-| WP-412 | D-014～016 | CLI/UI/promotion proposal | proposed |
+| WP-400 | D-001～004 | RCP、Mode/Run Schema、contract | completed |
+| WP-401 | D-005～009 | registry、resolver、runner transaction | completed |
+| WP-410 | D-010 | 9 mode definitions；可按 mode 分包 | completed |
+| WP-411 | D-011～013 | compare、Red Team、discovery sandbox | completed |
+| WP-412 | D-014～016 | CLI/UI/promotion proposal | completed |
 | WP-420 | D-017～018 | evaluator/metrics | proposed |
 | WP-430 | D-019～020 | 10-case field Gate/recovery | proposed |
 
 所有 Mode 子包必须共用同一 output contract，不得各自创造不兼容的 Facts/Inference 字段。
+
+WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
+- **D-014 CLI**：`modes list/show/check` + `analyze run/show/compare/replay/propose-thesis`。`modes check` 用 `require_runnable` 逐模式门禁；`analyze run` 走 D-009 全事务（dry-run 默认/`--apply`）；`analyze replay` 复用冻结输入以当前模型重放（创建新 ID，不覆盖）；错误退出码 2。
+- **D-015 Dashboard**：`/analysis` 工作区（概览 + modes/runs 列表 + mode/run detail + `?runs=` compare），只读 GET，渲染输入引用/版本/冻结哈希/共享事实与冲突信号；导航加「分析」。
+- **D-016 promote insight**：`services/insight_proposal.py`——reviewed completed run → `05_Research/Analysis_Proposals/Thesis_Proposal_<ANL>.md`（pending proposal）。门禁：rejected/pending run 拒绝、red-team 反证须实质（RT001/RT002）、open-discovery 只产候选 Hypothesis（D-013）。**永不经由此服务改写 THS-\***（RCP-v03-007 points 3/6）。
+- **修复**：Wave 4 表 WP-400/401/410/411 状态补齐为 completed（此前未更新）。
+- **Known limitations**：`analyze run` 当前仅 echo/deterministic adapter（真 provider 接入是后续 WP）；proposal 文档非正式对象（不在 OBJECT_PATTERNS，validate 不扫 `05_Research/Analysis_Proposals/`）。
+- 420 tests 全绿（+29），validate 0 error，ruff/mypy clean。
+- **Next：WP-420（D-017 evaluator / D-018 mode metrics），或接真实模型 provider 跑真实 multi-mode run 后做 D-019 10-case Gate。**
 
 ## 8. Wave 5：Forecast 与 Decision
 

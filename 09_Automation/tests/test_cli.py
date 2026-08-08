@@ -405,5 +405,261 @@ class CliPathTests(unittest.TestCase):
             self.assertEqual(0, confirmed.returncode, confirmed.stdout)
 
 
+def mode_file(
+    mode_id: str = "MOD-ANL-value-chain-v1",
+    *,
+    status: str = "active",
+    review_status: str = "reviewed",
+) -> str:
+    return f"""---
+id: {mode_id}
+type: analysis_mode
+title: Value Chain Mode
+created_at: 2026-08-08
+updated_at: 2026-08-08
+schema_version: 2
+project_ids: []
+status: {status}
+review_status: {review_status}
+valid_from: 2026-08-08
+tags: []
+name: 价值链分析
+purpose: 定位价值链各环节的控制力、瓶颈与利润池迁移。
+applicable_scopes: [sector, company, technology, event, thesis]
+required_input_types: [event]
+optional_input_types: []
+required_questions:
+- 哪个环节控制稀缺资源？
+required_output_sections: [Current chain]
+assumption_policy: 显式列出假设。
+evidence_policy: 只引用冻结输入。
+counterevidence_policy: 列出反向证据。
+time_horizons: [quarter, year]
+prohibited_conclusions:
+- 不得输出投资建议。
+---
+
+# Value Chain Mode
+"""
+
+
+def run_file(
+    run_id: str = "ANL-20260808-001",
+    *,
+    mode_id: str = "MOD-ANL-value-chain-v1",
+    status: str = "completed",
+    review_status: str = "rejected",
+    event_ids: tuple[str, ...] = ("EVT-20260729-001",),
+) -> str:
+    return f"""---
+id: {run_id}
+type: analysis_run
+title: Analysis Run {run_id}
+created_at: 2026-08-08
+updated_at: 2026-08-08
+schema_version: 2
+project_ids: []
+status: {status}
+review_status: {review_status}
+tags: []
+mode_id: {mode_id}
+scope_ids: []
+as_of: 2026-08-08
+input_source_ids: []
+input_event_ids: [{', '.join(event_ids)}]
+input_impact_ids: []
+input_thesis_ids: []
+input_snapshot_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+model_provider: deterministic
+model_id: valid-body-v1
+model_parameters: {{}}
+prompt_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+output_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+generation_method: mode-runner
+---
+
+## Facts used
+- EVT-20260729-001
+
+## Inferences
+议价权向稀缺产能方转移。
+
+## Judgments
+先进制程与 HBM 存储环节的产能瓶颈维持。
+
+## Contradicting evidence
+输入事件未提供明显反证。
+
+## Alternative explanations
+需求端增速可能弱于供给约束假设。
+
+## Unknowns
+产能爬坡速度与二供进展。
+
+## Indicators
+资本开支指引。
+
+## Mode-specific output
+算力价值链全景图。
+
+## Current chain
+当前链：设备→代工→存储→设计→云。
+
+## Changed chain
+变化后链：HBM 与先进制程地位上升。
+
+## Beneficiaries and losers
+受益：先进制程代工与 HBM 存储。
+
+## Mechanism
+稀缺产能→议价权→利润池迁移。
+
+## Falsification indicators
+新增产能投产快于预期。
+
+## Limitations
+推断性分析。
+"""
+
+
+def analysis_fixture_root(temp: str, *, review_status: str = "rejected") -> Path:
+    root = Path(temp)
+    fixtures.write(root / "00_System" / "Taxonomy.md", fixtures.TAXONOMY)
+    fixtures.write(root / "05_Research" / "Projects" / "PRJ-001.md", fixtures.project())
+    fixtures.write(
+        root / "01_Inbox" / "Articles" / "SRC-20260729-001-source.md",
+        fixtures.source(),
+    )
+    fixtures.write(
+        root / "04_Evidence" / "Events" / "EVT-20260729-001-event.md",
+        fixtures.event(status="reviewed"),
+    )
+    fixtures.write(
+        root / "02_Knowledge" / "Modes" / "MOD-ANL-value-chain-v1.md",
+        mode_file(),
+    )
+    fixtures.write(
+        root / "05_Research" / "Analysis" / "ANL-20260808-001.md",
+        run_file(review_status=review_status),
+    )
+    return root
+
+
+class AnalysisCliTests(unittest.TestCase):
+    """WP-412 (D-014/D-016): modes + analyze CLI command groups."""
+
+    def test_modes_list(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp)
+            result = run_cli(root, "modes", "list")
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("MOD-ANL-value-chain-v1", result.stdout)
+            self.assertIn("价值链分析", result.stdout)
+
+    def test_modes_check(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp)
+            result = run_cli(root, "modes", "check")
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("OK       MOD-ANL-value-chain-v1", result.stdout)
+            self.assertIn("1 runnable / 1 modes", result.stdout)
+
+    def test_modes_show(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp)
+            result = run_cli(root, "modes", "show", "MOD-ANL-value-chain-v1")
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("定位价值链各环节的控制力", result.stdout)
+            self.assertIn("## Required questions", result.stdout)
+
+    def test_modes_show_unknown_exits_2(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp)
+            result = run_cli(root, "modes", "show", "MOD-ANL-missing-v1")
+            self.assertEqual(2, result.returncode)
+            self.assertIn("ERROR:", result.stdout)
+
+    def test_analyze_show(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp)
+            result = run_cli(root, "analyze", "show", "ANL-20260808-001")
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("mode: MOD-ANL-value-chain-v1", result.stdout)
+            self.assertIn("## Current chain", result.stdout)
+
+    def test_analyze_show_unknown_exits_2(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp)
+            result = run_cli(root, "analyze", "show", "ANL-missing")
+            self.assertEqual(2, result.returncode)
+            self.assertIn("ERROR:", result.stdout)
+
+    def test_analyze_compare(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp)
+            result = run_cli(root, "analyze", "compare", "--runs", "ANL-20260808-001")
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("# Mode comparison", result.stdout)
+            self.assertIn("ANL-20260808-001", result.stdout)
+
+    def test_analyze_run_echo_surfaces_contract_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp)
+            result = run_cli(
+                root,
+                "analyze",
+                "run",
+                "--mode",
+                "MOD-ANL-value-chain-v1",
+                "--event",
+                "EVT-20260729-001",
+                "--as-of",
+                "2026-08-08",
+            )
+            self.assertEqual(2, result.returncode)
+            self.assertIn("ERROR:", result.stdout)
+
+    def test_analyze_propose_thesis_rejected_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp, review_status="rejected")
+            result = run_cli(
+                root, "analyze", "propose-thesis", "--run", "ANL-20260808-001"
+            )
+            self.assertEqual(2, result.returncode)
+            self.assertIn("only reviewed runs", result.stdout)
+
+    def test_analyze_propose_thesis_dry_run_writes_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp, review_status="reviewed")
+            result = run_cli(
+                root, "analyze", "propose-thesis", "--run", "ANL-20260808-001"
+            )
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("DRY-RUN: no files changed", result.stdout)
+            self.assertIn("## Proposed Thesis", result.stdout)
+            self.assertFalse((root / "05_Research" / "Analysis_Proposals").exists())
+
+    def test_analyze_propose_thesis_apply_writes_proposal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_fixture_root(temp, review_status="reviewed")
+            result = run_cli(
+                root,
+                "analyze",
+                "propose-thesis",
+                "--run",
+                "ANL-20260808-001",
+                "--apply",
+            )
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("CREATED: 05_Research/Analysis_Proposals/", result.stdout)
+            proposal = (
+                root / "05_Research" / "Analysis_Proposals"
+                / "Thesis_Proposal_ANL-20260808-001.md"
+            )
+            self.assertTrue(proposal.exists())
+            text = proposal.read_text(encoding="utf-8")
+            self.assertIn("这是 Proposal，不是权威 Thesis", text)
+
+
 if __name__ == "__main__":
     unittest.main()

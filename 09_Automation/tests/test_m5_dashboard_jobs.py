@@ -478,3 +478,194 @@ class SchedulerJobTests(unittest.TestCase):
             cli = run_cli(root, "jobs", "run", "validate")
             self.assertEqual(0, cli.returncode, cli.stdout)
             self.assertIn("SUCCESS JOB-", cli.stdout)
+
+
+def _mode_fixture(mode_id: str = "MOD-ANL-value-chain-v1") -> str:
+    return f"""---
+id: {mode_id}
+type: analysis_mode
+title: Value Chain Mode
+created_at: 2026-08-08
+updated_at: 2026-08-08
+schema_version: 2
+project_ids: []
+status: active
+review_status: reviewed
+valid_from: 2026-08-08
+tags: []
+name: 价值链分析
+purpose: 定位价值链各环节的控制力、瓶颈与利润池迁移。
+applicable_scopes: [sector, company, technology, event, thesis]
+required_input_types: [event]
+optional_input_types: []
+required_questions:
+- 哪个环节控制稀缺资源？
+required_output_sections: [Current chain]
+assumption_policy: 显式列出假设。
+evidence_policy: 只引用冻结输入。
+counterevidence_policy: 列出反向证据。
+time_horizons: [quarter, year]
+prohibited_conclusions:
+- 不得输出投资建议。
+---
+
+# Value Chain Mode
+"""
+
+
+def _run_fixture(run_id: str = "ANL-20260808-001") -> str:
+    return f"""---
+id: {run_id}
+type: analysis_run
+title: Analysis Run {run_id}
+created_at: 2026-08-08
+updated_at: 2026-08-08
+schema_version: 2
+project_ids: []
+status: completed
+review_status: rejected
+tags: []
+mode_id: MOD-ANL-value-chain-v1
+scope_ids: []
+as_of: 2026-08-08
+input_source_ids: []
+input_event_ids: [EVT-20260729-001]
+input_impact_ids: []
+input_thesis_ids: []
+input_snapshot_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+model_provider: deterministic
+model_id: valid-body-v1
+model_parameters: {{}}
+prompt_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+output_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+generation_method: mode-runner
+---
+
+## Facts used
+- EVT-20260729-001
+
+## Inferences
+议价权向稀缺产能方转移。
+
+## Judgments
+先进制程与 HBM 存储环节的产能瓶颈维持。
+
+## Contradicting evidence
+输入事件未提供明显反证。
+
+## Alternative explanations
+需求端增速可能弱于供给约束假设。
+
+## Unknowns
+产能爬坡速度。
+
+## Indicators
+资本开支指引。
+
+## Mode-specific output
+算力价值链全景图。
+
+## Current chain
+当前链：设备→代工→存储→设计→云。
+
+## Changed chain
+变化后链：HBM 与先进制程地位上升。
+
+## Beneficiaries and losers
+受益：先进制程代工与 HBM 存储。
+
+## Mechanism
+稀缺产能→议价权→利润池迁移。
+
+## Falsification indicators
+新增产能投产快于预期。
+
+## Limitations
+推断性分析。
+"""
+
+
+def analysis_root(temp: str):
+    root = prepared_root(temp)
+    fixtures.write(
+        root / "02_Knowledge" / "Modes" / "MOD-ANL-value-chain-v1.md",
+        _mode_fixture(),
+    )
+    fixtures.write(
+        root / "05_Research" / "Analysis" / "ANL-20260808-001.md",
+        _run_fixture(),
+    )
+    return root
+
+
+class AnalysisDashboardTests(unittest.TestCase):
+    """WP-412 (D-015): analysis workspace pages render read-only."""
+
+    def test_analysis_workspace_pages_render(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_root(temp)
+            client = TestClient(create_app(root))
+
+            overview = client.get("/analysis")
+            self.assertEqual(200, overview.status_code)
+            self.assertIn("分析工作区", overview.text)
+            self.assertIn("ANL-20260808-001", overview.text)
+            self.assertIn("/analysis/modes", overview.text)
+            self.assertIn("/analysis/runs", overview.text)
+            self.assertIn("/analysis/compare", overview.text)
+
+            modes = client.get("/analysis/modes")
+            self.assertEqual(200, modes.status_code)
+            self.assertIn("MOD-ANL-value-chain-v1", modes.text)
+            self.assertIn("可运行", modes.text)
+
+            runs = client.get("/analysis/runs")
+            self.assertEqual(200, runs.status_code)
+            self.assertIn("ANL-20260808-001", runs.text)
+
+    def test_analysis_mode_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_root(temp)
+            client = TestClient(create_app(root))
+            page = client.get("/analysis/modes/MOD-ANL-value-chain-v1")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("定位价值链各环节的控制力", page.text)
+            self.assertIn("必答问题", page.text)
+            self.assertIn("禁止结论", page.text)
+            missing = client.get("/analysis/modes/MOD-ANL-missing-v1")
+            self.assertEqual(404, missing.status_code)
+
+    def test_analysis_run_detail_with_input_links(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_root(temp)
+            client = TestClient(create_app(root))
+            page = client.get("/analysis/runs/ANL-20260808-001")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("冻结元数据", page.text)
+            self.assertIn("input_event_ids", page.text)
+            self.assertIn("/events/EVT-20260729-001", page.text)
+            self.assertIn("## Current chain", page.text)
+            missing = client.get("/analysis/runs/ANL-missing")
+            self.assertEqual(404, missing.status_code)
+
+    def test_analysis_compare_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_root(temp)
+            client = TestClient(create_app(root))
+            page = client.get("/analysis/compare?runs=ANL-20260808-001")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("模式比较", page.text)
+            self.assertIn("ANL-20260808-001", page.text)
+            self.assertIn("共享事实", page.text)
+
+    def test_analysis_routes_are_read_only_get(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_root(temp)
+            client = TestClient(create_app(root))
+            for route in client.app.routes:
+                if getattr(route, "path", "").startswith("/analysis"):
+                    self.assertEqual(
+                        {"GET"},
+                        set(route.methods) or {"GET"},
+                        route.path,
+                    )

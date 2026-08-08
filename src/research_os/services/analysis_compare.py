@@ -188,3 +188,36 @@ def _conflicting_signals(
 
 def _opposing(a: str, b: str) -> bool:
     return (a, b) in {("positive", "negative"), ("negative", "positive")}
+
+
+def render_compare_report(report: CompareReport) -> str:
+    """D-014 ``analyze compare``: human-readable comparison (no majority vote)."""
+    lines = ["# Mode comparison"]
+    if not report.runs:
+        return "# Mode comparison\n\n(no comparable runs)"
+    lines.append("\n## Runs")
+    for run in report.runs:
+        lines.append(
+            f"- {run.run_id}  [{run.mode_slug}]  as_of={run.as_of}  "
+            f"review={run.review_status}  signal={run.signal}"
+        )
+    lines.append(f"\n## Shared facts\n{', '.join(report.shared_facts) or '—'}")
+    lines.append(f"\n## Distinct modes\n{', '.join(report.modes) or '—'}")
+    lines.append(f"\n## Distinct horizons\n{', '.join(report.time_horizons) or '—'}")
+    lines.append("\n## Questions")
+    for question in report.questions:
+        lines.append(f"- {question}")
+    lines.append("\n## Evidence omitted by each run (used by another, not itself)")
+    for run_id, omitted in report.evidence_omitted.items():
+        lines.append(f"- {run_id}: {', '.join(omitted) or '—'}")
+    lines.append("\n## Conflicting signals (heuristic — human review required)")
+    if not report.conflicting_signals:
+        lines.append("- none")
+    for a, signal_a, b, signal_b in report.conflicting_signals:
+        lines.append(f"- {a} ({signal_a}) vs {b} ({signal_b})")
+    lines.append(
+        "\nNo majority voting: convergence weight must come from evidence quality, "
+        "mechanism completeness, scope fit, calibration history or explicit "
+        "researcher judgment (Phase 4 §6)."
+    )
+    return "\n".join(lines)

@@ -6,6 +6,30 @@ from research_os.services.actions import (
     prepare_action_draft,
     render_actions,
 )
+from research_os.services.analysis_compare import (
+    compare_runs,
+    render_compare_report,
+)
+from research_os.services.analysis_registry import (
+    ModeError,
+    UnknownMode,
+    find_mode,
+    mode_metadata,
+    mode_slug,
+    mode_version,
+    mode_versions,
+    render_mode_check,
+    render_mode_detail,
+    render_mode_list,
+    require_runnable,
+)
+from research_os.services.analysis_runner import (
+    RunError,
+    apply_run,
+    prepare_run,
+    render_run_detail,
+    run_analysis,
+)
 from research_os.services.benchmark import run_scale_benchmark
 from research_os.services.brief import (
     brief_path,
@@ -74,6 +98,7 @@ from research_os.services.ingestion import (
     process_source_asset,
     verify_source_assets,
 )
+from research_os.services.insight_proposal import propose_thesis
 from research_os.services.jobs import job_rows, run_job
 from research_os.services.metrics import (
     load_metrics_snapshot,
@@ -137,18 +162,24 @@ from research_os.services.workflow import (
 )
 
 __all__ = [
+    "ModeError",
+    "RunError",
+    "UnknownMode",
     "apply_event_draft",
     "apply_company_update_proposal",
     "apply_indexes",
     "apply_impact_draft",
     "apply_review",
+    "apply_run",
     "action_rows",
     "close_action",
+    "compare_runs",
     "brief_path",
     "daily_brief",
     "dedup_paths",
     "detect_contradictions",
     "expand_impact_paths",
+    "find_mode",
     "render_daily_brief",
     "write_daily_brief",
     "capture_existing_source",
@@ -168,6 +199,10 @@ __all__ = [
     "load_metrics_snapshot",
     "load_spec",
     "metrics_json",
+    "mode_metadata",
+    "mode_slug",
+    "mode_version",
+    "mode_versions",
     "ontology_jsonl",
     "objects_for_project",
     "pipeline_metrics",
@@ -179,7 +214,9 @@ __all__ = [
     "path_confidence",
     "prepare_impact_batch",
     "prepare_impact_draft",
+    "prepare_run",
     "propose_direct_impacts",
+    "propose_thesis",
     "prepare_company_update_proposal",
     "prepare_entity_draft",
     "prepare_event_draft",
@@ -194,6 +231,7 @@ __all__ = [
     "render_channel_check",
     "render_channel_list",
     "set_channel_enabled",
+    "render_compare_report",
     "render_discovery_result",
     "run_discovery",
     "due_channels",
@@ -212,6 +250,10 @@ __all__ = [
     "render_gate_packet",
     "render_metrics_comparison",
     "render_metrics_markdown",
+    "render_mode_check",
+    "render_mode_detail",
+    "render_mode_list",
+    "render_run_detail",
     "render_universe_coverage",
     "render_actions",
     "render_project_indexes",
@@ -223,7 +265,9 @@ __all__ = [
     "render_scale_assessment",
     "render_status",
     "research_metrics",
+    "require_runnable",
     "review_queue",
+    "run_analysis",
     "universe_coverage",
     "run_scale_benchmark",
     "run_job",

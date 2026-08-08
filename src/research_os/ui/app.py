@@ -18,6 +18,12 @@ from fastapi.responses import (
 
 from research_os.domain.models import ResearchObject
 from research_os.services.actions import action_rows
+from research_os.services.analysis_compare import compare_runs
+from research_os.services.analysis_registry import (
+    mode_metadata,
+    mode_version,
+    require_runnable,
+)
 from research_os.services.candidate_queue import promoted_rows, queue_rows, queue_show
 from research_os.services.channels import channel_rows
 from research_os.services.indexing import (
@@ -153,6 +159,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
       <a href="/pipeline{project_query}">管线</a>
       <a href="/companies{project_query}">产业</a>
       <a href="/impact{project_query}">影响</a>
+      <a href="/analysis{project_query}">分析</a>
       <a href="/health{project_query}">健康</a>
     </nav>
   </div>
@@ -1069,6 +1076,304 @@ def _impact_page(repo: DashboardRepository) -> str:
     return shell("影响", content)
 
 
+_ANALYSIS_INPUT_FIELDS = (
+    "input_source_ids",
+    "input_event_ids",
+    "input_impact_ids",
+    "input_thesis_ids",
+)
+
+
+def _analysis_input_link(
+    by_id: dict[str, ResearchObject], object_id: str
+) -> str:
+    obj = by_id.get(object_id)
+    if obj is None:
+        return esc(object_id)
+    plural = {
+        "impact_assertion": "impact",
+        "analysis_run": "analysis/runs",
+        "analysis_mode": "analysis/modes",
+    }.get(obj.object_type, object_url(obj))
+    return f'<a href="/{plural}/{obj.object_id}">{esc(obj.object_id)}</a>'
+
+
+def _run_link(obj: ResearchObject) -> str:
+    return f'<a href="/analysis/runs/{obj.object_id}">{esc(obj.object_id)}</a>'
+
+
+def _mode_link(obj: ResearchObject) -> str:
+    return f'<a href="/analysis/modes/{obj.object_id}">{esc(obj.object_id)}</a>'
+
+
+def _analysis_page(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    modes = [o for o in objects if o.object_type == "analysis_mode"]
+    runs = [o for o in objects if o.object_type == "analysis_run"]
+    by_status: dict[str, int] = {}
+    for run in runs:
+        key = str(run.metadata.get("review_status", "")) or "—"
+        by_status[key] = by_status.get(key, 0) + 1
+    active = sum(1 for m in modes if m.metadata.get("status") == "active")
+    latest = sorted(runs, key=lambda o: o.object_id, reverse=True)[:10]
+    rows = [
+        [
+            _run_link(o),
+            esc(o.metadata.get("mode_id", "")),
+            esc(o.metadata.get("as_of", "")),
+            badge(o.metadata.get("status", "")),
+            badge(
+                o.metadata.get("review_status", ""),
+                warning=o.metadata.get("review_status") == "pending",
+            ),
+        ]
+        for o in latest
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">分析工作区</div><h2>同一证据 · 多视角复现</h2>
+<p>版本化契约模式 + 冻结分析运行；Run ≠ Thesis，仅 reviewed run 可进入报告。</p>
+</div><div><div class="eyebrow">模式</div>
+<h2>{esc(len(modes))}</h2>
+<p class="muted">active {esc(active)} · <a href="/analysis/modes">全部</a></p>
+</div></section>
+<section class="metrics">
+<div class="metric"><strong>{esc(len(runs))}</strong><span>分析运行</span></div>
+<div class="metric"><strong>{esc(by_status.get('pending', 0))}</strong><span>待评审</span></div>
+<div class="metric"><strong>{esc(by_status.get('reviewed', 0))}</strong><span>已评审</span></div>
+<div class="metric"><strong>{esc(by_status.get('rejected', 0))}</strong><span>已拒绝</span></div>
+</section>
+<section class="panel"><h3>最新运行</h3>
+{table(["Run", "模式", "as-of", "状态", "评审"], rows) if rows else "<p class='muted'>尚无分析运行。</p>"}
+<p class="muted"><a href="/analysis/runs">全部运行</a> · <a href="/analysis/modes">全部模式</a> · <a href="/analysis/compare">模式比较</a></p>
+</section>"""
+    return shell("分析", content)
+
+
+def _analysis_modes(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    modes = sorted(
+        (o for o in objects if o.object_type == "analysis_mode"),
+        key=lambda o: o.object_id,
+    )
+    rows: list[list[str]] = []
+    for m in modes:
+        meta = mode_metadata(m)
+        try:
+            require_runnable(objects, m.object_id)
+            runnable = "可运行"
+        except ValueError:
+            runnable = "阻塞"
+        rows.append(
+            [
+                _mode_link(m),
+                esc(meta["name"]),
+                esc(", ".join(meta["applicable_scopes"])),
+                badge(
+                    meta["status"],
+                    warning=meta["status"] != "active",
+                ),
+                badge(
+                    meta["review_status"],
+                    warning=meta["review_status"] != "reviewed",
+                ),
+                badge(runnable),
+                esc(mode_version(m.object_id)),
+            ]
+        )
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">分析工作区</div><h2>分析模式</h2>
+<p>版本化契约：active + reviewed 方可产生新的权威运行。</p>
+</div></section>
+<section class="panel">{table(["模式", "名称", "范围", "状态", "评审", "运行", "版本"], rows) if rows else "<p class='muted'>尚无模式。</p>"}</section>"""
+    return shell("分析 · 模式", content)
+
+
+def _analysis_mode_detail(repo: DashboardRepository, mode_id: str) -> str:
+    objects, _ = repo.all()
+    mode = next(
+        (
+            o
+            for o in objects
+            if o.object_type == "analysis_mode" and o.object_id == mode_id
+        ),
+        None,
+    )
+    if mode is None:
+        raise KeyError(mode_id)
+    meta = mode_metadata(mode)
+    questions = "".join(f"<li>{esc(q)}</li>" for q in meta["required_questions"])
+    sections = "".join(
+        f"<li>{esc(s)}</li>" for s in meta["required_output_sections"]
+    )
+    banned = "".join(
+        f"<li>{esc(c)}</li>" for c in meta["prohibited_conclusions"]
+    )
+    rows = [
+        ["状态", badge(meta["status"], warning=meta["status"] != "active")],
+        [
+            "评审",
+            badge(
+                meta["review_status"],
+                warning=meta["review_status"] != "reviewed",
+            ),
+        ],
+        ["生效自", esc(meta["valid_from"] or "—")],
+        ["适用范围", esc(", ".join(meta["applicable_scopes"]) or "—")],
+        ["必填输入", esc(", ".join(meta["required_input_types"]) or "—")],
+        ["可选输入", esc(", ".join(meta["optional_input_types"]) or "—")],
+        ["时间视野", esc(", ".join(meta["time_horizons"]) or "—")],
+        ["Output 契约", esc(meta["output_schema_path"] or "—")],
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">分析工作区</div><h2>{esc(mode_id)}</h2>
+<p>{esc(meta["name"])}</p>
+</div></section>
+<section class="panel"><h3>Purpose</h3><p>{esc(meta["purpose"] or "—")}</p></section>
+<section class="grid">
+<div class="panel">{_kv_table(rows)}</div>
+<div class="panel"><h3>必答问题</h3><ul>{questions or "<li class='muted'>—</li>"}</ul>
+<h3>必输分区</h3><ul>{sections or "<li class='muted'>—</li>"}</ul></div>
+<div class="panel full"><h3>政策</h3>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody>
+<tr><td>假设</td><td>{esc(meta["assumption_policy"] or "—")}</td></tr>
+<tr><td>证据</td><td>{esc(meta["evidence_policy"] or "—")}</td></tr>
+<tr><td>反证</td><td>{esc(meta["counterevidence_policy"] or "—")}</td></tr>
+</tbody></table></div>
+<div class="panel full"><h3>禁止结论</h3><ul>{banned or "<li class='muted'>—</li>"}</ul></div>
+</section>"""
+    return shell(f"分析 {mode_id}", content)
+
+
+def _analysis_runs(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    runs = sorted(
+        (o for o in objects if o.object_type == "analysis_run"),
+        key=lambda o: o.object_id,
+    )
+    rows = [
+        [
+            _run_link(o),
+            esc(o.metadata.get("mode_id", "")),
+            esc(o.metadata.get("as_of", "")),
+            badge(o.metadata.get("status", "")),
+            badge(
+                o.metadata.get("review_status", ""),
+                warning=o.metadata.get("review_status") == "pending",
+            ),
+            esc(len(o.metadata.get("input_event_ids", []) or [])),
+        ]
+        for o in runs
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">分析工作区</div><h2>分析运行</h2>
+<p>每次运行冻结输入、模式版本、模型参数与输出哈希；失败不留半成品。</p>
+</div></section>
+<section class="panel">{table(["Run", "模式", "as-of", "状态", "评审", "事件数"], rows) if rows else "<p class='muted'>尚无分析运行。</p>"}</section>"""
+    return shell("分析 · 运行", content)
+
+
+def _analysis_run_detail(repo: DashboardRepository, run_id: str) -> str:
+    objects, _ = repo.all()
+    by_id = {obj.object_id: obj for obj in objects}
+    run = by_id.get(run_id)
+    if run is None or run.object_type != "analysis_run":
+        raise KeyError(run_id)
+    mode = by_id.get(str(run.metadata.get("mode_id", "")))
+    mode_cell = _mode_link(mode) if mode else esc(run.metadata.get("mode_id", ""))
+    inputs: list[str] = []
+    for field in _ANALYSIS_INPUT_FIELDS:
+        ids = run.metadata.get(field, []) or []
+        if ids:
+            links = " · ".join(
+                _analysis_input_link(by_id, str(value)) for value in ids
+            )
+            inputs.append(f"<dt>{esc(field)}</dt><dd>{links}</dd>")
+    input_block = "".join(inputs) or "<p class='muted'>无冻结输入</p>"
+    rows = [
+        ["模式", mode_cell],
+        ["as-of", esc(run.metadata.get("as_of", ""))],
+        ["状态", badge(run.metadata.get("status", ""))],
+        [
+            "评审",
+            badge(
+                run.metadata.get("review_status", ""),
+                warning=run.metadata.get("review_status") == "pending",
+            ),
+        ],
+        [
+            "模型",
+            f"{esc(run.metadata.get('model_provider', ''))} / "
+            f"{esc(run.metadata.get('model_id', ''))}",
+        ],
+        ["输入快照", esc(run.metadata.get("input_snapshot_hash", "") or "—")],
+        ["Prompt 哈希", esc(run.metadata.get("prompt_hash", "") or "—")],
+        ["输出哈希", esc(run.metadata.get("output_hash", "") or "—")],
+        ["生成方式", esc(run.metadata.get("generation_method", "") or "—")],
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">分析运行</div><h2>{esc(run_id)}</h2>
+<p>{mode_cell} · as-of {esc(run.metadata.get("as_of", ""))}</p>
+</div></section>
+<section class="grid">
+<div class="panel"><h3>冻结元数据</h3>{_kv_table(rows)}</div>
+<div class="panel"><h3>输入引用</h3><dl>{input_block}</dl></div>
+<div class="panel full"><h3>正文</h3><pre>{esc(run.body)}</pre></div>
+</section>
+<p class="muted"><a href="/analysis/compare?runs={esc(run_id)}">与此运行比较</a></p>"""
+    return shell(f"分析 {run_id}", content)
+
+
+def _analysis_compare(repo: DashboardRepository, run_ids: list[str]) -> str:
+    objects, _ = repo.all()
+    if not run_ids:
+        run_ids = sorted(
+            o.object_id
+            for o in objects
+            if o.object_type == "analysis_run"
+        )
+    by_id = {obj.object_id: obj for obj in objects}
+    report = compare_runs(objects, run_ids)
+    if not report.runs:
+        content = (
+            "<section class='panel'><p class='muted'>没有可比较的运行。"
+            "用 ?runs=ANL-x,ANL-y 指定，或先产生多个运行。</p></section>"
+        )
+        return shell("分析 · 比较", content)
+    run_rows = [
+        [
+            _run_link(by_id[run.run_id]),
+            esc(run.mode_slug),
+            esc(run.as_of),
+            badge(run.review_status),
+            badge(run.signal),
+            esc(", ".join(run.evidence_ids)),
+        ]
+        for run in report.runs
+    ]
+    conflicts = "".join(
+        f"<li><strong>{esc(a)}</strong>（{esc(sa)}）↔ "
+        f"<strong>{esc(b)}</strong>（{esc(sb)}）</li>"
+        for a, sa, b, sb in report.conflicting_signals
+    )
+    omitted = "".join(
+        f"<li><strong>{esc(run_id)}</strong>: {esc(', '.join(om) or '—')}</li>"
+        for run_id, om in report.evidence_omitted.items()
+    )
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">分析工作区</div><h2>模式比较</h2>
+<p>浮出共享事实、证据遗漏与冲突信号；禁止多数投票，综合权重来自证据质量/机制完整性/范围适配/校准历史或人工判断。</p>
+</div></section>
+<section class="panel"><h3>运行</h3>
+{table(["Run", "模式", "as-of", "评审", "信号", "证据"], run_rows)}</section>
+<section class="grid">
+<div class="panel"><h3>共享事实</h3><p>{esc(', '.join(report.shared_facts) or '—')}</p>
+<h3>时间视野</h3><p>{esc(', '.join(report.time_horizons) or '—')}</p></div>
+<div class="panel"><h3>证据遗漏（别 run 用了、本 run 没用）</h3><ul>{omitted or "<li class='muted'>—</li>"}</ul></div>
+<div class="panel full"><h3>冲突信号（启发式，需人工复核）</h3><ul>{conflicts or "<li class='muted'>无</li>"}</ul></div>
+</section>"""
+    return shell("分析 · 比较", content)
+
+
 def create_app(root: Path) -> FastAPI:
     repo = DashboardRepository(root)
     app = FastAPI(
@@ -1175,6 +1480,40 @@ def create_app(root: Path) -> FastAPI:
     @app.get("/impact", response_class=HTMLResponse)
     def impact_assertions(project: str | None = Query(default=None)) -> HTMLResponse:
         return HTMLResponse(_impact_page(repo))
+
+    @app.get("/analysis", response_class=HTMLResponse)
+    def analysis_overview(project: str | None = Query(default=None)) -> HTMLResponse:
+        return HTMLResponse(_analysis_page(repo))
+
+    @app.get("/analysis/modes", response_class=HTMLResponse)
+    def analysis_modes(project: str | None = Query(default=None)) -> HTMLResponse:
+        return HTMLResponse(_analysis_modes(repo))
+
+    @app.get("/analysis/runs", response_class=HTMLResponse)
+    def analysis_runs(project: str | None = Query(default=None)) -> HTMLResponse:
+        return HTMLResponse(_analysis_runs(repo))
+
+    @app.get("/analysis/compare", response_class=HTMLResponse)
+    def analysis_compare(
+        runs: str = Query(default=""),
+        project: str | None = Query(default=None),
+    ) -> HTMLResponse:
+        run_ids = [item.strip() for item in runs.split(",") if item.strip()]
+        return HTMLResponse(_analysis_compare(repo, run_ids))
+
+    @app.get("/analysis/modes/{mode_id}", response_class=HTMLResponse)
+    def analysis_mode_detail(mode_id: str) -> HTMLResponse:
+        try:
+            return HTMLResponse(_analysis_mode_detail(repo, mode_id))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=mode_id) from exc
+
+    @app.get("/analysis/runs/{run_id}", response_class=HTMLResponse)
+    def analysis_run_detail(run_id: str) -> HTMLResponse:
+        try:
+            return HTMLResponse(_analysis_run_detail(repo, run_id))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=run_id) from exc
 
     @app.get("/health", response_class=HTMLResponse)
     def health(project: str | None = Query(default=None)) -> HTMLResponse:

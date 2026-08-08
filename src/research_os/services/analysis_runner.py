@@ -50,6 +50,13 @@ from research_os.services.validation import validate_repository
 
 _ANL_PATH = "05_Research/Analysis"
 
+_INPUT_FIELDS = (
+    "input_source_ids",
+    "input_event_ids",
+    "input_impact_ids",
+    "input_thesis_ids",
+)
+
 # Frontmatter field order mirrors the schema; unknown keys sort after these.
 _ANL_FIELD_ORDER = [
     "id",
@@ -383,3 +390,30 @@ def _yaml_value(value: Any) -> str:
     if isinstance(value, list):
         return yaml_list([str(item) for item in value])
     return yaml_scalar(str(value))
+
+
+def render_run_detail(run: ResearchObject, by_id: dict[str, ResearchObject]) -> str:
+    """D-014 ``analyze show``: frozen run detail + mode label + input listing."""
+    mode = by_id.get(str(run.metadata.get("mode_id", "")))
+    mode_label = (
+        str(mode.metadata.get("name", "")) if mode is not None else "(unknown mode)"
+    )
+    lines = [
+        f"# {run.object_id}",
+        f"mode: {run.metadata.get('mode_id')}  ({mode_label})",
+        f"as_of: {run.metadata.get('as_of')}",
+        f"status: {run.metadata.get('status')}  "
+        f"(review: {run.metadata.get('review_status')})",
+        f"model: {run.metadata.get('model_provider')} / {run.metadata.get('model_id')}",
+        f"input_snapshot_hash: {run.metadata.get('input_snapshot_hash') or '—'}",
+        f"prompt_hash: {run.metadata.get('prompt_hash') or '—'}",
+        f"output_hash: {run.metadata.get('output_hash') or '—'}",
+        "inputs:",
+    ]
+    for field in _INPUT_FIELDS:
+        ids = run.metadata.get(field, []) or []
+        if ids:
+            lines.append(f"  {field}: {', '.join(str(i) for i in ids)}")
+    lines.append("")
+    lines.append(run.body.rstrip())
+    return "\n".join(lines)

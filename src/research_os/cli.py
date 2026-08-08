@@ -339,6 +339,61 @@ def parse_args() -> argparse.Namespace:
         choices=("pending", "reviewed", "rejected", "superseded"),
         default="pending",
     )
+
+    modes = subparsers.add_parser("modes", help="Analysis Modes (D-014)")
+    modes_commands = modes.add_subparsers(dest="modes_command", required=True)
+    modes_commands.add_parser(
+        "list", help="list every mode with its version/status gate"
+    )
+    modes_show = modes_commands.add_parser(
+        "show", help="show one mode's versioned contract"
+    )
+    modes_show.add_argument("mode_id", help="MOD-ANL-<slug>-vN")
+    modes_commands.add_parser(
+        "check", help="check which modes may produce a new run"
+    )
+
+    analyze = subparsers.add_parser("analyze", help="Analysis Runs (D-014/D-016)")
+    analyze_commands = analyze.add_subparsers(dest="analyze_command", required=True)
+    analyze_run = analyze_commands.add_parser(
+        "run", help="dry-run/apply a Mode Runner transaction"
+    )
+    analyze_run.add_argument("--mode", required=True, help="MOD-ANL-<slug>-vN")
+    analyze_run.add_argument("--scope", default="", help="comma-separated scope IDs")
+    analyze_run.add_argument("--as-of", default=date.today().isoformat())
+    analyze_run.add_argument("--source", default="", help="comma-separated SRC-* ids")
+    analyze_run.add_argument("--event", default="", help="comma-separated EVT-* ids")
+    analyze_run.add_argument("--impact", default="", help="comma-separated IMP-* ids")
+    analyze_run.add_argument("--thesis", default="", help="comma-separated THS-* ids")
+    analyze_run.add_argument("--model-provider", default="echo")
+    analyze_run.add_argument("--model-id", default="echo")
+    analyze_run.add_argument("--timeout", type=float, default=60.0)
+    analyze_run.add_argument("--apply", action="store_true")
+    analyze_show = analyze_commands.add_parser("show", help="show one Analysis Run")
+    analyze_show.add_argument("run_id", help="ANL-YYYYMMDD-NNN")
+    analyze_compare = analyze_commands.add_parser(
+        "compare", help="compare runs (no majority vote)"
+    )
+    analyze_compare.add_argument(
+        "--runs", required=True, help="comma-separated ANL-* ids"
+    )
+    analyze_replay = analyze_commands.add_parser(
+        "replay",
+        help="re-run a run's frozen inputs with a current model (creates a NEW run)",
+    )
+    analyze_replay.add_argument("run_id", help="ANL-YYYYMMDD-NNN to replay")
+    analyze_replay.add_argument("--model-provider", default="echo")
+    analyze_replay.add_argument("--model-id", default="echo")
+    analyze_replay.add_argument("--timeout", type=float, default=60.0)
+    analyze_replay.add_argument("--apply", action="store_true")
+    analyze_propose = analyze_commands.add_parser(
+        "propose-thesis",
+        help="from a reviewed run, draft a pending Thesis proposal (never a THS-*)",
+    )
+    analyze_propose.add_argument("--run", required=True, help="ANL-YYYYMMDD-NNN")
+    analyze_propose.add_argument("--date", default=date.today().isoformat())
+    analyze_propose.add_argument("--apply", action="store_true")
+
     subparsers.add_parser("scale", help="assess scale triggers and storage mode")
 
     project = subparsers.add_parser("project", help="manage research Projects")
@@ -1478,6 +1533,107 @@ def main() -> int:
             except (OSError, TransactionError, ValueError) as exc:
                 print(f"ERROR: {exc}")
                 return 2
+    if args.command == "modes":
+        try:
+            objects, _ = runtime.validate_repository(args.root.resolve())
+            if args.modes_command == "list":
+                print(runtime.render_mode_list(objects), end="")
+            elif args.modes_command == "check":
+                print(runtime.render_mode_check(objects), end="")
+            elif args.modes_command == "show":
+                mode = runtime.find_mode(objects, args.mode_id)
+                if mode is None:
+                    raise ValueError(f"unknown analysis mode {args.mode_id!r}")
+                print(runtime.render_mode_detail(mode, objects), end="")
+            return 0
+        except (OSError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
+    if args.command == "analyze":
+        try:
+            root = args.root.resolve()
+            if args.analyze_command == "run":
+                print(
+                    runtime.run_analysis(
+                        root,
+                        mode_id=args.mode,
+                        as_of=args.as_of,
+                        scope_ids=runtime.split_values(args.scope),
+                        input_source_ids=runtime.split_values(args.source),
+                        input_event_ids=runtime.split_values(args.event),
+                        input_impact_ids=runtime.split_values(args.impact),
+                        input_thesis_ids=runtime.split_values(args.thesis),
+                        model_provider=args.model_provider,
+                        model_id=args.model_id,
+                        timeout=args.timeout,
+                        apply=args.apply,
+                    ),
+                    end="",
+                )
+                return 0
+            if args.analyze_command == "show":
+                objects, _ = runtime.validate_repository(root)
+                by_id = {obj.object_id: obj for obj in objects}
+                run = by_id.get(args.run_id)
+                if run is None or run.object_type != "analysis_run":
+                    raise ValueError(f"unknown analysis run {args.run_id!r}")
+                print(runtime.render_run_detail(run, by_id), end="")
+                return 0
+            if args.analyze_command == "compare":
+                objects, _ = runtime.validate_repository(root)
+                report = runtime.compare_runs(
+                    objects, runtime.split_values(args.runs)
+                )
+                print(runtime.render_compare_report(report), end="")
+                return 0
+            if args.analyze_command == "replay":
+                objects, _ = runtime.validate_repository(root)
+                source = next(
+                    (o for o in objects if o.object_id == args.run_id),
+                    None,
+                )
+                if source is None or source.object_type != "analysis_run":
+                    raise ValueError(f"unknown analysis run {args.run_id!r}")
+                print(
+                    runtime.run_analysis(
+                        root,
+                        mode_id=str(source.metadata.get("mode_id", "")),
+                        as_of=str(source.metadata.get("as_of", "")),
+                        scope_ids=list(source.metadata.get("scope_ids", []) or []),
+                        input_source_ids=list(
+                            source.metadata.get("input_source_ids", []) or []
+                        ),
+                        input_event_ids=list(
+                            source.metadata.get("input_event_ids", []) or []
+                        ),
+                        input_impact_ids=list(
+                            source.metadata.get("input_impact_ids", []) or []
+                        ),
+                        input_thesis_ids=list(
+                            source.metadata.get("input_thesis_ids", []) or []
+                        ),
+                        model_provider=args.model_provider,
+                        model_id=args.model_id,
+                        timeout=args.timeout,
+                        apply=args.apply,
+                    ),
+                    end="",
+                )
+                return 0
+            if args.analyze_command == "propose-thesis":
+                print(
+                    runtime.propose_thesis(
+                        root,
+                        run_id=args.run,
+                        created_at=args.date,
+                        apply=args.apply,
+                    ),
+                    end="",
+                )
+                return 0
+        except (OSError, TransactionError, ValueError, FileExistsError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
     if args.command == "export":
         try:
             root = args.root.resolve()
