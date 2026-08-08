@@ -4,7 +4,7 @@
 
 更新时间：2026-08-07
 
-| Impact ID | 触发 Event | Target | 类型 | 方向 | Horizon | 置信度 | 审核状态 |
+| Impact ID | 触发 Event | Target | 类型 | 方向 | Horizon | 置信度 | 状态 |
 |---|---|---|---|---|---|---:|---|
 | IMP-20260807-001 | EVT-20260225-034 | COM-asml | supply | mixed | unknown | 0.70 | pending |
 | IMP-20260807-002 | EVT-20260225-034 | COM-tsmc | supply | mixed | unknown | 0.70 | pending |
