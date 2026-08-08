@@ -2,7 +2,7 @@
 
 <!-- Generated from immutable Review Decision objects. -->
 
-更新时间：2026-08-06
+更新时间：2026-08-08
 
 | Review ID | Date | Decision | Targets | Reviewer | Projects |
 |---|---|---|---|---|---|
@@ -95,3 +95,7 @@
 | REV-20260806-043 | 2026-08-06 | approve | REL-20260806-265 | max | PRJ-001 |
 | REV-20260806-060 | 2026-08-06 | approve | COM-microsoft | max | PRJ-001 |
 | REV-20260806-062 | 2026-08-06 | approve | COM-openai | max | PRJ-001 |
+| REV-20260808-001 | 2026-08-08 | approve | EVT-20260531-049 | max | PRJ-001 |
+| REV-20260808-002 | 2026-08-08 | approve | SRC-20260808-153 | max | PRJ-001 |
+| REV-20260808-003 | 2026-08-08 | approve | EVT-20260407-050 | max | PRJ-001 |
+| REV-20260808-004 | 2026-08-08 | approve | SRC-20260808-154 | max | PRJ-001 |

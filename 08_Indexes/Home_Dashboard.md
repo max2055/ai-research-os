@@ -375,6 +375,13 @@
 
 ## Failed jobs
 
-- [[JOB-20260807141733-001]] — discover: ValueError: discovery failed for CHN-sec-microsoft: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1032)>
-- [[JOB-20260806121259-001]] — discover: ValueError: SEC channel requires a CIK in locator or entity_ids
-- [[JOB-20260806121246-001]] — discover: ValueError: GitHub channel locator must be a repository URL: https://api.github.com/repos/{owner}/{repo}/releases
+- [[JOB-20260808050741-001]] — discover: ValueError: discovery failed for CHN-skhynix-ir: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050712-001]] — discover: ValueError: discovery failed for CHN-sec-tsmc: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050651-001]] — discover: ValueError: discovery failed for CHN-sec-nvidia: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050629-001]] — discover: ValueError: discovery failed for CHN-sec-microsoft: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050601-001]] — discover: ValueError: discovery failed for CHN-sec-micron: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050540-001]] — discover: ValueError: discovery failed for CHN-sec-meta: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050512-001]] — discover: ValueError: discovery failed for CHN-sec-coreweave: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050450-001]] — discover: ValueError: discovery failed for CHN-sec-amazon: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050422-001]] — discover: ValueError: discovery failed for CHN-github-openai: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260808050401-001]] — discover: ValueError: discovery failed for CHN-github-microsoft: <urlopen error [Errno 8] nodename nor servname provided, or not known>
