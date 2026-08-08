@@ -26,6 +26,8 @@ REVIEWABLE_TYPES = frozenset(
         "sector",
         "ontology_assertion",
         "impact_assertion",
+        "analysis_mode",
+        "analysis_run",
         "product",
         "security",
         "source_channel",

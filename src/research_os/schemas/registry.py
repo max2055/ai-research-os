@@ -5,6 +5,8 @@ from datetime import date
 from typing import Any
 
 from research_os.schemas.action import ActionSchema
+from research_os.schemas.analysis_mode import AnalysisModeSchema
+from research_os.schemas.analysis_run import AnalysisRunSchema
 from research_os.schemas.common import ManagedObjectSchema
 from research_os.schemas.company import CompanySchema
 from research_os.schemas.event import EventSchema
@@ -48,6 +50,8 @@ SCHEMAS: dict[str, SchemaType] = {
     "source_channel": SourceChannelSchema,
     "ontology_assertion": OntologyAssertionSchema,
     "impact_assertion": ImpactAssertionSchema,
+    "analysis_mode": AnalysisModeSchema,
+    "analysis_run": AnalysisRunSchema,
 }
 
 

@@ -411,6 +411,8 @@ def validate_refs(
         expect_ref(obj, "object_id", None, by_id, findings)
         expect_refs(obj, "evidence_ids", "event", by_id, findings)
         expect_refs(obj, "source_ids", "source", by_id, findings)
+    elif obj.object_type == "analysis_run":
+        expect_ref(obj, "mode_id", "analysis_mode", by_id, findings)
     elif obj.object_type == "impact_assertion":
         expect_refs(obj, "trigger_event_ids", "event", by_id, findings)
         expect_ref(obj, "subject_id", None, by_id, findings)

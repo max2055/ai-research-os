@@ -28,6 +28,8 @@ ID_PATTERNS = {
     "source_channel": re.compile(r"^CHN-[a-z0-9]+(?:-[a-z0-9]+)*$"),
     "ontology_assertion": re.compile(r"^REL-\d{8}-\d{3}$"),
     "impact_assertion": re.compile(r"^IMP-\d{8}-\d{3}$"),
+    "analysis_mode": re.compile(r"^MOD-ANL-[a-z0-9]+(?:-[a-z0-9]+)*-v\d+$"),
+    "analysis_run": re.compile(r"^ANL-\d{8}-\d{3}$"),
 }
 
 # Ontology assertion predicates (Phase 0-1 §5). Relation direction is explicit;
