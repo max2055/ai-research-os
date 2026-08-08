@@ -3,11 +3,12 @@ id: MOD-ANL-expectations-valuation-v1
 type: analysis_mode
 title: Expectations & Valuation Mode
 created_at: 2026-08-08
-updated_at: 2026-08-08
+updated_at: '2026-08-08'
 schema_version: 2
 project_ids: []
-status: proposed
-review_status: pending
+status: active
+review_status: reviewed
+valid_from: 2026-08-08
 tags: []
 name: 预期与估值分析
 purpose: 评估当前价格与市场预期隐含的经营结果：dated price、shares、资本结构、预期来源、匹配分母与时效。
@@ -15,17 +16,17 @@ applicable_scopes: [company, event, thesis]
 required_input_types: [event]
 optional_input_types: [thesis]
 required_questions:
-  - 当前价格隐含什么经营结果？
-  - 市场预期来源与时效？
-  - 估值分母是否匹配（price / shares / 资本结构）？
+- 当前价格隐含什么经营结果？
+- 市场预期来源与时效？
+- 估值分母是否匹配（price / shares / 资本结构）？
 required_output_sections: [Current price implication, Expectation source, Valuation denominators, Freshness]
 assumption_policy: 显式列出价格、股数、资本结构与预期来源；注明数据时效。
 evidence_policy: 只引用冻结输入；价格与预期须有来源。
 counterevidence_policy: 对隐含预期判断列出反向解读，或说明为何缺失。
 time_horizons: [quarter, year]
 prohibited_conclusions:
-  - 不把模型 confidence 当作客观概率。
-  - 不得输出投资建议或买卖指令。
+- 不把模型 confidence 当作客观概率。
+- 不得输出投资建议或买卖指令。
 output_schema_path: 00_System/Analysis_Modes/output_contract_schema.json
 evaluator_version: ""
 ---
@@ -58,4 +59,4 @@ evaluator_version: ""
 
 ## Review
 
-Drafted as proposed；pending human review（RCP-v03-007 point 6）before activation。
+Activated 2026-08-08 by max review（REV-20260808-007）。

@@ -640,10 +640,9 @@ class RunDraftRenderTests(unittest.TestCase):
 
 
 class ModeDefinitionsTests(unittest.TestCase):
-    """D-010: the 9 first-batch modes exist, share the output contract; the 3
-    activated modes (value-chain/supply-demand/red-team, REV-20260808-005) are
-    runnable, the 6 remaining are proposed/pending and refused by
-    require_runnable until max reviews and activates them."""
+    """D-010: the 9 first-batch modes exist, share the output contract, and are
+    all activated (value-chain/supply-demand/red-team via REV-20260808-005, the
+    remaining 6 via REV-20260808-007) so require_runnable accepts every one."""
 
     EXPECTED = [
         "MOD-ANL-value-chain-v1",
@@ -657,15 +656,9 @@ class ModeDefinitionsTests(unittest.TestCase):
         "MOD-ANL-open-discovery-v1",
     ]
 
-    # Activated 2026-08-08 by max via REV-20260808-005 (status=active +
-    # review_status=reviewed + valid_from); the rest stay proposed/pending.
-    ACTIVATED = frozenset(
-        {
-            "MOD-ANL-value-chain-v1",
-            "MOD-ANL-supply-demand-v1",
-            "MOD-ANL-red-team-v1",
-        }
-    )
+    # All 9 activated 2026-08-08 by max (REV-20260808-005 + REV-20260808-007):
+    # status=active + review_status=reviewed + valid_from.
+    ACTIVATED = frozenset(EXPECTED)
 
     def _repo_objects(self) -> list[ResearchObject]:
         from research_os.services.validation import validate_repository
@@ -685,20 +678,14 @@ class ModeDefinitionsTests(unittest.TestCase):
         for mode_id in self.EXPECTED:
             self.assertIsNotNone(find_mode(objects, mode_id))
 
-    def test_activated_modes_are_runnable_rest_proposed(self) -> None:
+    def test_all_modes_are_active_and_runnable(self) -> None:
         objects = self._repo_objects()
         for mode_id in self.EXPECTED:
             mode = find_mode(objects, mode_id)
-            if mode_id in self.ACTIVATED:
-                self.assertEqual("active", mode.metadata["status"])
-                self.assertEqual("reviewed", mode.metadata["review_status"])
-                self.assertEqual("2026-08-08", mode.metadata.get("valid_from"))
-                self.assertIsNotNone(require_runnable(objects, mode_id))
-            else:
-                self.assertEqual("proposed", mode.metadata["status"])
-                self.assertEqual("pending", mode.metadata["review_status"])
-                with self.assertRaises(ModeNotRunnable):
-                    require_runnable(objects, mode_id)
+            self.assertEqual("active", mode.metadata["status"])
+            self.assertEqual("reviewed", mode.metadata["review_status"])
+            self.assertEqual("2026-08-08", mode.metadata.get("valid_from"))
+            self.assertIsNotNone(require_runnable(objects, mode_id))
 
     def test_modes_share_output_contract(self) -> None:
         objects = self._repo_objects()
