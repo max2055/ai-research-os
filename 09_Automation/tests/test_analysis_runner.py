@@ -585,10 +585,65 @@ def _parse_frontmatter(content: str) -> dict[str, object]:
     return meta
 
 
+class RunDraftRenderTests(unittest.TestCase):
+    """render_run_draft must emit schema-valid frontmatter: dict values
+    (model_parameters) render as YAML flow mappings, never quoted strings."""
+
+    def _meta(self) -> dict[str, object]:
+        return {
+            "id": "ANL-20260808-001",
+            "type": "analysis_run",
+            "title": "t",
+            "created_at": "2026-08-08",
+            "updated_at": "2026-08-08",
+            "schema_version": 2,
+            "project_ids": [],
+            "status": "completed",
+            "review_status": "pending",
+            "tags": [],
+            "mode_id": "MOD-ANL-value-chain-v1",
+            "scope_ids": [],
+            "as_of": "2026-08-08",
+            "input_source_ids": [],
+            "input_event_ids": [],
+            "input_impact_ids": [],
+            "input_thesis_ids": [],
+            "input_snapshot_hash": "a" * 64,
+            "model_provider": "deterministic",
+            "model_id": "m",
+            "model_parameters": {"temperature": "0.2", "max_tokens": "2000"},
+            "prompt_hash": "b" * 64,
+            "output_hash": "c" * 64,
+            "generation_method": "mode-runner",
+        }
+
+    def test_dict_roundtrips_through_schema(self) -> None:
+        from research_os.repositories.markdown import MarkdownDocument
+        from research_os.schemas import AnalysisRunSchema
+        from research_os.services.analysis_runner import render_run_draft
+
+        content = render_run_draft(self._meta(), "## Facts used\nx\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ANL-20260808-001.md"
+            path.write_text(content, encoding="utf-8")
+            doc = MarkdownDocument.read(path)
+            obj = AnalysisRunSchema.model_validate(doc.metadata)
+            self.assertEqual(
+                {"temperature": "0.2", "max_tokens": "2000"}, obj.model_parameters
+            )
+
+    def test_empty_dict_renders_as_flow_mapping(self) -> None:
+        from research_os.services.analysis_runner import render_run_draft
+
+        content = render_run_draft({"model_parameters": {}}, "body")
+        self.assertIn("model_parameters: {}", content)
+
+
 class ModeDefinitionsTests(unittest.TestCase):
-    """D-010: the 9 first-batch mode definitions exist in the repo, are drafted
-    as proposed/pending, share the output contract, and are not runnable until
-    max reviews and activates them (RCP-v03-007 point 6)."""
+    """D-010: the 9 first-batch modes exist, share the output contract; the 3
+    activated modes (value-chain/supply-demand/red-team, REV-20260808-005) are
+    runnable, the 6 remaining are proposed/pending and refused by
+    require_runnable until max reviews and activates them."""
 
     EXPECTED = [
         "MOD-ANL-value-chain-v1",
@@ -601,6 +656,16 @@ class ModeDefinitionsTests(unittest.TestCase):
         "MOD-ANL-red-team-v1",
         "MOD-ANL-open-discovery-v1",
     ]
+
+    # Activated 2026-08-08 by max via REV-20260808-005 (status=active +
+    # review_status=reviewed + valid_from); the rest stay proposed/pending.
+    ACTIVATED = frozenset(
+        {
+            "MOD-ANL-value-chain-v1",
+            "MOD-ANL-supply-demand-v1",
+            "MOD-ANL-red-team-v1",
+        }
+    )
 
     def _repo_objects(self) -> list[ResearchObject]:
         from research_os.services.validation import validate_repository
@@ -620,14 +685,20 @@ class ModeDefinitionsTests(unittest.TestCase):
         for mode_id in self.EXPECTED:
             self.assertIsNotNone(find_mode(objects, mode_id))
 
-    def test_modes_are_proposed_and_not_runnable(self) -> None:
+    def test_activated_modes_are_runnable_rest_proposed(self) -> None:
         objects = self._repo_objects()
         for mode_id in self.EXPECTED:
             mode = find_mode(objects, mode_id)
-            self.assertEqual("proposed", mode.metadata["status"])
-            self.assertEqual("pending", mode.metadata["review_status"])
-            with self.assertRaises(ModeNotRunnable):
-                require_runnable(objects, mode_id)
+            if mode_id in self.ACTIVATED:
+                self.assertEqual("active", mode.metadata["status"])
+                self.assertEqual("reviewed", mode.metadata["review_status"])
+                self.assertEqual("2026-08-08", mode.metadata.get("valid_from"))
+                self.assertIsNotNone(require_runnable(objects, mode_id))
+            else:
+                self.assertEqual("proposed", mode.metadata["status"])
+                self.assertEqual("pending", mode.metadata["review_status"])
+                with self.assertRaises(ModeNotRunnable):
+                    require_runnable(objects, mode_id)
 
     def test_modes_share_output_contract(self) -> None:
         objects = self._repo_objects()

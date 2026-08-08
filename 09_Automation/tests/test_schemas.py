@@ -57,7 +57,7 @@ class SchemaTests(unittest.TestCase):
                 "product": 5,  # WP-120 Product entities
                 "project": 2,
                 "report": 2,
-                "review": 174,  # +4 C-018 BIS reviews (REV-20260808-001..004)
+                "review": 175,  # +5: C-018 BIS + REV-20260808-005 activation
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "security": 10,  # Field Gate §9.3 securities
                 "source": 153,  # +2 C-018 BIS sources +42 8-K +2 github +26 arxiv

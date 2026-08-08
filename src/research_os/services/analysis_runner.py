@@ -369,6 +369,13 @@ def _yaml_value(value: Any) -> str:
         return "true" if value else "false"
     if isinstance(value, (int, float)):
         return str(value)
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        inner = ", ".join(
+            f"{yaml_scalar(str(k))}: {yaml_scalar(str(v))}" for k, v in value.items()
+        )
+        return "{" + inner + "}"
     if isinstance(value, list):
         return yaml_list([str(item) for item in value])
     return yaml_scalar(str(value))

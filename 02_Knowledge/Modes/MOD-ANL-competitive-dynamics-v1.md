@@ -19,7 +19,7 @@ required_questions:
   - 进入壁垒与生态位？
   - 分发、数据、权限与标准控制力？
   - 供应依赖与商业模式冲突？
-required_output_sections: [Competitors and substitutes, Barriers and ecosystem, Distribution, data and standards, Supply dependence and conflicts]
+required_output_sections: [Competitors and substitutes, Barriers and ecosystem, "Distribution, data and standards", Supply dependence and conflicts]
 assumption_policy: 显式说明竞争格局判断的时点与口径。
 evidence_policy: 只引用冻结输入；护城河判断须有证据，不得仅依据产品功能列表。
 counterevidence_policy: 对护城河/竞争地位判断列出反向证据，或说明为何缺失。
