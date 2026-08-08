@@ -10,6 +10,12 @@ from research_os.services.analysis_compare import (
     compare_runs,
     render_compare_report,
 )
+from research_os.services.analysis_evaluator import (
+    evaluate_run,
+    evaluator_metrics,
+    render_evaluation_packet,
+    render_scorecard,
+)
 from research_os.services.analysis_registry import (
     ModeError,
     UnknownMode,
@@ -112,6 +118,7 @@ from research_os.services.metrics import (
     universe_coverage,
     write_metrics_snapshot,
 )
+from research_os.services.mode_metrics import mode_metrics, render_mode_metrics
 from research_os.services.ontology import (
     ontology_jsonl,
     render_impact,
@@ -187,6 +194,8 @@ __all__ = [
     "confirm_published_date",
     "count_by_type",
     "enrich_candidates",
+    "evaluate_run",
+    "evaluator_metrics",
     "gate_metrics",
     "gate_metrics_from_reviews",
     "gate_sample",
@@ -200,6 +209,7 @@ __all__ = [
     "load_spec",
     "metrics_json",
     "mode_metadata",
+    "mode_metrics",
     "mode_slug",
     "mode_version",
     "mode_versions",
@@ -253,7 +263,10 @@ __all__ = [
     "render_mode_check",
     "render_mode_detail",
     "render_mode_list",
+    "render_mode_metrics",
     "render_run_detail",
+    "render_evaluation_packet",
+    "render_scorecard",
     "render_universe_coverage",
     "render_actions",
     "render_project_indexes",

@@ -669,3 +669,41 @@ class AnalysisDashboardTests(unittest.TestCase):
                         set(route.methods) or {"GET"},
                         route.path,
                     )
+
+
+class AnalysisEvalMetricsDashboardTests(unittest.TestCase):
+    """WP-420 (D-017/D-018): evaluator scorecard + mode metrics dashboard pages."""
+
+    def test_run_detail_shows_scorecard(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_root(temp)
+            client = TestClient(create_app(root))
+            page = client.get("/analysis/runs/ANL-20260808-001")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("确定性评分（D-017）", page.text)
+            self.assertIn("引用可解析", page.text)
+
+    def test_eval_packet_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_root(temp)
+            client = TestClient(create_app(root))
+            page = client.get("/analysis/eval?run=ANL-20260808-001")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("D-017 Evaluation Packet", page.text)
+            self.assertIn("人工评分", page.text)
+            missing = client.get("/analysis/eval?run=ANL-missing")
+            self.assertEqual(200, missing.status_code)
+            self.assertIn("unknown analysis run", missing.text)
+
+    def test_overview_and_metrics_pages_show_mode_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = analysis_root(temp)
+            client = TestClient(create_app(root))
+            overview = client.get("/analysis")
+            self.assertEqual(200, overview.status_code)
+            self.assertIn("模式指标（D-018）", overview.text)
+            self.assertIn("输出多样性", overview.text)
+            metrics = client.get("/analysis/metrics")
+            self.assertEqual(200, metrics.status_code)
+            self.assertIn("模式指标", metrics.text)
+            self.assertIn("证据遗漏", metrics.text)

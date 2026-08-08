@@ -19,8 +19,13 @@ from fastapi.responses import (
 from research_os.domain.models import ResearchObject
 from research_os.services.actions import action_rows
 from research_os.services.analysis_compare import compare_runs
+from research_os.services.analysis_evaluator import (
+    evaluate_run,
+    render_evaluation_packet,
+)
 from research_os.services.analysis_registry import (
     mode_metadata,
+    mode_slug,
     mode_version,
     require_runnable,
 )
@@ -37,6 +42,7 @@ from research_os.services.metrics import (
     render_metrics_comparison,
     research_metrics,
 )
+from research_os.services.mode_metrics import mode_metrics
 from research_os.services.ontology import render_impact
 from research_os.services.pilot import pilot_status
 from research_os.services.projects import objects_for_project
@@ -1142,11 +1148,44 @@ def _analysis_page(repo: DashboardRepository) -> str:
 <div class="metric"><strong>{esc(by_status.get('reviewed', 0))}</strong><span>已评审</span></div>
 <div class="metric"><strong>{esc(by_status.get('rejected', 0))}</strong><span>已拒绝</span></div>
 </section>
+{_analysis_metrics_panel(objects)}
 <section class="panel"><h3>最新运行</h3>
 {table(["Run", "模式", "as-of", "状态", "评审"], rows) if rows else "<p class='muted'>尚无分析运行。</p>"}
-<p class="muted"><a href="/analysis/runs">全部运行</a> · <a href="/analysis/modes">全部模式</a> · <a href="/analysis/compare">模式比较</a></p>
+<p class="muted"><a href="/analysis/runs">全部运行</a> · <a href="/analysis/modes">全部模式</a> · <a href="/analysis/compare">模式比较</a> · <a href="/analysis/metrics">模式指标</a></p>
 </section>"""
     return shell("分析", content)
+
+
+def _analysis_metrics_panel(objects: list[ResearchObject]) -> str:
+    metrics = mode_metrics(objects)
+    mm_rows: list[list[str]] = []
+    for slug, stats in metrics["modes"].items():
+        agreement = (
+            f"{stats['agreement']:.2f}" if stats["agreement"] is not None else "—"
+        )
+        mm_rows.append(
+            [
+                _mode_link(next(o for o in objects if o.object_type == "analysis_mode"
+                               and mode_slug(o.object_id) == slug)),
+                esc(stats["run_count"]),
+                esc(f"{stats['edit_distance']:.2f}"),
+                esc(agreement),
+                esc(stats["evidence_omitted"]),
+            ]
+        )
+    return (
+        '<section class="panel"><h3>模式指标（D-018）</h3>'
+        + (
+            table(
+                ["模式", "运行数", "输出多样性", "一致性", "证据遗漏"],
+                mm_rows,
+            )
+            if mm_rows
+            else "<p class='muted'>尚无 completed 运行。</p>"
+        )
+        + '<p class="muted">输出多样性=edit（1 完全不同/0 完全相同）；一致性=同证据 run 对信号一致率；证据遗漏=他 mode 用过而本 mode 未用的证据数。</p>'
+        + "</section>"
+    )
 
 
 def _analysis_modes(repo: DashboardRepository) -> str:
@@ -1310,13 +1349,37 @@ def _analysis_run_detail(repo: DashboardRepository, run_id: str) -> str:
         ["输出哈希", esc(run.metadata.get("output_hash", "") or "—")],
         ["生成方式", esc(run.metadata.get("generation_method", "") or "—")],
     ]
+    eval_rows: list[list[str]] = []
+    eval_gate = "—"
+    try:
+        card = evaluate_run(objects, run_id)
+        eval_rows = [
+            [
+                esc(dimension.label),
+                esc(f"{dimension.score:.2f}"),
+                badge("达标" if dimension.passed else "未达标",
+                      warning=not dimension.passed),
+            ]
+            for dimension in card.dimensions
+        ]
+        eval_gate = badge("PASS" if card.gate_pass else "FAIL",
+                          danger=not card.gate_pass)
+    except ValueError:
+        pass
+    eval_block = (
+        table(["维度", "分数", "达标"], eval_rows)
+        if eval_rows
+        else "<p class='muted'>—</p>"
+    )
     content = f"""<section class="hero"><div>
 <div class="eyebrow">分析运行</div><h2>{esc(run_id)}</h2>
 <p>{mode_cell} · as-of {esc(run.metadata.get("as_of", ""))}</p>
-</div></section>
+</div><div><div class="eyebrow">确定性 Gate</div><h2>{eval_gate}</h2>
+<p class="muted"><a href="/analysis/eval?run={esc(run_id)}">人工评估包</a></p></div></section>
 <section class="grid">
 <div class="panel"><h3>冻结元数据</h3>{_kv_table(rows)}</div>
 <div class="panel"><h3>输入引用</h3><dl>{input_block}</dl></div>
+<div class="panel full"><h3>确定性评分（D-017）</h3>{eval_block}</div>
 <div class="panel full"><h3>正文</h3><pre>{esc(run.body)}</pre></div>
 </section>
 <p class="muted"><a href="/analysis/compare?runs={esc(run_id)}">与此运行比较</a></p>"""
@@ -1500,6 +1563,53 @@ def create_app(root: Path) -> FastAPI:
     ) -> HTMLResponse:
         run_ids = [item.strip() for item in runs.split(",") if item.strip()]
         return HTMLResponse(_analysis_compare(repo, run_ids))
+
+    @app.get("/analysis/eval", response_class=HTMLResponse)
+    def analysis_eval(
+        run: str = Query(default=""), project: str | None = Query(default=None)
+    ) -> HTMLResponse:
+        objects, _ = repo.all()
+        if not run:
+            content = (
+                "<section class='panel'><p class='muted'>用 ?run=ANL-xxx 指定运行。</p></section>"
+            )
+        else:
+            try:
+                packet = render_evaluation_packet(objects, run)
+                content = f'<section class="panel"><pre>{esc(packet)}</pre></section>'
+            except ValueError as exc:
+                content = f"<section class='panel'><p class='muted'>{esc(str(exc))}</p></section>"
+        return HTMLResponse(shell("分析 · 评估包", content))
+
+    @app.get("/analysis/metrics", response_class=HTMLResponse)
+    def analysis_metrics(project: str | None = Query(default=None)) -> HTMLResponse:
+        objects, _ = repo.all()
+        metrics = mode_metrics(objects)
+        mm_rows: list[list[str]] = []
+        for slug, stats in metrics["modes"].items():
+            agreement = (
+                f"{stats['agreement']:.2f}" if stats["agreement"] is not None else "—"
+            )
+            omitted = ", ".join(stats["evidence_omitted_ids"][:10]) or "—"
+            if stats["evidence_omitted"] > 10:
+                omitted += f" … +{stats['evidence_omitted'] - 10}"
+            mm_rows.append(
+                [
+                    esc(slug),
+                    esc(stats["run_count"]),
+                    esc(stats["reviewed_count"]),
+                    esc(f"{stats['edit_distance']:.2f}"),
+                    esc(agreement),
+                    esc(stats["evidence_used"]),
+                    omitted,
+                ]
+            )
+        content = f"""<section class="hero"><div>
+<div class="eyebrow">分析工作区</div><h2>模式指标</h2>
+<p>edit=输出多样性（1 完全不同/0 完全相同）；一致性=同证据 run 对信号一致率；证据遗漏=他 mode 用过而本 mode 未用的证据。</p>
+</div></section>
+<section class="panel">{table(["模式", "运行", "已评审", "输出多样性", "一致性", "证据使用", "证据遗漏"], mm_rows) if mm_rows else "<p class='muted'>尚无 completed 运行。</p>"}</section>"""
+        return HTMLResponse(shell("分析 · 模式指标", content))
 
     @app.get("/analysis/modes/{mode_id}", response_class=HTMLResponse)
     def analysis_mode_detail(mode_id: str) -> HTMLResponse:

@@ -139,10 +139,19 @@ C-018 最小闭环 enablement（2026-08-07）：打通「物化 → review → G
 | WP-410 | D-010 | 9 mode definitions；可按 mode 分包 | completed |
 | WP-411 | D-011～013 | compare、Red Team、discovery sandbox | completed |
 | WP-412 | D-014～016 | CLI/UI/promotion proposal | completed |
-| WP-420 | D-017～018 | evaluator/metrics | proposed |
+| WP-420 | D-017～018 | evaluator/metrics | completed |
 | WP-430 | D-019～020 | 10-case field Gate/recovery | proposed |
 
 所有 Mode 子包必须共用同一 output contract，不得各自创造不兼容的 Facts/Inference 字段。
+
+WP-420 close-out（2026-08-08）：D-017~018 落地，Phase 4 评估层完成。
+- **D-017 evaluator**：`services/analysis_evaluator.py`——确定性评分卡（每 completed run）：citation（被引 ID 可解析率，§11 目标 100%）/ outside_facts（被引证据是否全为声明输入，硬门）/ sections（共享契约 + mode 必输分区非空率）/ questions（必答问题内容词覆盖率，CJK bigram 保守启发式，无特色词问题诚实排除）/ counterevidence（反证非裸否认）/ placeholders。整体 = 均分，gate_pass = 全维度达标。`render_evaluation_packet` 输出 §11 八维人工评估包（D-019 用）；`evaluator_metrics` 聚合 gate 通过率。
+- **D-018 mode metrics**：`services/mode_metrics.py`——按 mode 聚合 completed run：edit（输出多样性 = 同 mode run 体两两归一化距离，近 0 提示 boilerplate）/ agreement（共享证据 run 对信号一致率，浮出分歧不自动裁决）/ evidence omission（他 mode 用过而本 mode 未用的证据清单，聚合 D-011）。纯启发式、只读。
+- **CLI**：`analyze eval --run [--packet]` + `analyze metrics [--mode]`。真实冒烟：ANL-001 scorecard（citation 1.0 / outside_facts 1.0 / sections 1.0 / questions 0.8 / counterevidence 0 / placeholders 1.0，gate FAIL 诚实反映管线验证 run 薄反证）。
+- **Dashboard**：run detail 加 D-017 评分卡 + 确定性 Gate；`/analysis/eval?run=` 人工评估包；`/analysis/metrics` + 概览 D-018 模式指标面板；导航不变。已重启 8765 真实渲染通过。
+- 440 tests 全绿（+20），validate 0 error，ruff/mypy clean。
+- **Known limitations**：questions 覆盖是内容词启发式（非语义）；edit 是词法距离非语义新颖度；agreement 是信号一致非结论同一。
+- **Next：D-019 10-case field Gate（WP-430）——需真实 model provider 跑多模式真实 run + max 用 D-017 评估包人工评分；或先接真实模型 provider。**
 
 WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 - **D-014 CLI**：`modes list/show/check` + `analyze run/show/compare/replay/propose-thesis`。`modes check` 用 `require_runnable` 逐模式门禁；`analyze run` 走 D-009 全事务（dry-run 默认/`--apply`）；`analyze replay` 复用冻结输入以当前模型重放（创建新 ID，不覆盖）；错误退出码 2。

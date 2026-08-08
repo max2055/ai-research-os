@@ -393,6 +393,20 @@ def parse_args() -> argparse.Namespace:
     analyze_propose.add_argument("--run", required=True, help="ANL-YYYYMMDD-NNN")
     analyze_propose.add_argument("--date", default=date.today().isoformat())
     analyze_propose.add_argument("--apply", action="store_true")
+    analyze_eval = analyze_commands.add_parser(
+        "eval", help="deterministic scorecard + human rubric packet for a run (D-017)"
+    )
+    analyze_eval.add_argument("--run", required=True, help="ANL-YYYYMMDD-NNN")
+    analyze_eval.add_argument(
+        "--packet", action="store_true", help="render the human review packet instead"
+    )
+    analyze_metrics = analyze_commands.add_parser(
+        "metrics",
+        help="per-mode metrics: edit diversity / agreement / evidence omission (D-018)",
+    )
+    analyze_metrics.add_argument(
+        "--mode", default="", help="restrict to one mode slug (optional)"
+    )
 
     subparsers.add_parser("scale", help="assess scale triggers and storage mode")
 
@@ -1630,6 +1644,28 @@ def main() -> int:
                     ),
                     end="",
                 )
+                return 0
+            if args.analyze_command == "eval":
+                objects, _ = runtime.validate_repository(root)
+                if args.packet:
+                    print(
+                        runtime.render_evaluation_packet(objects, args.run),
+                        end="",
+                    )
+                else:
+                    card = runtime.evaluate_run(objects, args.run)
+                    print(runtime.render_scorecard(card), end="")
+                return 0
+            if args.analyze_command == "metrics":
+                objects, _ = runtime.validate_repository(root)
+                metrics = runtime.mode_metrics(objects)
+                if args.mode:
+                    slug = args.mode
+                    if slug not in metrics["modes"]:
+                        raise ValueError(f"no completed runs for mode slug {slug!r}")
+                    metrics = {"modes": {slug: metrics["modes"][slug]},
+                               "overall": metrics["overall"]}
+                print(runtime.render_mode_metrics(metrics), end="")
                 return 0
         except (OSError, TransactionError, ValueError, FileExistsError) as exc:
             print(f"ERROR: {exc}")
