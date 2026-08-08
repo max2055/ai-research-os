@@ -37,8 +37,8 @@
       "mechanism_backed": true,
       "direction_ok": false,
       "horizon_ok": true,
-      "contrary_omitted": true,
-      "notes": "Naming competitors is NOT a margin/price/revenue event; margin now gated out but price/revenue still over-reach (10-K mentions them). Competitor-customer duality omitted."
+      "contrary_omitted": false,
+      "notes": "Naming competitors is NOT a margin/price/revenue event; price/revenue still over-reach (10-K mentions them). Countervailing factor now captured: some competitors are also current customers."
     },
     {
       "event_id": "EVT-20260302-048",
@@ -73,8 +73,8 @@
       "mechanism_backed": true,
       "direction_ok": true,
       "horizon_ok": true,
-      "contrary_omitted": true,
-      "notes": "Margin now surfaced negative via SUPPLIES/CUSTOMER_OF->margin rule-map extension (毛利率降至 66%); supply/demand/capacity/technology positive correct for Azure growth. Azure efficiency offset (countervailing) still omitted."
+      "contrary_omitted": false,
+      "notes": "Margin now surfaced negative via SUPPLIES/CUSTOMER_OF->margin rule-map extension (毛利率降至 66%). Countervailing factor now captured: margin decline partially offset by Azure efficiency improvements."
     },
     {
       "event_id": "EVT-20260429-046",
@@ -146,9 +146,9 @@
     "mechanism_backed": 1.0,
     "direction_ok": 0.8666666666666667,
     "horizon_ok": 1.0,
-    "contrary_omissions": 2,
+    "contrary_omissions": 0,
     "gate_direct_precision": true,
     "gate_mechanism_backing": true,
-    "gate_contrary_omissions": false
+    "gate_contrary_omissions": true
   }
 }

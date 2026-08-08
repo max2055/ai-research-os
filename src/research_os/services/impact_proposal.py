@@ -85,6 +85,22 @@ _MARGIN_INCREASE_RE = re.compile(
     r"(毛利率|毛利|margin)\S{0,15}(提升|上升|increase|improve|up|growth)",
     re.IGNORECASE,
 )
+
+# Countervailing factor extraction (C-004): event facts that state an
+# offsetting/duality signal (margin decline partially offset by efficiency, a
+# competitor that is also a customer) become countervailing_factors on the
+# proposals, so contrary context is preserved rather than silently dropped
+# (Phase 3 §2.10).
+_FACT_BLOCK_RE = re.compile(
+    r"- \*\*F\d+\*\*\s*—\s*(.*?)(?=- \*\*F\d+\*\*|- Source:|- Anchor:|- Quote:|\Z)",
+    re.DOTALL,
+)
+_COUNTERVAILING_RE = re.compile(
+    r"(抵消|offset|countervail|缓解|部分被|有所抵消|也[是同时]|同时也是|"
+    r"同时是|既.*又|however|although|despite|but.*(efficienc|improve|offset|growth)|"
+    r"而.*(提升|改善|offset|增长))",
+    re.IGNORECASE,
+)
 _IMPACT_KEYWORDS: dict[str, re.Pattern[str]] = {
     "price": re.compile(r"(price|pricing|价格|ASP|定价|降价|涨价|单价)", re.IGNORECASE),
     "margin": re.compile(r"(margin|毛利|利润|盈利|净利率)", re.IGNORECASE),
@@ -144,6 +160,7 @@ def propose_direct_impacts(
         and _as_of_valid(rel.metadata, today)
     ]
     proposals: list[dict[str, Any]] = []
+    countervailing = _countervailing_factors(event)
     for rel in bridging:
         predicate = rel.metadata.get("predicate")
         if predicate not in IMPACT_RULE_MAP:
@@ -177,6 +194,7 @@ def propose_direct_impacts(
                         "magnitude": "unknown",
                         "horizon": _infer_horizon(event),
                         "mechanism": mechanism,
+                        "countervailing_factors": countervailing,
                         "trigger_event_ids": [event_id],
                         "evidence_ids": [event_id],
                         "relation_id": rel.object_id,
@@ -273,6 +291,21 @@ def _impact_type_relevant(event: ResearchObject, impact_type: str) -> bool:
     )
     pattern = _IMPACT_KEYWORDS.get(impact_type)
     return pattern is None or bool(pattern.search(text))
+
+
+def _countervailing_factors(event: ResearchObject) -> list[str]:
+    """Extract offset/duality signals from the event's Facts as countervailing
+    factors (e.g. margin decline partially offset by efficiency; a competitor
+    that is also a customer). Preserves contrary context (Phase 3 §2.10)."""
+    section = _facts_section(event.body)
+    if not section:
+        return []
+    factors: list[str] = []
+    for match in _FACT_BLOCK_RE.finditer(section):
+        fact = match.group(1).strip()
+        if fact and _COUNTERVAILING_RE.search(fact):
+            factors.append(fact[:200])
+    return factors
 
 
 def _dedup_proposals(

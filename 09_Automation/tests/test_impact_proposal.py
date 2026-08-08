@@ -156,6 +156,30 @@ class DirectImpactProposalTests(unittest.TestCase):
         self.assertNotIn("price", types)
         self.assertNotIn("cost", types)
 
+    def test_countervailing_factors_extracted(self) -> None:
+        objects = [
+            _event(
+                title="Microsoft Cloud margin down",
+                body=(
+                    "## Facts\n"
+                    "- **F1** — 毛利率降至 66%（部分被 Azure 效率提升抵消）。\n"
+                    "- Source: `SRC-x`\n"
+                ),
+            ),
+            _rel("REL-1"),
+            *_entities(),
+        ]
+        proposals = propose_direct_impacts(objects, event_id="EVT-1")
+        self.assertTrue(proposals)
+        for proposal in proposals:
+            self.assertTrue(proposal["countervailing_factors"])
+            self.assertIn("抵消", proposal["countervailing_factors"][0])
+
+    def test_no_countervailing_when_absent(self) -> None:
+        proposals = propose_direct_impacts(self._objects(), event_id="EVT-1")
+        for proposal in proposals:
+            self.assertEqual([], proposal["countervailing_factors"])
+
     def test_dedup_collapses_same_target_type_and_merges_rels(self) -> None:
         objects = [
             _event(),

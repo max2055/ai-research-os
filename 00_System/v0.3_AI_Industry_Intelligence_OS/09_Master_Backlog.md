@@ -401,4 +401,4 @@ Revisit trigger/date:
 - Reviewer: max
 - Revisit trigger/date: WP-300 实施遇架构问题；任一 Impact 语义字段实施遇阻时提修改 RCP。
 
-C-018 Gate 判定（2026-08-08，agent 判定建议，待 max 拍板）：15 事件样本 **有条件通过**——可测量硬阈值 3/3 达标（direct precision 93.3%、mechanism 锚定 100%、horizon 100%）；direction 86.7%（EVT-047 过度提案 / EVT-044 逐 target 价格 2 事件待人工修正）；contrary 2 处遗漏（EVT-047 竞争同时是客户、EVT-039 Azure 效率抵消）须修复；regulation 桶 0/2 为数据缺口。**多跳维持 inactive**（Phase 3 §12 治理门），待 max 复核判断初稿 + 修复 contrary + 补事件至 20 + 全绿后拍板放行。判定包：`05_Research/Reviews/Field_Gate_20_Impact_Packet.md`。
+C-018 Gate 判定（2026-08-08，agent 判定建议，待 max 拍板）：15 事件样本 **有条件通过**——可测量硬阈值 3/3 达标（direct precision 93.3%、mechanism 锚定 100%、horizon 100%）；direction 86.7%（EVT-047 过度提案 / EVT-044 逐 target 价格 2 事件待人工修正）；contrary 已修复（C-004 从事件 Facts 自动提取 countervailing_factors：EVT-047 竞争-客户二重性、EVT-039 Azure 效率抵消，反面遗漏 0）；direction 87%（EVT-047/044 待 max 人工修正）；regulation 桶 0/2 为数据缺口。**多跳维持 inactive**（Phase 3 §12 治理门），待 max 复核判断初稿 + 修复 contrary + 补事件至 20 + 全绿后拍板放行。判定包：`05_Research/Reviews/Field_Gate_20_Impact_Packet.md`。
