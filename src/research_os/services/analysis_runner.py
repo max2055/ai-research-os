@@ -209,7 +209,7 @@ def prepare_run(
     model_provider: str = "echo",
     model_id: str = "echo",
     model_parameters: dict[str, str] | None = None,
-    timeout: float = 60.0,
+    timeout: float | None = None,
     created_at: str | None = None,
     adapter: ModelAdapter | None = None,
 ) -> RunPlan:
@@ -260,7 +260,12 @@ def prepare_run(
 
     model = adapter or build_adapter(model_provider)
     try:
-        raw = model.generate(prompt, timeout=timeout)
+        raw = model.generate(
+            prompt,
+            timeout=timeout,
+            model_id=model_id,
+            model_parameters=dict(model_parameters or {}),
+        )
     except TimeoutError as exc:
         raise RunError("timeout", f"model provider timed out: {exc}") from exc
     except Exception as exc:  # provider failure boundary (Phase 4 §10)
@@ -324,7 +329,7 @@ def run_analysis(
     model_provider: str = "echo",
     model_id: str = "echo",
     model_parameters: dict[str, str] | None = None,
-    timeout: float = 60.0,
+    timeout: float | None = None,
     created_at: str | None = None,
     apply: bool = False,
     adapter: ModelAdapter | None = None,

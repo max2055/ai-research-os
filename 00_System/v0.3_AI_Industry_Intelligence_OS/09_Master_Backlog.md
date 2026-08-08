@@ -153,6 +153,22 @@ WP-420 close-out（2026-08-08）：D-017~018 落地，Phase 4 评估层完成。
 - **Known limitations**：questions 覆盖是内容词启发式（非语义）；edit 是词法距离非语义新颖度；agreement 是信号一致非结论同一。
 - **Next：D-019 10-case field Gate（WP-430）——需真实 model provider 跑多模式真实 run + max 用 D-017 评估包人工评分；或先接真实模型 provider。**
 
+## LLM 供应商适配（D-008 后续，2026-08-09）
+
+参考 CC Switch「供应商预设 + 服务端加载模型 + 下拉选择」的必要部分，落地真实 provider 接入（砍掉视觉分离/自定义供应商/大目录/测速/代理管理）。
+
+- **`research_os/llm/` 四模块**：
+  - `provider_catalog.py`：DeepSeek preset（base_url `https://api.deepseek.com`、api_format `openai_chat`、api_key_url、default_params max_tokens 4096、recommended_models、default_model `deepseek-chat`、timeout 120），结构化便于新增供应商；协议由 preset 决定，绝不靠失败猜测。
+  - `llm_config.py`：服务端 Key 存储 `00_System/llm.local.json`（`*.local.json` gitignored + 0600）；`public_config` 永不含 Key（masked `sk-***`）；编辑留空保留已有 Key、无 Key 留空报错；`get_api_key` config store 优先、env `DEEPSEEK_API_KEY` 兜底。
+  - `llm_adapter.py`：openai_chat（`/chat/completions` + `messages` + `choices[].message.content`）与 openai_responses（`/responses` + `input`/`max_output_tokens` + `output[]/output_text`）独立 builder/parser；**`content:null + reasoning_content` 是合法成功包**（test_connection 不要求非空 content、不把 max_tokens 压小）；错误映射 auth/not_found/rate_limited/server_error/timeout/invalid_response。
+  - `model_fetch.py`：服务端代理 `GET /models`（Bearer Key），标准化 `{id, ownedBy}` 排序，Key 不出现在输出/错误。
+- **ModelAdapter Protocol 扩展**：`generate(prompt, *, timeout, model_id, model_parameters)`——冻结的 model_id == 实际调用模型（此前 `--model-id` 名不副实）；DeepSeekAdapter 按 preset 绑定 + generate 时从 config store/env 解析 Key；runner 透传 model_id/params。
+- **`/llm` dashboard 配置页**：供应商下拉（不显示 URL 输入框）→ API Key 输入（显隐 + 获取 API Key 链接）→ 加载模型按钮 → 可搜索模型下拉（按 ownedBy 分组、不允许手输 ID）→ 测试连接 → 保存配置；供应商切换清空模型选择；模型列表仅会话缓存。**仅新增 POST /llm/config、/llm/models、/llm/test 三个写端点**（dashboard 其余保持只读，测试断言唯一写路由）。
+- **CLI**：`analyze run --model-provider deepseek --model-id deepseek-chat`（空则用已保存 config，缺 Key 给出可操作报错）。
+- **测试**：`test_llm_provider.py` 31 项——模型列表加载排序、Key 不出现客户端响应/错误、content:null 合法、chat/responses 端点与解析器分离、401/404/429/超时/非法响应映射、留空保留 Key、供应商切换清模型、真实 DeepSeek 连接 E2E（`DEEPSEEK_API_KEY` 门控，无 Key skipped）。471 tests 全绿（+31），validate 0 error，ruff/mypy clean。
+- **已知边界**：仅 DeepSeek（openai_chat，responses 已实现+测试但无 preset）；无视觉供应商分离（项目无视觉功能）；无自定义供应商高级入口（缩窄攻击面）；token/cost 未捕获（D-008 协议仍只返回 str）；真实连接需 max 在 `/llm` 填 Key 或用 `! DEEPSEEK_API_KEY=... pytest ...` 跑 E2E。
+- **Next：max 在 /llm 配置 DeepSeek Key 并跑通真实 analyze run → D-019 10-case Gate（WP-430）。**
+
 WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 - **D-014 CLI**：`modes list/show/check` + `analyze run/show/compare/replay/propose-thesis`。`modes check` 用 `require_runnable` 逐模式门禁；`analyze run` 走 D-009 全事务（dry-run 默认/`--apply`）；`analyze replay` 复用冻结输入以当前模型重放（创建新 ID，不覆盖）；错误退出码 2。
 - **D-015 Dashboard**：`/analysis` 工作区（概览 + modes/runs 列表 + mode/run detail + `?runs=` compare），只读 GET，渲染输入引用/版本/冻结哈希/共享事实与冲突信号；导航加「分析」。

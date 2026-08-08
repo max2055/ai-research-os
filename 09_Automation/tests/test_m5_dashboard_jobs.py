@@ -138,14 +138,27 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual("PRJ-001", state.json()["project_id"])
             self.assertGreaterEqual(len(state.json()["objects"]), 4)
 
-            route_methods = {
-                method
-                for route in app.routes
-                for method in getattr(route, "methods", set())
-            }
-            self.assertNotIn("POST", route_methods)
-            self.assertNotIn("PUT", route_methods)
-            self.assertNotIn("DELETE", route_methods)
+            # The research dashboard is read-only EXCEPT the /llm config
+            # endpoints (deliberate server-side provider/key/model config UI —
+            # the API key never leaves the server). No other write routes.
+            write_routes = sorted(
+                {
+                    route.path
+                    for route in app.routes
+                    if (set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"})
+                    - {"GET"}
+                }
+            )
+            self.assertEqual(["/llm/config", "/llm/models", "/llm/test"], write_routes)
+            for route in app.routes:
+                methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
+                if route.path.startswith("/llm") or route.path in {
+                    "/llm/config",
+                    "/llm/models",
+                    "/llm/test",
+                }:
+                    continue
+                self.assertEqual({"GET"}, methods, route.path)
 
     def test_health_metrics_operations_and_missing_assets(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

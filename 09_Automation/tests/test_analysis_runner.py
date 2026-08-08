@@ -74,8 +74,15 @@ No primary data; inference only.
 class ValidBodyAdapter:
     provider = "valid"
 
-    def generate(self, prompt: str, *, timeout: float | None = None) -> str:
-        del prompt, timeout
+    def generate(
+        self,
+        prompt: str,
+        *,
+        timeout: float | None = None,
+        model_id: str | None = None,
+        model_parameters: dict[str, str] | None = None,
+    ) -> str:
+        del prompt, timeout, model_id, model_parameters
         return _VALID_BODY
 
 
@@ -162,8 +169,15 @@ def _adapter_from(output: str) -> object:
     """A minimal adapter returning a fixed output (no provider semantics)."""
 
     class Adapter:
-        def generate(self, prompt: str, *, timeout: float | None = None) -> str:
-            del prompt, timeout
+        def generate(
+            self,
+            prompt: str,
+            *,
+            timeout: float | None = None,
+            model_id: str | None = None,
+            model_parameters: dict[str, str] | None = None,
+        ) -> str:
+            del prompt, timeout, model_id, model_parameters
             return output
 
     return Adapter()
@@ -173,8 +187,15 @@ def _raise_adapter(exc: Exception) -> object:
     """An adapter that always raises (timeout / provider failure)."""
 
     class Adapter:
-        def generate(self, prompt: str, *, timeout: float | None = None) -> str:
-            del prompt, timeout
+        def generate(
+            self,
+            prompt: str,
+            *,
+            timeout: float | None = None,
+            model_id: str | None = None,
+            model_parameters: dict[str, str] | None = None,
+        ) -> str:
+            del prompt, timeout, model_id, model_parameters
             raise exc
 
     return Adapter()

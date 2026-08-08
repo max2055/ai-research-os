@@ -20,8 +20,25 @@ from research_os.adapters.discovery import (
 )
 from research_os.adapters.file import FileCaptureAdapter
 from research_os.adapters.url import UrlCaptureAdapter
+from research_os.llm import llm_config
 from research_os.repositories.transaction import TransactionError
 from research_os.runtime import product as runtime
+
+
+def _resolved_model(provider_flag: str, model_flag: str) -> tuple[str, str]:
+    """Resolve provider/model from CLI flags, falling back to the saved llm
+    config (provider) and finally echo. An explicit flag always wins."""
+    config = llm_config.load_config()
+    configured_provider = str(config.get("provider") or "")
+    provider = provider_flag or configured_provider or "echo"
+    model = model_flag
+    if not model:
+        model = (
+            str(config.get("model") or "")
+            if provider == configured_provider
+            else ""
+        )
+    return provider, model or "echo"
 
 
 def parse_args() -> argparse.Namespace:
@@ -365,9 +382,11 @@ def parse_args() -> argparse.Namespace:
     analyze_run.add_argument("--event", default="", help="comma-separated EVT-* ids")
     analyze_run.add_argument("--impact", default="", help="comma-separated IMP-* ids")
     analyze_run.add_argument("--thesis", default="", help="comma-separated THS-* ids")
-    analyze_run.add_argument("--model-provider", default="echo")
-    analyze_run.add_argument("--model-id", default="echo")
-    analyze_run.add_argument("--timeout", type=float, default=60.0)
+    analyze_run.add_argument("--model-provider", default="",
+                             help="provider (deepseek); empty = saved config or echo")
+    analyze_run.add_argument("--model-id", default="",
+                             help="model id; empty = saved config or echo")
+    analyze_run.add_argument("--timeout", type=float, default=0.0)
     analyze_run.add_argument("--apply", action="store_true")
     analyze_show = analyze_commands.add_parser("show", help="show one Analysis Run")
     analyze_show.add_argument("run_id", help="ANL-YYYYMMDD-NNN")
@@ -382,9 +401,13 @@ def parse_args() -> argparse.Namespace:
         help="re-run a run's frozen inputs with a current model (creates a NEW run)",
     )
     analyze_replay.add_argument("run_id", help="ANL-YYYYMMDD-NNN to replay")
-    analyze_replay.add_argument("--model-provider", default="echo")
-    analyze_replay.add_argument("--model-id", default="echo")
-    analyze_replay.add_argument("--timeout", type=float, default=60.0)
+    analyze_replay.add_argument(
+        "--model-provider", default="",
+        help="provider; empty = saved config or echo",
+    )
+    analyze_replay.add_argument("--model-id", default="",
+                                help="model id; empty = saved config or echo")
+    analyze_replay.add_argument("--timeout", type=float, default=0.0)
     analyze_replay.add_argument("--apply", action="store_true")
     analyze_propose = analyze_commands.add_parser(
         "propose-thesis",
@@ -1567,6 +1590,9 @@ def main() -> int:
         try:
             root = args.root.resolve()
             if args.analyze_command == "run":
+                provider, model_id = _resolved_model(
+                    args.model_provider, args.model_id
+                )
                 print(
                     runtime.run_analysis(
                         root,
@@ -1577,9 +1603,9 @@ def main() -> int:
                         input_event_ids=runtime.split_values(args.event),
                         input_impact_ids=runtime.split_values(args.impact),
                         input_thesis_ids=runtime.split_values(args.thesis),
-                        model_provider=args.model_provider,
-                        model_id=args.model_id,
-                        timeout=args.timeout,
+                        model_provider=provider,
+                        model_id=model_id,
+                        timeout=args.timeout or None,
                         apply=args.apply,
                     ),
                     end="",
@@ -1608,6 +1634,9 @@ def main() -> int:
                 )
                 if source is None or source.object_type != "analysis_run":
                     raise ValueError(f"unknown analysis run {args.run_id!r}")
+                provider, model_id = _resolved_model(
+                    args.model_provider, args.model_id
+                )
                 print(
                     runtime.run_analysis(
                         root,
@@ -1626,9 +1655,9 @@ def main() -> int:
                         input_thesis_ids=list(
                             source.metadata.get("input_thesis_ids", []) or []
                         ),
-                        model_provider=args.model_provider,
-                        model_id=args.model_id,
-                        timeout=args.timeout,
+                        model_provider=provider,
+                        model_id=model_id,
+                        timeout=args.timeout or None,
                         apply=args.apply,
                     ),
                     end="",

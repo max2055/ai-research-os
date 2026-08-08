@@ -17,6 +17,7 @@ from fastapi.responses import (
 )
 
 from research_os.domain.models import ResearchObject
+from research_os.llm import llm_adapter, llm_config, model_fetch, provider_catalog
 from research_os.services.actions import action_rows
 from research_os.services.analysis_compare import compare_runs
 from research_os.services.analysis_evaluator import (
@@ -49,6 +50,20 @@ from research_os.services.projects import objects_for_project
 from research_os.services.validation import validate_repository
 
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+
+_LLM_HUMAN_ERRORS = {
+    "auth": "认证失败：API Key 无效或已过期",
+    "not_found": "接口不存在（404）",
+    "rate_limited": "请求过于频繁，请稍后重试（429）",
+    "server_error": "供应商服务暂时不可用",
+    "timeout": "连接超时",
+    "invalid_response": "供应商返回了无法解析的响应",
+    "empty": "供应商返回为空",
+}
+
+
+def _llm_human(error_type: str) -> str:
+    return _LLM_HUMAN_ERRORS.get(error_type, error_type)
 
 TYPE_LABELS = {
     "source": "来源",
@@ -166,6 +181,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
       <a href="/companies{project_query}">产业</a>
       <a href="/impact{project_query}">影响</a>
       <a href="/analysis{project_query}">分析</a>
+      <a href="/llm{project_query}">模型</a>
       <a href="/health{project_query}">健康</a>
     </nav>
   </div>
@@ -1437,6 +1453,197 @@ def _analysis_compare(repo: DashboardRepository, run_ids: list[str]) -> str:
     return shell("分析 · 比较", content)
 
 
+def _llm_page() -> str:
+    config = llm_config.load_config()
+    public = llm_config.public_config(config)
+    current_provider = public["provider"]
+    current_model = public["model"]
+    provider_options = "".join(
+        f'<option value="{esc(p.id)}"{" selected" if p.id == current_provider else ""}>'
+        f"{esc(p.name)}</option>"
+        for p in provider_catalog.PROVIDER_CATALOG
+    )
+    key_hint = (
+        f'<span class="muted">当前 Key：{esc(public["key_masked"])}'
+        f'（{esc("已配置" if public["has_api_key"] else "未配置")}）</span>'
+        if public["has_api_key"]
+        else '<span class="muted">尚未配置 API Key。</span>'
+    )
+    model_selected = (
+        f'<option value="{esc(current_model)}" selected>{esc(current_model)}</option>'
+        if current_model
+        else '<option value="">— 先加载模型 —</option>'
+    )
+    llm_provider_json = json.dumps(
+        [
+            {
+                "id": p.id,
+                "name": p.name,
+                "api_key_url": p.api_key_url,
+                "default_model": p.default_model,
+                "recommended_models": p.recommended_models,
+            }
+            for p in provider_catalog.PROVIDER_CATALOG
+        ],
+        ensure_ascii=False,
+    )
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">LLM 配置</div><h2>模型供应商</h2>
+<p>Base URL 与 API 协议由供应商预设决定，无需手填；API Key 仅保存在服务端。</p>
+</div></section>
+<section class="panel">
+<label for="llm-provider">供应商</label>
+<select id="llm-provider" name="provider">{provider_options}</select>
+
+<label for="llm-key">API Key</label>
+<div class="llm-row">
+  <input id="llm-key" type="password" autocomplete="off"
+         placeholder="sk-...（留空表示保留已有 Key）">
+  <button type="button" id="llm-key-toggle">显示</button>
+  <a id="llm-key-url" href="#" target="_blank" rel="noopener">获取 API Key</a>
+</div>
+<div id="llm-key-hint">{key_hint}</div>
+
+<label for="llm-model">模型</label>
+<div class="llm-row">
+  <input id="llm-model-filter" type="text" placeholder="搜索模型…" disabled>
+  <select id="llm-model" disabled>{model_selected}</select>
+  <button type="button" id="llm-load" disabled>加载模型</button>
+</div>
+
+<div class="llm-row">
+  <button type="button" id="llm-test">测试连接</button>
+  <button type="button" id="llm-save">保存配置</button>
+  <span id="llm-status" class="muted"></span>
+</div>
+</section>
+<script>
+(function () {{
+  const $ = (id) => document.getElementById(id);
+  const provider = $("llm-provider");
+  const keyInput = $("llm-key");
+  const keyUrl = $("llm-key-url");
+  const modelFilter = $("llm-model-filter");
+  const modelSelect = $("llm-model");
+  const loadBtn = $("llm-load");
+  const status = $("llm-status");
+  const presets = {llm_provider_json};
+
+  function setStatus(text, ok) {{
+    status.textContent = text;
+    status.className = ok ? "" : "badge danger";
+  }}
+
+  function preset() {{
+    return presets.find((p) => p.id === provider.value) || {{}};
+  }}
+
+  function resetModels() {{
+    modelSelect.innerHTML = '<option value="">— 先加载模型 —</option>';
+    modelFilter.value = "";
+    modelFilter.disabled = true;
+    modelSelect.disabled = true;
+  }}
+
+  function providerChanged() {{
+    const p = preset();
+    keyUrl.href = p.api_key_url || "#";
+    loadBtn.disabled = !p.id;
+    resetModels();
+    $("llm-key-hint").textContent = "";
+  }}
+
+  provider.addEventListener("change", () => {{
+    providerChanged();
+    setStatus("供应商已切换，请加载模型", false);
+  }});
+  $("llm-key-toggle").addEventListener("click", () => {{
+    const show = keyInput.type === "password";
+    keyInput.type = show ? "text" : "password";
+    $("llm-key-toggle").textContent = show ? "隐藏" : "显示";
+  }});
+  modelFilter.addEventListener("input", () => {{
+    const q = modelFilter.value.toLowerCase();
+    Array.from(modelSelect.options).forEach((opt) => {{
+      opt.hidden = opt.value && !opt.value.toLowerCase().includes(q);
+    }});
+  }});
+
+  async function post(path, body) {{
+    const response = await fetch(path, {{
+      method: "POST",
+      headers: {{"Content-Type": "application/json"}},
+      body: JSON.stringify(body),
+    }});
+    return response.json();
+  }}
+
+  loadBtn.addEventListener("click", async () => {{
+    setStatus("正在加载模型…", false);
+    const body = {{provider: provider.value, api_key: keyInput.value.trim()}};
+    const result = await post("/llm/models", body);
+    if (!result.models) {{
+      setStatus("加载失败：" + (result.error || "未知错误"), false);
+      resetModels();
+      return;
+    }}
+    modelSelect.innerHTML = "";
+    const groups = {{}};
+    result.models.forEach((m) => {{
+      (groups[m.ownedBy] = groups[m.ownedBy] || []).push(m.id);
+    }});
+    Object.keys(groups).sort().forEach((owner) => {{
+      const group = document.createElement("optgroup");
+      group.label = owner;
+      groups[owner].sort().forEach((id) => {{
+        const option = document.createElement("option");
+        option.value = option.textContent = id;
+        group.appendChild(option);
+      }});
+      modelSelect.appendChild(group);
+    }});
+    modelFilter.disabled = false;
+    modelSelect.disabled = false;
+    setStatus("已加载 " + result.models.length + " 个模型", true);
+  }});
+
+  $("llm-test").addEventListener("click", async () => {{
+    setStatus("正在测试连接…", false);
+    const body = {{
+      provider: provider.value,
+      api_key: keyInput.value.trim(),
+      model: modelSelect.value,
+    }};
+    const result = await post("/llm/test", body);
+    setStatus(result.ok ? "✓ " + result.message + "（" + result.latency_ms + "ms）" : "✗ " + result.message, result.ok);
+  }});
+
+  $("llm-save").addEventListener("click", async () => {{
+    setStatus("正在保存…", false);
+    const body = {{
+      provider: provider.value,
+      api_key: keyInput.value.trim(),
+      model: modelSelect.value,
+    }};
+    const result = await post("/llm/config", body);
+    if (result.error) {{
+      setStatus("保存失败：" + result.error, false);
+      return;
+    }}
+    setStatus("已保存（" + result.key_masked + "）", true);
+    keyInput.value = "";
+  }});
+
+  providerChanged();
+  if (modelSelect.value) {{
+    modelFilter.disabled = false;
+    modelSelect.disabled = false;
+  }}
+}})();
+</script>"""
+    return shell("模型配置", content)
+
+
 def create_app(root: Path) -> FastAPI:
     repo = DashboardRepository(root)
     app = FastAPI(
@@ -1624,6 +1831,73 @@ def create_app(root: Path) -> FastAPI:
             return HTMLResponse(_analysis_run_detail(repo, run_id))
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=run_id) from exc
+
+    @app.get("/llm", response_class=HTMLResponse)
+    def llm_config_page(project: str | None = Query(default=None)) -> HTMLResponse:
+        return HTMLResponse(_llm_page())
+
+    @app.get("/llm/config", response_class=JSONResponse)
+    def llm_config_get() -> JSONResponse:
+        return JSONResponse(llm_config.public_config(llm_config.load_config()))
+
+    @app.post("/llm/config", response_class=JSONResponse)
+    def llm_config_save(payload: dict[str, Any]) -> JSONResponse:
+        provider_id = str(payload.get("provider", ""))
+        try:
+            provider_catalog.get_preset(provider_id)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)})
+        try:
+            saved = llm_config.save_config(
+                provider=provider_id,
+                api_key=str(payload.get("api_key", "") or ""),
+                model=str(payload.get("model", "") or ""),
+            )
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)})
+        return JSONResponse(llm_config.public_config(saved))
+
+    @app.post("/llm/models", response_class=JSONResponse)
+    def llm_models(payload: dict[str, Any]) -> JSONResponse:
+        provider_id = str(payload.get("provider", ""))
+        try:
+            preset = provider_catalog.get_preset(provider_id)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)})
+        key = str(payload.get("api_key", "") or "") or llm_config.get_api_key(
+            provider=provider_id
+        )
+        if not key:
+            return JSONResponse({"error": "请先填写 API Key"})
+        try:
+            models = model_fetch.fetch_models(
+                base_url=preset.base_url, key=key, timeout=preset.timeout
+            )
+        except llm_adapter.LLMError as exc:
+            return JSONResponse({"error": _llm_human(exc.error_type)})
+        return JSONResponse({"models": models})
+
+    @app.post("/llm/test", response_class=JSONResponse)
+    def llm_test(payload: dict[str, Any]) -> JSONResponse:
+        provider_id = str(payload.get("provider", ""))
+        try:
+            preset = provider_catalog.get_preset(provider_id)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)})
+        key = str(payload.get("api_key", "") or "") or llm_config.get_api_key(
+            provider=provider_id
+        )
+        model = str(payload.get("model", "") or "") or preset.default_model
+        if not key:
+            return JSONResponse({"error": "请先填写 API Key"})
+        result = llm_adapter.test_connection(
+            base_url=preset.base_url,
+            api_format=preset.api_format,
+            key=key,
+            model=model,
+            timeout=preset.timeout,
+        )
+        return JSONResponse(result)
 
     @app.get("/health", response_class=HTMLResponse)
     def health(project: str | None = Query(default=None)) -> HTMLResponse:
