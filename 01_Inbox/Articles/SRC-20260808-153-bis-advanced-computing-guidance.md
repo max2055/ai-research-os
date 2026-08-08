@@ -3,11 +3,11 @@ id: SRC-20260808-153
 type: source
 title: "BIS Advanced Computing Items Export License Requirement (May 2026)"
 created_at: 2026-08-08
-updated_at: 2026-08-08
+updated_at: '2026-08-08'
 schema_version: 1
 project_ids: [PRJ-001]
 status: active
-review_status: pending
+review_status: reviewed
 source_type: report
 publisher: "U.S. Bureau of Industry and Security"
 authors: []

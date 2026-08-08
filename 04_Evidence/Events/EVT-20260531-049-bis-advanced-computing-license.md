@@ -3,11 +3,11 @@ id: EVT-20260531-049
 type: event
 title: BIS requires export license for advanced computing items to Country Group D:5 / Macau (May 2026)
 created_at: 2026-08-08
-updated_at: 2026-08-08
+updated_at: '2026-08-08'
 schema_version: 1
 project_ids: [PRJ-001]
 status: active
-review_status: pending
+review_status: reviewed
 event_date: 2026-05-31
 source_ids: [SRC-20260808-153]
 companies: [COM-nvidia]
