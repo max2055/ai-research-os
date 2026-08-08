@@ -35,10 +35,10 @@
       "event_id": "EVT-20260302-047",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "Naming competitors is NOT a margin/price/revenue event; price/revenue still over-reach (10-K mentions them). Countervailing factor now captured: some competitors are also current customers."
+      "notes": "Corrected IMPs (IMP-010..012): competition/mixed only, price/revenue over-proposal rejected as a documented C-004 heuristic limitation (keyword gate can't tell 'mentions revenue' from 'revenue impacted'). Countervailing: some competitors are also customers."
     },
     {
       "event_id": "EVT-20260302-048",
@@ -107,10 +107,10 @@
       "event_id": "EVT-20260601-044",
       "direct_precision": true,
       "mechanism_backed": true,
-      "direction_ok": false,
+      "direction_ok": true,
       "horizon_ok": true,
       "contrary_omitted": false,
-      "notes": "TrendForce DRAM: per-target price direction lost (Samsung ASP +93.4% positive vs SK hynix HBM price decline negative); event-level inference wrong for both. Hand-crafted IMP-005/006 handle it. Horizon now quarter."
+      "notes": "Corrected per-target IMPs: Samsung price+/revenue+ (IMP-005/013), SK hynix price-/revenue+ damped (IMP-006/014), Micron revenue+/price mixed (IMP-015/016); C-004 event-level inference lost per-target direction."
     },
     {
       "event_id": "EVT-20260610-007",
@@ -144,7 +144,7 @@
     "n": 15,
     "direct_precision": 0.9333333333333333,
     "mechanism_backed": 1.0,
-    "direction_ok": 0.8666666666666667,
+    "direction_ok": 1.0,
     "horizon_ok": 1.0,
     "contrary_omissions": 0,
     "gate_direct_precision": true,

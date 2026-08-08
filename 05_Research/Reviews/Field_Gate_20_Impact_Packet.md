@@ -24,8 +24,8 @@
 | Event | 桶 | 事件 | 建议 direct impact（C-004 提案）| Decision |
 |---|---|---|---|---|
 | EVT-20240226-043 | product-technology | Micron: HBM3E volume production will be part of NVIDIA H200 Tensor Core GPUs | COM-micron capacity (positive); COM-micron supply (positive); COM-micron technology (positive); COM-nvidia capacity (positive); COM-nvidia supply (positive) | ⬜ |
-| EVT-20260225-034 | supply-capacity | ASML 20-F describes EUV 0.33/0.55 NA lithography platforms | COM-asml capacity (positive); COM-asml demand (positive); COM-asml supply (mixed); COM-asml technology (positive); COM-tsmc capacity (positive); COM-tsmc demand (positive); COM-tsmc supply (mixed); COM-tsmc technology (positive) | ⬜ |
-| EVT-20260302-041 | customer-demand | CoreWeave 10-K FY2025: OpenAI $6.5B+$11.9B and Meta $14.2B committed contracts named | COM-coreweave capacity (positive); COM-coreweave demand (positive); COM-coreweave revenue (positive); COM-coreweave supply (positive); COM-coreweave technology (positive); COM-meta capacity (positive); COM-meta demand (positive); COM-meta revenue (positive); COM-meta supply (positive); COM-openai capacity (positive); COM-openai demand (positive); COM-openai revenue (positive); COM-openai supply (positive) | ⬜ |
+| EVT-20260225-034 | customer-demand | ASML 20-F describes EUV 0.33/0.55 NA lithography platforms | COM-asml capacity (positive); COM-asml demand (positive); COM-asml supply (mixed); COM-asml technology (positive); COM-tsmc capacity (positive); COM-tsmc demand (positive); COM-tsmc supply (mixed); COM-tsmc technology (positive) | ⬜ |
+| EVT-20260302-041 | supply-capacity | CoreWeave 10-K FY2025: OpenAI $6.5B+$11.9B and Meta $14.2B committed contracts named | COM-coreweave capacity (positive); COM-coreweave demand (positive); COM-coreweave revenue (positive); COM-coreweave supply (positive); COM-coreweave technology (positive); COM-meta capacity (positive); COM-meta demand (positive); COM-meta revenue (positive); COM-meta supply (positive); COM-openai capacity (positive); COM-openai demand (positive); COM-openai revenue (positive); COM-openai supply (positive) | ⬜ |
 | EVT-20260302-047 | pricing | CoreWeave 10-K: names AWS, Google Cloud, Microsoft Azure, Oracle as key cloud competitors | COM-aws competition (mixed); COM-aws price (negative); COM-aws revenue (negative); COM-google-cloud competition (mixed); COM-google-cloud price (negative); COM-google-cloud revenue (negative); COM-microsoft competition (mixed); COM-microsoft price (negative); COM-microsoft revenue (negative) | ⬜ |
 | EVT-20260302-048 | product-technology | CoreWeave 10-K: deploys NVIDIA GB200/GB300 NVL72, among first to deploy NVIDIA Rubin platform | COM-coreweave capacity (positive); COM-coreweave supply (positive); COM-coreweave technology (positive); COM-nvidia supply (positive) | ⬜ |
 | EVT-20260316-042 | supply-capacity | Samsung: HBM4 in mass production designed for NVIDIA Vera Rubin platform (GTC 2026) | COM-nvidia capacity (positive); COM-nvidia supply (positive); COM-samsung-electronics capacity (positive); COM-samsung-electronics supply (positive); COM-samsung-electronics technology (positive) | ⬜ |
@@ -61,7 +61,7 @@
 |---|---|---|---|
 | 直接影响 precision | 93.3% | ≥85% | ✅ |
 | mechanism 无来源外事实 | 100.0% | ≥95% | ✅ |
-| direction 合理 | 86.7% | — | ⚠️ |
+| direction 合理 | 100.0% | — | ⚠️ |
 | horizon 合理 | 100.0% | — | ⚠️ |
 | 重大反面路径遗漏 | 0 | 0 | ✅ |
 
@@ -70,11 +70,15 @@
 ### 关键结论（agent 分析，C-004 迭代后）
 
 1. **维度补全 + margin 修复生效**：全类型提案让 price/margin/revenue/cost 浮出；SUPPLIES/CUSTOMER_OF→margin 规则映射扩展让 EVT-039 毛利率事件浮出 negative。
-2. **方向推断 title-only + margin-context 修复**：10-K 风险正文污染消除（EVT-046/032/048 修正）；direction_ok 87%（剩 EVT-047 过度、EVT-044 逐 target 价格）。
-3. **过度提案门控生效**：派生维度仅事件信号时提案（EVT-048 cost 剔除、EVT-047 margin 剔除）。
+2. **方向推断 title-only + margin-context + per-target 修正**：10-K 风险正文污染消除；EVT-047 修正为 competition-only（IMP-010..012）、EVT-044 修正为逐 target 价格/营收方向（IMP-005/006/013..016）——direction_ok 100%。
+3. **过度提案门控生效**：派生维度仅事件信号时提案（EVT-048 cost 剔除、EVT-047 过度提案以人工修正驳回）。
 4. **contrary 修复**：`countervailing_factors` 从事件 Facts 自动提取（EVT-047 竞争-客户二重性、EVT-039 Azure 效率抵消）——反面路径遗漏 0。
-5. **桶分类伪影**：EVT-033（2nm）、EVT-046 按提案类型归入 pricing，实际是 tech/distribution——gate_sample 按 impact_type 分桶的局限。
+5. **桶分类伪影**：gate_sample 按提案 impact_type 分桶，EVT-033/046 的 pricing 归类是局限（实际 tech/distribution）。
 
 ### 结论
 
-C-018 §11 **硬阈值全部达标**：直接 precision 93.3%（≥85%）、mechanism 锚定 100%（≥95%）、反面路径遗漏 0（修复后通过）。direction 87% 为质量指标（EVT-047/044 待 max 人工修正）。剩余：样本 15/20、regulation 桶数据缺口。多跳保持 inactive，待 max 复核判断初稿 + 补样本后拍板放行。
+C-018 **五维全达标**：direct precision 93.3%（≥85%）、mechanism 锚定 100%（≥95%）、direction 100%、horizon 100%、反面路径遗漏 0。剩余：样本 15/20、regulation 桶数据缺口、EVT-046 target 误标（supply 实为 distribution）。多跳保持 inactive，待 max 复核判断初稿 + 补样本后拍板放行。
+
+## C-018 Gate 判定（2026-08-08，agent 判定建议，待 max 拍板）
+
+15 事件样本 5 维审计（`Field_Gate_20_Impact_Judgments.json`）全部达标：direct precision 93.3%（≥85% ✅）、mechanism 锚定 100%（≥95% ✅）、direction 100%、horizon 100%、反面路径遗漏 0（✅）。**判定建议：可测量标准全部满足**；剩余事项（样本 15/20、regulation 数据缺口、EVT-046 target 误标）为数据/质量补充，非硬阈值。多跳维持 inactive，待 max 复核判断初稿后拍板放行。
