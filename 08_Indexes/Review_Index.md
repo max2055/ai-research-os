@@ -176,3 +176,7 @@
 | REV-20260806-068 | 2026-08-06 | approve | CHN-github-releases | max |  |
 | REV-20260806-069 | 2026-08-06 | approve | CHN-company-ir | max |  |
 | REV-20260806-070 | 2026-08-06 | approve | CHN-sec-nvidia, CHN-sec-tsmc, CHN-sec-micron, CHN-sec-microsoft, CHN-sec-meta, CHN-sec-amazon, CHN-sec-coreweave, CHN-github-openai, CHN-github-anthropic, CHN-github-meta, CHN-github-deepseek, CHN-github-microsoft, CHN-arxiv-llm, CHN-arxiv-vision, CHN-arxiv-datacenter, CHN-arxiv-hardware, CHN-arxiv-agents, CHN-arxiv-econ | max |  |
+| REV-20260808-001 | 2026-08-08 | approve | EVT-20260531-049 | max | PRJ-001 |
+| REV-20260808-002 | 2026-08-08 | approve | SRC-20260808-153 | max | PRJ-001 |
+| REV-20260808-003 | 2026-08-08 | approve | EVT-20260407-050 | max | PRJ-001 |
+| REV-20260808-004 | 2026-08-08 | approve | SRC-20260808-154 | max | PRJ-001 |

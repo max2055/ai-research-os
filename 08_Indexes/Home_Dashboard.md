@@ -31,6 +31,8 @@
 | [[IMP-20260808-014]] | impact_assertion | 2026-08-08 |
 | [[IMP-20260808-015]] | impact_assertion | 2026-08-08 |
 | [[IMP-20260808-016]] | impact_assertion | 2026-08-08 |
+| [[IMP-20260808-017]] | impact_assertion | 2026-08-08 |
+| [[IMP-20260808-018]] | impact_assertion | 2026-08-08 |
 | [[REL-20260805-004]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-005]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-006]] | ontology_assertion | 2026-08-05 |
@@ -364,7 +366,7 @@
 
 | Action | Owner | Due | Status |
 |---|---|---|---|
-| [[ACT-20260729-009]] | max | 2026-08-29 | open |
+| — | — | — | No open actions |
 
 ## Recent reports
 

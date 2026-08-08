@@ -22,3 +22,5 @@
 | IMP-20260808-014 | EVT-20260601-044 | COM-sk-hynix | revenue | positive | quarter | 0.70 | pending |
 | IMP-20260808-015 | EVT-20260601-044 | COM-micron | revenue | positive | quarter | 0.70 | pending |
 | IMP-20260808-016 | EVT-20260601-044 | COM-micron | price | mixed | quarter | 0.70 | pending |
+| IMP-20260808-017 | EVT-20260531-049 | COM-nvidia | regulation | negative | year | 0.80 | pending |
+| IMP-20260808-018 | EVT-20260407-050 | COM-nvidia | regulation | negative | year | 0.70 | pending |

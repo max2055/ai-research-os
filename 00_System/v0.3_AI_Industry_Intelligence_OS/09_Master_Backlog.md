@@ -39,7 +39,7 @@ WP-000 Baseline
 | WP | 包含任务 | 交付 | 依赖 | 状态 |
 |---|---|---|---|---|
 | WP-000 | baseline audit | v0.2 commit/object/test/release snapshot | 无 | proposed |
-| WP-001 | v0.2 cadence completion | 真实 Weekly/Monthly/final decision | 研究者（2 期 cadence 记录 + 最终发布决定；日期不再阻塞，见 D-CALENDAR-DECOUPLE）| blocked until researcher decision |
+| WP-001 | v0.2 cadence completion | 真实 Weekly/Monthly/final decision | 研究者（最终发布决定；cadence 记录已 2 Weekly + 1 Monthly，见 D-CALENDAR-DECOUPLE）| blocked until researcher decision |
 | WP-010 | A-001 | RCP-v03-001 产品/Candidate 边界 | WP-000 | proposed |
 | WP-011 | charter decisions | Pilot、Core 上限、Sector ID、Recommendation ceiling | WP-010 | proposed |
 | WP-012 | RCP schedule | RCP-v03-002～010 owner/date | WP-010 | proposed |
