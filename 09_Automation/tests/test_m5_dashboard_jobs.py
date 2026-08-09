@@ -19,7 +19,12 @@ from research_os.services.indexing import (
     render_project_indexes,
 )
 from research_os.services.jobs import job_rows, run_job
-from research_os.services.read_model import industry_home_snapshot
+from research_os.services.read_model import (
+    analysis_workspace_snapshot,
+    decision_desk_snapshot,
+    impact_explorer_snapshot,
+    industry_home_snapshot,
+)
 from research_os.services.validation import validate_repository
 from research_os.ui.app import create_app, run_ui
 from test_cli import run_cli
@@ -368,6 +373,125 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(200, operations.status_code)
             self.assertIn("打开管线看板", operations.text)
             self.assertNotIn("B-023", operations.text)
+
+
+class ResearchWorkspaceSnapshotTests(unittest.TestCase):
+    @property
+    def root(self) -> Path:
+        return Path(__file__).resolve().parents[2]
+
+    def test_impact_explorer_contract_and_depth_bounds(self) -> None:
+        snapshot = impact_explorer_snapshot(self.root, max_depth=3)
+        self.assertEqual(3, snapshot["max_depth"])
+        self.assertIn("direct_assertions", snapshot)
+        self.assertTrue(
+            all(
+                row["review_status"] == "reviewed"
+                for row in snapshot["direct_assertions"]
+            )
+        )
+        for key in (
+            "paths",
+            "pruning_reasons",
+            "conflicts",
+            "countervailing_factors",
+            "alternative_explanations",
+        ):
+            self.assertIn(key, snapshot)
+        for depth in (0, 4):
+            with self.assertRaisesRegex(ValueError, "between 1 and 3"):
+                impact_explorer_snapshot(self.root, max_depth=depth)
+
+    def test_analysis_workspace_contract_and_compare(self) -> None:
+        all_runs = analysis_workspace_snapshot(self.root)
+        self.assertTrue(all_runs["runs"])
+        run_ids = [row["run_id"] for row in all_runs["runs"][:2]]
+        snapshot = analysis_workspace_snapshot(self.root, run_ids=run_ids)
+        self.assertEqual(run_ids, [row["run_id"] for row in snapshot["runs"]])
+        for key in (
+            "input_ids",
+            "mode_version",
+            "model_version",
+            "template_version",
+            "input_snapshot_hash",
+            "prompt_hash",
+            "output_hash",
+            "evaluator_scores",
+        ):
+            self.assertIn(key, snapshot["runs"][0])
+        for key in ("shared_facts", "evidence_omitted", "conflicting_signals"):
+            self.assertIn(key, snapshot["comparison"])
+        self.assertIn("mode_metrics", snapshot)
+        with self.assertRaises(KeyError):
+            analysis_workspace_snapshot(self.root, run_ids=["ANL-unknown"])
+
+    def test_decision_desk_contract_is_honest_before_resolutions(self) -> None:
+        snapshot = decision_desk_snapshot(self.root, as_of="2026-08-09")
+        for key in (
+            "open_forecasts",
+            "due_forecasts",
+            "overdue_forecasts",
+            "calibration",
+            "valuations",
+            "recommendations",
+            "resolution_history",
+        ):
+            self.assertIn(key, snapshot)
+        self.assertEqual("insufficient_sample", snapshot["calibration"]["status"])
+        self.assertTrue(snapshot["valuations"])
+        for key in ("age_days", "threshold_days", "freshness"):
+            self.assertIn(key, snapshot["valuations"][0])
+        self.assertTrue(snapshot["recommendations"])
+        for key in (
+            "catalysts",
+            "falsification_conditions",
+            "risks",
+            "unknowns",
+            "scenario_references",
+        ):
+            self.assertIn(key, snapshot["recommendations"][0])
+        self.assertEqual([], snapshot["resolution_history"])
+
+    def test_workspace_pages_render_complete_read_only_sections(self) -> None:
+        client = TestClient(create_app(self.root))
+        expectations = {
+            "/impact": (
+                "直接断言",
+                "1–3 跳路径",
+                "最弱环节置信度",
+                "剪枝原因",
+                "冲突信号",
+                "反向因素",
+                "替代解释",
+            ),
+            "/analysis": (
+                "冻结输入",
+                "版本与哈希",
+                "Evaluator",
+                "共享事实",
+                "遗漏 Evidence",
+                "冲突信号",
+            ),
+            "/decision": (
+                "Open Forecast",
+                "Due / Overdue",
+                "校准样本",
+                "估值新鲜度",
+                "催化剂与证伪条件",
+                "风险与未知",
+                "Scenario 引用",
+                "Resolution 历史",
+            ),
+        }
+        for path, labels in expectations.items():
+            response = client.get(path)
+            self.assertEqual(200, response.status_code, path)
+            for label in labels:
+                self.assertIn(label, response.text, (path, label))
+        for route in client.app.routes:
+            if route.path in expectations:
+                methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
+                self.assertEqual({"GET"}, methods, route.path)
 
     def test_pipeline_pages_graceful_without_candidate_db(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

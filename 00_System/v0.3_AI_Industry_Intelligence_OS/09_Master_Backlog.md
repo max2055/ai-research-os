@@ -246,7 +246,7 @@ WP-530 不能用回填或合成 outcome 提前完成。
 |---|---|---|---|
 | WP-600 | F-001～003 | IA/read model/Industry Home | completed |
 | WP-601 | F-004～006 | Sector/Company/Candidate UI | completed |
-| WP-602 | F-007～009 | Impact/Analysis/Decision UI | proposed |
+| WP-602 | F-007～009 | Impact/Analysis/Decision UI | completed |
 | WP-603 | F-010～011 | Operations/Health | proposed |
 | WP-610 | F-012～014 | profile/SLO/security | proposed |
 | WP-611 | F-015～018 | license/backup/recovery/migration | proposed |
@@ -270,6 +270,12 @@ WP-601 close-out（2026-08-09）：F-004~006 落地，Sector/Company/Candidate �
 - **路由策略**：`generic_detail`（app.py）按 `object_type` 分支到 `_company_detail`/`_sector_detail`，其余类型保持 generic——不加路由、自动保只读不变量。
 - 测试：`test_m5_dashboard_jobs.py` +5（SectorCompanyDetailTests 2 + CandidateDetailTests 3）。**583 tests 全绿（+5）、validate 0 error、ruff/mypy clean、index drift 0**。真实仓库冒烟 `/companies/COM-nvidia`（证券/事件/运行面板）+ `/sectors/SEG-memory-storage`（覆盖 rollup）200。
 - **Known limitation**：company/sector 详情多处 inline 过滤（含一次 universe_coverage 调用）——诚实无缓存；sector 上下游仅展示 sector 自身的 ontology_assertion（成员级上下游未聚合，数据稀疏）；候选评分分项需 model_version 匹配才重算（评分版本演进时数值面板自动隐藏并提示）。
+
+WP-602 close-out（2026-08-09）：F-007~009 落地，三类研究工作台改由只读 read model 组合。
+- **F-007**：`impact_explorer_snapshot` + `/impact`——reviewed 直接断言、1～3 跳逐跳机制/Evidence、weakest-link confidence、剪枝、正负/多 horizon 冲突、反向因素和替代解释。当前 22 个 Impact Assertion 均为 pending，页面诚实显示 reviewed 直接断言为 0，不自动提升；多跳查询仅使用 reviewed Event/ontology relation。
+- **F-008**：`analysis_workspace_snapshot` + `/analysis`——冻结输入 ID、Mode/model/template 版本、input/prompt/output hash、Evaluator、D-018 metrics 及双 Run shared facts/evidence omitted/conflicting signals 比较；无 Thesis/Recommendation 自动提升。
+- **F-009**：`decision_desk_snapshot` + `/decision`——open/due/overdue Forecast、校准样本、Valuation freshness、Recommendation catalysts/falsifiers/risks/unknowns/Scenario 引用、Resolution history。当前真实 Resolution 为 0，明确 `insufficient_sample`，不回填未来 outcome。
+- **边界与测试**：Dashboard 写路由仍仅 3 个 `/llm` 本地配置例外；WP-530/WP-620 不变。`test_impact_path.py`、`test_analysis_evaluator.py`、`test_mode_metrics.py`、`test_phase5_lifecycle.py`、`test_phase5_valuation.py`、`test_m5_dashboard_jobs.py` 全绿；相关 ruff/mypy clean。
 
 ## 10. 建议首批派发顺序
 

@@ -32,7 +32,6 @@ from research_os.services.analysis_registry import (
 )
 from research_os.services.candidate_queue import promoted_rows, queue_rows, queue_show
 from research_os.services.channels import channel_rows
-from research_os.services.forecast_due import due_forecasts, overdue_forecasts
 from research_os.services.indexing import (
     index_drift,
     render_project_indexes,
@@ -49,7 +48,10 @@ from research_os.services.ontology import render_impact
 from research_os.services.pilot import pilot_status
 from research_os.services.projects import objects_for_project
 from research_os.services.read_model import (
+    analysis_workspace_snapshot,
     company_snapshot,
+    decision_desk_snapshot,
+    impact_explorer_snapshot,
     industry_home_snapshot,
     sector_snapshot,
 )
@@ -1676,42 +1678,92 @@ def _sector_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
     return shell(f"{obj.object_id} · 板块", content)
 
 
-def _impact_page(repo: DashboardRepository) -> str:
-    objects, _ = repo.all()
-    impacts = sorted(
-        (obj for obj in objects if obj.object_type == "impact_assertion"),
-        key=lambda obj: obj.object_id,
+def _impact_page(
+    repo: DashboardRepository,
+    *,
+    start_id: str | None = None,
+    max_depth: int = 3,
+) -> str:
+    snapshot = impact_explorer_snapshot(
+        repo.root,
+        start_id=start_id,
+        max_depth=max_depth,
     )
-    pending = sum(1 for o in impacts if o.metadata.get("review_status") == "pending")
-    reviewed = sum(1 for o in impacts if o.metadata.get("review_status") == "reviewed")
-    events_covered = len({o.metadata.get("subject_id") for o in impacts})
-    rows = [
+    direct_rows = [
         [
-            f"{esc(o.object_id)}<br><span class='muted'>{esc(o.metadata.get('title', ''))}</span>",
-            esc(o.metadata.get("subject_id", "")),
-            esc(o.metadata.get("target_id", "")),
-            esc(o.metadata.get("impact_type", "")),
-            badge(o.metadata.get("direction", "")),
-            esc(o.metadata.get("horizon", "")),
-            esc(o.metadata.get("confidence", "")),
-            badge(o.metadata.get("review_status", ""),
-                  warning=o.metadata.get("review_status") == "pending"),
+            esc(row["assertion_id"]),
+            esc(row["source_id"]),
+            esc(row["target_id"]),
+            esc(row["predicate"] or row["impact_type"]),
+            esc(row["mechanism"]),
+            esc(", ".join(row["evidence_ids"]) or "—"),
+            f"{esc(row['direction'])} / {esc(row['horizon'])}",
+            esc(row["confidence"]),
         ]
-        for o in impacts
+        for row in snapshot["direct_assertions"]
     ]
+    path_rows = []
+    for path in snapshot["paths"]:
+        hop_lines = []
+        for hop in path["hops"]:
+            evidence = ", ".join(hop["evidence_ids"]) or "—"
+            hop_lines.append(
+                "<li>"
+                f"{esc(hop['source_id'])} → {esc(hop['target_id'])} · "
+                f"{esc(hop['predicate'])}<br>"
+                f"{esc(hop['mechanism'])}<br>Evidence: {esc(evidence)}"
+                "</li>"
+            )
+        path_rows.append(
+            [
+                esc(path["trigger_event_id"]),
+                esc(" → ".join(path["entity_sequence"])),
+                f"<ol>{''.join(hop_lines)}</ol>",
+                esc(path["weakest_confidence"]),
+                esc(path["variant_count"]),
+            ]
+        )
+    pruning_rows = [
+        [esc(row.get("reason")), esc(row.get("at")), esc(row)]
+        for row in snapshot["pruning_reasons"]
+    ]
+    conflict_rows = [
+        [
+            esc(row["target_id"]),
+            esc(", ".join(row["directions_present"])),
+            esc(", ".join(row["horizons_present"])),
+            esc(", ".join(row["conflicts"])),
+        ]
+        for row in snapshot["conflicts"]
+    ]
+
+    def text_list(values: list[str], empty: str) -> str:
+        if not values:
+            return f"<p class='muted'>{esc(empty)}</p>"
+        return "<ul>" + "".join(f"<li>{esc(value)}</li>" for value in values) + "</ul>"
+
     content = f"""<section class="hero"><div>
-<div class="eyebrow">影响引擎</div><h2>事件 → 影响断言</h2>
-<p>仅 reviewed Event 生成；提案默认 pending，人工 review 后转 reviewed。reviewed Impact 支持 1–3 跳路径；每跳保留机制、Evidence 与置信度。</p>
-</div><div><div class="eyebrow">Gate 样本</div>
-<h2>{esc(events_covered)}</h2>
-<p class="muted">事件覆盖</p></div></section>
+<div class="eyebrow">影响引擎</div><h2>Impact Explorer</h2>
+<p>reviewed 直接断言与 1–3 跳解释路径分区展示；正反方向和不同 horizon 不静默合并。</p>
+</div><div><div class="eyebrow">最弱环节置信度</div>
+<h2>{esc(len(snapshot['paths']))}</h2><p class="muted">可解释路径</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(len(impacts))}</strong><span>影响断言</span></div>
-<div class="metric"><strong>{esc(pending)}</strong><span>待审</span></div>
-<div class="metric"><strong>{esc(reviewed)}</strong><span>已审</span></div>
+<div class="metric"><strong>{esc(snapshot['total_assertions'])}</strong><span>全部断言</span></div>
+<div class="metric"><strong>{esc(snapshot['pending_assertions'])}</strong><span>pending</span></div>
+<div class="metric"><strong>{esc(len(snapshot['direct_assertions']))}</strong><span>reviewed 直接断言</span></div>
+<div class="metric"><strong>{esc(len(snapshot['conflicts']))}</strong><span>冲突</span></div>
 </section>
-<section class="panel">{table(["Impact ID", "触发 Event", "Target", "类型", "方向", "Horizon", "置信度", "状态"], rows) if rows else "<p class='muted'>尚无影响断言。</p>"}</section>
-<p class="muted"><a href="/reports" style="display:none"></a>C-018 已批准；评估包见 <code>05_Research/Reviews/Field_Gate_20_Impact_Packet.md</code>。</p>"""
+<section class="panel"><h3>直接断言</h3>
+{table(["ID", "触发", "Target", "谓词/类型", "机制", "Evidence", "方向/Horizon", "置信度"], direct_rows) if direct_rows else "<p class='muted'>当前无 reviewed 直接断言；pending 断言未混入。</p>"}</section>
+<section class="panel"><h3>1–3 跳路径</h3>
+{table(["Event", "实体序列", "每跳机制与 Evidence", "最弱环节置信度", "变体"], path_rows) if path_rows else "<p class='muted'>当前 reviewed 关系未形成可展开路径。</p>"}</section>
+<section class="grid">
+<div class="panel"><h3>剪枝原因</h3>{table(["原因", "位置", "详情"], pruning_rows) if pruning_rows else "<p class='muted'>无剪枝。</p>"}</div>
+<div class="panel"><h3>冲突信号</h3>{table(["Target", "方向", "Horizon", "冲突"], conflict_rows) if conflict_rows else "<p class='muted'>未检测到正负或多时间跨度冲突。</p>"}</div>
+<div class="panel"><h3>反向因素</h3>{text_list(snapshot['countervailing_factors'], 'reviewed 断言暂无反向因素。')}</div>
+<div class="panel"><h3>替代解释</h3>{text_list(snapshot['alternative_explanations'], 'reviewed 断言暂无替代解释。')}</div>
+</section>
+<p class="muted">C-018 已批准；路径查询只读，不自动提升 pending Assertion。</p>"""
     return shell("影响", content)
 
 
@@ -1761,151 +1813,207 @@ def _res_link(obj: ResearchObject) -> str:
     return f'<a href="/decision/resolution/{obj.object_id}">{esc(obj.object_id)}</a>'
 
 
-def _analysis_page(repo: DashboardRepository) -> str:
-    objects, _ = repo.all()
-    modes = [o for o in objects if o.object_type == "analysis_mode"]
-    runs = [o for o in objects if o.object_type == "analysis_run"]
-    by_status: dict[str, int] = {}
-    for run in runs:
-        key = str(run.metadata.get("review_status", "")) or "—"
-        by_status[key] = by_status.get(key, 0) + 1
-    active = sum(1 for m in modes if m.metadata.get("status") == "active")
-    latest = sorted(runs, key=lambda o: o.object_id, reverse=True)[:10]
-    rows = [
-        [
-            _run_link(o),
-            esc(o.metadata.get("mode_id", "")),
-            esc(o.metadata.get("as_of", "")),
-            badge(o.metadata.get("status", "")),
-            badge(
-                o.metadata.get("review_status", ""),
-                warning=o.metadata.get("review_status") == "pending",
-            ),
+def _analysis_page(
+    repo: DashboardRepository,
+    *,
+    run_ids: list[str] | None = None,
+) -> str:
+    selected_ids = list(dict.fromkeys(run_ids or []))[:2]
+    snapshot = analysis_workspace_snapshot(
+        repo.root,
+        run_ids=selected_ids if selected_ids else None,
+    )
+    all_snapshot = (
+        analysis_workspace_snapshot(repo.root) if selected_ids else snapshot
+    )
+    selected = set(selected_ids)
+    selector = "".join(
+        "<label style='display:block'>"
+        f"<input type='checkbox' name='run' value='{esc(row['run_id'])}'"
+        f"{' checked' if row['run_id'] in selected else ''}> "
+        f"{esc(row['run_id'])} · {esc(row['mode_id'])}</label>"
+        for row in all_snapshot["runs"][:20]
+    )
+    run_rows = []
+    evaluator_rows = []
+    for row in snapshot["runs"][:10]:
+        inputs = [
+            object_id
+            for values in row["input_ids"].values()
+            for object_id in values
         ]
-        for o in latest
+        run_rows.append(
+            [
+                f'<a href="/analysis/runs/{esc(row["run_id"])}">{esc(row["run_id"])}</a>',
+                esc(", ".join(inputs) or "—"),
+                esc(row["mode_id"]),
+                f"mode v{esc(row['mode_version'])}<br>model {esc(row['model_version'])}<br>template {esc(row['template_version'])}",
+                f"input {esc(row['input_snapshot_hash'])}<br>prompt {esc(row['prompt_hash'])}<br>output {esc(row['output_hash'])}",
+                badge(row["review_status"], warning=row["review_status"] == "pending"),
+            ]
+        )
+        scores = row["evaluator_scores"]
+        evaluator_rows.append(
+            [
+                esc(row["run_id"]),
+                f"{float(scores['overall']):.2f}",
+                badge("pass" if scores["gate_pass"] else "review", warning=not scores["gate_pass"]),
+                esc(
+                    ", ".join(
+                        f"{item['label']}={item['score']:.2f}"
+                        for item in scores["dimensions"]
+                    )
+                ),
+            ]
+        )
+    comparison = snapshot["comparison"] or {
+        "shared_facts": [],
+        "evidence_omitted": {},
+        "conflicting_signals": [],
+    }
+    shared = ", ".join(comparison["shared_facts"]) or "—"
+    omitted_rows = [
+        [esc(run_id), esc(", ".join(values) or "—")]
+        for run_id, values in comparison["evidence_omitted"].items()
     ]
+    conflict_rows = [
+        [esc(values[0]), esc(values[1]), esc(values[2]), esc(values[3])]
+        for values in comparison["conflicting_signals"]
+    ]
+    metrics = snapshot["mode_metrics"]
+    metrics_rows = [
+        [
+            esc(slug),
+            esc(stats["run_count"]),
+            esc(f"{stats['edit_distance']:.2f}"),
+            esc(
+                f"{stats['agreement']:.2f}"
+                if stats["agreement"] is not None
+                else "—"
+            ),
+            esc(stats["evidence_omitted"]),
+        ]
+        for slug, stats in metrics["modes"].items()
+    ]
+    metrics_panel = (
+        '<section class="panel"><h3>模式指标（D-018）</h3>'
+        + (
+            table(
+                ["模式", "运行数", "输出多样性", "一致性", "证据遗漏"],
+                metrics_rows,
+            )
+            if metrics_rows
+            else "<p class='muted'>尚无 completed 运行。</p>"
+        )
+        + "</section>"
+    )
     content = f"""<section class="hero"><div>
-<div class="eyebrow">分析工作区</div><h2>同一证据 · 多视角复现</h2>
-<p>版本化契约模式 + 冻结分析运行；Run ≠ Thesis，仅 reviewed run 可进入报告。</p>
-</div><div><div class="eyebrow">模式</div>
-<h2>{esc(len(modes))}</h2>
-<p class="muted">active {esc(active)} · <a href="/analysis/modes">全部</a></p>
-</div></section>
-<section class="metrics">
-<div class="metric"><strong>{esc(len(runs))}</strong><span>分析运行</span></div>
-<div class="metric"><strong>{esc(by_status.get('pending', 0))}</strong><span>待评审</span></div>
-<div class="metric"><strong>{esc(by_status.get('reviewed', 0))}</strong><span>已评审</span></div>
-<div class="metric"><strong>{esc(by_status.get('rejected', 0))}</strong><span>已拒绝</span></div>
+<div class="eyebrow">分析工作区</div><h2>Analysis Workspace</h2>
+<p>冻结输入、版本、哈希与 Evaluator 结果均来自不可变 Run；比较不自动形成 Thesis 或 Recommendation。</p>
+</div><div><div class="eyebrow">Runs</div><h2>{esc(len(all_snapshot['runs']))}</h2>
+<p class="muted">mode families {esc(metrics['overall']['modes'])}</p></div></section>
+<section class="panel"><h3>选择 Runs 比较</h3><form method="get" action="/analysis">
+{selector}<button type="submit">比较所选</button></form><p class="muted">最多比较前两个所选 Run。</p></section>
+<section class="panel"><h3>冻结输入 · 版本与哈希</h3>
+{table(["Run", "冻结输入", "Mode", "版本", "输入 / Prompt / Output hashes", "评审"], run_rows) if run_rows else "<p class='muted'>尚无 Analysis Run。</p>"}</section>
+<section class="panel"><h3>Evaluator 分数</h3>
+{table(["Run", "Overall", "Gate", "维度"], evaluator_rows) if evaluator_rows else "<p class='muted'>无可评估 Run。</p>"}</section>
+{metrics_panel}
+<section class="grid">
+<div class="panel"><h3>共享事实</h3><p>{esc(shared)}</p></div>
+<div class="panel"><h3>遗漏 Evidence</h3>{table(["Run", "其他 Run 使用但本 Run 遗漏"], omitted_rows) if omitted_rows else "<p class='muted'>选择两个 Run 后显示。</p>"}</div>
+<div class="panel"><h3>冲突信号</h3>{table(["Run A", "信号", "Run B", "信号"], conflict_rows) if conflict_rows else "<p class='muted'>未检测到相反结论信号，或尚未选择比较。</p>"}</div>
 </section>
-{_analysis_metrics_panel(objects)}
-<section class="panel"><h3>最新运行</h3>
-{table(["Run", "模式", "as-of", "状态", "评审"], rows) if rows else "<p class='muted'>尚无分析运行。</p>"}
-<p class="muted"><a href="/analysis/runs">全部运行</a> · <a href="/analysis/modes">全部模式</a> · <a href="/analysis/compare">模式比较</a> · <a href="/analysis/metrics">模式指标</a></p>
-</section>"""
+<p class="muted"><a href="/analysis/runs">全部运行</a> · <a href="/analysis/modes">全部模式</a> · <a href="/analysis/compare">模式比较</a> · <a href="/analysis/metrics">模式指标</a></p>"""
     return shell("分析", content)
 
 
 def _decision_page(repo: DashboardRepository) -> str:
-    objects, _ = repo.all()
-    as_of = date.today().isoformat()
-    forecasts = [o for o in objects if o.object_type == "forecast"]
-    valuations = [o for o in objects if o.object_type == "valuation_snapshot"]
-    recs = [o for o in objects if o.object_type == "recommendation"]
-    resolutions = [o for o in objects if o.object_type == "forecast_resolution"]
-
-    by_status: dict[str, int] = {}
-    for f in forecasts:
-        key = str(f.metadata.get("status", "")) or "—"
-        by_status[key] = by_status.get(key, 0) + 1
-    due = due_forecasts(forecasts, as_of=as_of)
-    overdue = overdue_forecasts(forecasts, as_of=as_of)
-    overdue_ids = {o.object_id for o in overdue}
-
-    forecast_rows = [
+    snapshot = decision_desk_snapshot(repo.root, as_of=date.today().isoformat())
+    open_rows = [
         [
-            _forecast_link(o),
-            esc(o.metadata.get("outcome_type", "")),
-            esc(o.metadata.get("resolution_date", "")),
-            badge(
-                o.metadata.get("status", ""),
-                warning=o.metadata.get("status") == "open"
-                and o.object_id in overdue_ids,
-            ),
-            badge(
-                o.metadata.get("review_status", ""),
-                warning=o.metadata.get("review_status") == "pending",
-            ),
+            f'<a href="/decision/forecast/{esc(row["id"])}">{esc(row["id"])}</a>',
+            esc(row["question"]),
+            esc(row["horizon"]),
+            esc(row["resolution_date"]),
         ]
-        for o in sorted(forecasts, key=lambda o: o.object_id)
-    ][:30]
-    val_rows = [
+        for row in snapshot["open_forecasts"]
+    ]
+    due_ids = {row["id"] for row in snapshot["due_forecasts"]}
+    overdue_ids = {row["id"] for row in snapshot["overdue_forecasts"]}
+    due_rows = [
         [
-            _val_link(o),
-            esc(o.metadata.get("company_id", "")),
-            esc(o.metadata.get("as_of", "")),
-            esc(o.metadata.get("valuation_identity", "")),
-            badge(o.metadata.get("status", "")),
+            f'<a href="/decision/forecast/{esc(row["id"])}">{esc(row["id"])}</a>',
+            esc(row["resolution_date"]),
+            badge("overdue" if row["id"] in overdue_ids else "due", warning=True),
         ]
-        for o in sorted(valuations, key=lambda o: o.object_id)
-    ][:30]
-    rec_rows = [
+        for row in snapshot["due_forecasts"]
+    ]
+    valuation_rows = [
         [
-            _rec_link(o),
-            esc(o.metadata.get("company_id", "")),
-            esc(o.metadata.get("research_posture", "")),
-            esc(o.metadata.get("direction", "")),
-            badge(o.metadata.get("status", ""), warning=o.metadata.get("status") == "active"),
+            f'<a href="/decision/valuation/{esc(row["id"])}">{esc(row["id"])}</a>',
+            esc(row["company_id"]),
+            esc(row["age_days"]),
+            esc(row["threshold_days"]),
+            badge(row["freshness"], warning=row["freshness"] == "stale"),
         ]
-        for o in sorted(recs, key=lambda o: o.object_id)
-    ][:30]
-    res_rows = [
-        [
-            _res_link(o),
-            esc(o.metadata.get("forecast_id", "")),
-            esc(o.metadata.get("resolved_at", "")),
-            badge(o.metadata.get("decision", ""), danger=o.metadata.get("decision") in {"void", "ambiguous"}),
-        ]
-        for o in sorted(resolutions, key=lambda o: o.object_id, reverse=True)
-    ][:30]
-
-    alert_lines = []
-    for o in due:
-        mark = "逾期" if o.object_id in overdue_ids else "到期"
-        alert_lines.append(
-            f"<li>{_forecast_link(o)}：{mark}（{esc(o.metadata.get('resolution_date',''))}）"
+        for row in snapshot["valuations"]
+    ]
+    recommendation_rows = []
+    for row in snapshot["recommendations"]:
+        recommendation_rows.append(
+            [
+                f'<a href="/decision/recommendation/{esc(row["id"])}">{esc(row["id"])}</a>',
+                esc(row["company_id"]),
+                esc(row["research_posture"]),
+                esc(row["direction"]),
+                esc("; ".join(row["catalysts"]) or "—"),
+                esc("; ".join(row["falsification_conditions"]) or "—"),
+                esc("; ".join(row["risks"]) or "—"),
+                esc("; ".join(row["unknowns"]) or "—"),
+                esc(", ".join(row["scenario_references"]) or "—"),
+            ]
         )
-    if not alert_lines:
-        alert_lines.append("<li class='muted'>无到期 Forecast。</li>")
-
+    resolution_rows = [
+        [
+            f'<a href="/decision/resolution/{esc(row["id"])}">{esc(row["id"])}</a>',
+            esc(row["forecast_id"]),
+            esc(row["resolved_at"]),
+            badge(row["decision"]),
+            esc(", ".join(row["resolution_source_ids"]) or "—"),
+        ]
+        for row in snapshot["resolution_history"]
+    ]
+    calibration = snapshot["calibration"]
+    calibration_label = (
+        "样本不足，暂不排名"
+        if calibration["status"] == "insufficient_sample"
+        else "仅作描述性校准"
+    )
     content = f"""<section class="hero"><div>
-<div class="eyebrow">决策工作区</div><h2>可证伪 · 可解析 · 可校准</h2>
-<p>Forecast → Scenario → Valuation → Recommendation Draft → 人工 review → active；到期 Forecast 用 Resolution 解析，原对象不改。</p>
-</div><div><div class="eyebrow">状态</div>
-<h2>{esc(len(forecasts))}</h2>
-<p class="muted">open {esc(by_status.get('open', 0))} · resolved {esc(by_status.get('resolved', 0))}</p>
-</div></section>
+<div class="eyebrow">决策工作区</div><h2>Forecast &amp; Decision Desk</h2>
+<p>Forecast、估值和 Recommendation 只读组合；Resolution 只记录自然到期后的真实结果。</p>
+</div><div><div class="eyebrow">Open Forecast</div><h2>{esc(len(snapshot['open_forecasts']))}</h2>
+<p class="muted">as of {esc(snapshot['as_of'])}</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(len(forecasts))}</strong><span>Forecast</span></div>
-<div class="metric"><strong>{esc(len(valuations))}</strong><span>Valuation</span></div>
-<div class="metric"><strong>{esc(len(recs))}</strong><span>Recommendation</span></div>
-<div class="metric"><strong>{esc(len(resolutions))}</strong><span>Resolution</span></div>
+<div class="metric"><strong>{esc(len(snapshot['open_forecasts']))}</strong><span>Open Forecast</span></div>
+<div class="metric"><strong>{esc(len(due_ids))}</strong><span>Due</span></div>
+<div class="metric"><strong>{esc(len(overdue_ids))}</strong><span>Overdue</span></div>
+<div class="metric"><strong>{esc(len(snapshot['resolution_history']))}</strong><span>Resolution</span></div>
 </section>
-<section class="panel"><h3>到期提醒（E-018）</h3>
-<ul>{"".join(alert_lines)}</ul>
-<p class="muted">open Forecast 且 resolution_date 已到/逾期：需 Resolution 解析，原 Forecast 永不回改。</p>
+<section class="panel"><h3>Open Forecast</h3>{table(["ID", "问题", "Horizon", "Resolution date"], open_rows)}</section>
+<section class="panel"><h3>Due / Overdue</h3>{table(["Forecast", "Resolution date", "状态"], due_rows) if due_rows else "<p class='muted'>当前没有到期 Forecast。</p>"}</section>
+<section class="panel"><h3>校准样本</h3><p><strong>{esc(calibration_label)}</strong></p>
+<p>reviewed Resolution n={esc(calibration['n_resolutions'])}；Brier/coverage/timeliness 仅在真实样本存在时解释。</p></section>
+<section class="panel"><h3>估值新鲜度</h3>{table(["Valuation", "公司", "年龄(天)", "阈值(天)", "状态"], valuation_rows)}</section>
+<section class="panel"><h3>催化剂与证伪条件</h3>
+{table(["Recommendation", "公司", "姿态", "方向", "催化剂", "证伪条件", "风险", "未知", "Scenario 引用"], recommendation_rows)}</section>
+<section class="grid">
+<div class="panel"><h3>风险与未知</h3><p>风险和 unknowns 保留在每条 Recommendation 行内，不自动净额化。</p></div>
+<div class="panel"><h3>Scenario 引用</h3><p>只展示已记录引用；空值显示为 —，不推断情景。</p></div>
 </section>
-<section class="panel"><h3>Forecasts</h3>
-{table(["ID", "Outcome", "Resolution date", "状态", "评审"], forecast_rows) if forecast_rows else "<p class='muted'>尚无 Forecast（WP-520 场门）。</p>"}
-</section>
-<section class="panel"><h3>Valuations</h3>
-{table(["ID", "公司", "As of", "口径", "状态"], val_rows) if val_rows else "<p class='muted'>尚无 Valuation Snapshot。</p>"}
-</section>
-<section class="panel"><h3>Recommendations</h3>
-{table(["ID", "公司", "姿态", "方向", "状态"], rec_rows) if rec_rows else "<p class='muted'>尚无 Recommendation（上限 investment_candidate）。</p>"}
-</section>
-<section class="panel"><h3>Resolutions 历史</h3>
-{table(["ID", "Forecast", "Resolved at", "Decision"], res_rows) if res_rows else "<p class='muted'>尚无 Resolution（等首批 Forecast 自然到期）。</p>"}
-</section>"""
+<section class="panel"><h3>Resolution 历史</h3>
+{table(["Resolution", "Forecast", "Resolved at", "Decision", "Sources"], resolution_rows) if resolution_rows else "<p class='muted'>尚无 Resolution；等待首批 Forecast 自然到期，不回填或合成 outcome。</p>"}</section>"""
     return shell("决策", content)
 
 
@@ -2517,12 +2625,27 @@ def create_app(root: Path) -> FastAPI:
         return HTMLResponse(_reports_page(repo))
 
     @app.get("/impact", response_class=HTMLResponse)
-    def impact_assertions(project: str | None = Query(default=None)) -> HTMLResponse:
-        return HTMLResponse(_impact_page(repo))
+    def impact_assertions(
+        project: str | None = Query(default=None),
+        start: str | None = Query(default=None),
+        depth: int = Query(default=3, ge=1, le=3),
+    ) -> HTMLResponse:
+        try:
+            return HTMLResponse(
+                _impact_page(repo, start_id=start, max_depth=depth)
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/analysis", response_class=HTMLResponse)
-    def analysis_overview(project: str | None = Query(default=None)) -> HTMLResponse:
-        return HTMLResponse(_analysis_page(repo))
+    def analysis_overview(
+        project: str | None = Query(default=None),
+        run: list[str] | None = None,
+    ) -> HTMLResponse:
+        try:
+            return HTMLResponse(_analysis_page(repo, run_ids=run))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/decision", response_class=HTMLResponse)
     def decision_overview(project: str | None = Query(default=None)) -> HTMLResponse:
