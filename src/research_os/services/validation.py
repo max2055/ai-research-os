@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from research_os.domain.models import Finding, ResearchObject
 from research_os.domain.policies import (
+    FORBIDDEN_INVESTMENT_ACTIONS,
     ID_PATTERNS,
     RELATIONSHIPS,
     REQUIRED_HEADINGS,
@@ -654,6 +655,78 @@ def validate_forecast_semantics(
             )
 
 
+def validate_valuation_rec_semantics(
+    obj: ResearchObject,
+    by_id: dict[str, ResearchObject],
+    findings: list[Finding],
+) -> None:
+    """WP-510 (E-011/E-013): Valuation and Recommendation invariants.
+
+    RCP-v03-009 Phase 5 §6/§7/§12:
+    - a reviewed ValuationSnapshot requires >=1 reviewed Source (VAL001);
+    - impossible market inputs are rejected (VAL002);
+    - ``active`` Recommendation requires review_status reviewed (REC001);
+    - the Recommendation body must not direct buy/sell/position sizing, the
+      v0.3 posture ceiling (REC002).
+    """
+    if obj.object_type == "valuation_snapshot":
+        if obj.metadata.get("review_status") == "reviewed":
+            source_ids = obj.metadata.get("source_ids", []) or []
+            if not any(
+                by_id[str(sid)].metadata.get("review_status") == "reviewed"
+                for sid in source_ids
+                if str(sid) in by_id
+            ):
+                add(
+                    findings,
+                    "error",
+                    "VAL001",
+                    obj,
+                    "reviewed ValuationSnapshot requires >=1 reviewed Source",
+                )
+        price = obj.metadata.get("market_price")
+        shares = obj.metadata.get("shares")
+        if isinstance(price, (int, float)) and price < 0:
+            add(
+                findings,
+                "error",
+                "VAL002",
+                obj,
+                "market_price must be non-negative",
+            )
+        if isinstance(shares, (int, float)) and shares <= 0:
+            add(
+                findings,
+                "error",
+                "VAL002",
+                obj,
+                "shares must be positive",
+            )
+    elif obj.object_type == "recommendation":
+        if obj.metadata.get("status") == "active" and obj.metadata.get(
+            "review_status"
+        ) != "reviewed":
+            add(
+                findings,
+                "error",
+                "REC001",
+                obj,
+                "active Recommendation requires review_status reviewed",
+            )
+        body_text = " ".join(
+            str(obj.metadata.get(key, "") or "")
+            for key in ("expected_case", "downside_case", "upside_case")
+        )
+        if FORBIDDEN_INVESTMENT_ACTIONS.search(body_text):
+            add(
+                findings,
+                "error",
+                "REC002",
+                obj,
+                "Recommendation body directs buy/sell/position sizing (§7 ceiling)",
+            )
+
+
 def validate_source_assets(
     root: Path,
     objects: list[ResearchObject],
@@ -1013,6 +1086,7 @@ def validate_repository(
         validate_report_supersession(obj, by_id, findings)
         validate_reviewed_assertion_evidence(obj, by_id, findings)
         validate_forecast_semantics(obj, by_id, findings)
+        validate_valuation_rec_semantics(obj, by_id, findings)
         validate_analysis_mode_semantics(root, obj, findings)
         validate_analysis_run_fingerprint(obj, findings)
         validate_run_contract(obj, by_id, findings)

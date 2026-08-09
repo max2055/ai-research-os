@@ -52,7 +52,7 @@ class SchemaTests(unittest.TestCase):
                 "action": 12,
                 "analysis_mode": 10,  # WP-410 first 9 + scenario-v2 (2026-08-09)
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
-                "event": 54,  # EvWP; Gate30; Field gap; +3 pricing/capex +1 demand (2026-08-09)
+                "event": 54,  # EvWP; Gate30; Field gap; +4 pricing/capex/demand
                 "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
                 "product": 5,  # WP-120 Product entities
                 "project": 2,

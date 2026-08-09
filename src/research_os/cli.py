@@ -417,6 +417,64 @@ def parse_args() -> argparse.Namespace:
     forecast_resolve.add_argument("--date", default=date.today().isoformat())
     forecast_resolve.add_argument("--apply", action="store_true")
 
+    valuation = subparsers.add_parser(
+        "valuation", help="Valuation Snapshots (WP-510, E-011)"
+    )
+    valuation_commands = valuation.add_subparsers(
+        dest="valuation_command", required=True
+    )
+    valuation_draft = valuation_commands.add_parser(
+        "draft", help="dry-run/apply a Valuation spec -> pending VAL object"
+    )
+    valuation_draft.add_argument("--spec", type=Path, required=True)
+    valuation_draft.add_argument("--date", default=date.today().isoformat())
+    valuation_draft.add_argument("--apply", action="store_true")
+    valuation_fresh = valuation_commands.add_parser(
+        "freshness", help="check a ValuationSnapshot against its threshold"
+    )
+    valuation_fresh.add_argument("--id", required=True)
+    valuation_fresh.add_argument("--as-of", default=date.today().isoformat())
+
+    scenario = subparsers.add_parser(
+        "scenario", help="Scenario workflow (WP-510, E-012)"
+    )
+    scenario_commands = scenario.add_subparsers(
+        dest="scenario_command", required=True
+    )
+    scenario_extract = scenario_commands.add_parser(
+        "extract", help="extract + validate the three-scenario set from a run"
+    )
+    scenario_extract.add_argument("--run", required=True, help="ANL-* scenario run")
+    scenario_template = scenario_commands.add_parser(
+        "template", help="render a fillable three-scenario worksheet"
+    )
+    scenario_template.add_argument("--company", required=True, help="COM-*")
+    scenario_template.add_argument("--as-of", default=date.today().isoformat())
+    scenario_template.add_argument("--question", default="")
+
+    recommendation = subparsers.add_parser(
+        "recommendation", help="Recommendations (WP-510, E-013)"
+    )
+    recommendation_commands = recommendation.add_subparsers(
+        dest="recommendation_command", required=True
+    )
+    rec_draft = recommendation_commands.add_parser(
+        "draft", help="dry-run/apply a Recommendation spec -> pending REC object"
+    )
+    rec_draft.add_argument("--spec", type=Path, required=True)
+    rec_draft.add_argument("--date", default=date.today().isoformat())
+    rec_draft.add_argument("--apply", action="store_true")
+    rec_gate = recommendation_commands.add_parser(
+        "gate", help="run the §12 completeness/freshness gate on a spec"
+    )
+    rec_gate.add_argument("--spec", type=Path, required=True)
+    rec_gate.add_argument("--as-of", default=date.today().isoformat())
+    rec_fresh = recommendation_commands.add_parser(
+        "freshness", help="check a Recommendation's freshness_date"
+    )
+    rec_fresh.add_argument("--id", required=True)
+    rec_fresh.add_argument("--as-of", default=date.today().isoformat())
+
     modes = subparsers.add_parser("modes", help="Analysis Modes (D-014)")
     modes_commands = modes.add_subparsers(dest="modes_command", required=True)
     modes_commands.add_parser(
@@ -1762,6 +1820,99 @@ def main() -> int:
             except (OSError, TransactionError, ValueError) as exc:
                 print(f"ERROR: {exc}")
                 return 2
+    if args.command == "valuation":
+        root = args.root.resolve()
+        try:
+            if args.valuation_command == "draft":
+                spec = _load_json_spec(args.spec)
+                relative, content = runtime.prepare_valuation_draft(
+                    root, spec=spec, created_at=args.date
+                )
+                if args.apply:
+                    runtime.apply_valuation_draft(root, relative, content)
+                    print(f"WRITTEN: {relative}")
+                else:
+                    print(f"# {relative}\n\n{content}")
+                    print("\nDRY-RUN: no files changed; rerun with --apply to write")
+            elif args.valuation_command == "freshness":
+                fresh = runtime.valuation_freshness(
+                    root, val_id=args.id, as_of=args.as_of
+                )
+                print(
+                    f"{args.id}: age {fresh['age_days']}d vs threshold "
+                    f"{fresh['threshold_days']}d -> "
+                    f"{'FRESH' if fresh['fresh'] else 'STALE'}"
+                )
+            return 0
+        except (OSError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
+    if args.command == "scenario":
+        root = args.root.resolve()
+        try:
+            if args.scenario_command == "extract":
+                scen = runtime.scenario_set_for_valuation(root, run_id=args.run)
+                print(f"# Scenario set — {scen['run_id']} ({scen['mode_id']})")
+                for section, section_text in scen["sections"].items():
+                    print(f"\n## {section}\n\n{section_text}")
+                if scen["problems"]:
+                    print("\nPROBLEMS:")
+                    for problem in scen["problems"]:
+                        print(f"- {problem}")
+                else:
+                    print("\nScenario set structurally complete (§5).")
+            elif args.scenario_command == "template":
+                print(
+                    runtime.render_scenario_template(
+                        company_id=args.company,
+                        as_of=args.as_of,
+                        question=args.question,
+                    ),
+                    end="",
+                )
+            return 0
+        except (OSError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
+    if args.command == "recommendation":
+        root = args.root.resolve()
+        try:
+            if args.recommendation_command == "draft":
+                spec = _load_json_spec(args.spec)
+                relative, content = runtime.prepare_recommendation_draft(
+                    root, spec=spec, created_at=args.date
+                )
+                if args.apply:
+                    runtime.apply_recommendation_draft(root, relative, content)
+                    print(f"WRITTEN: {relative}")
+                else:
+                    print(f"# {relative}\n\n{content}")
+                    print("\nDRY-RUN: no files changed; rerun with --apply to write")
+            elif args.recommendation_command == "gate":
+                spec = _load_json_spec(args.spec)
+                gate = runtime.recommendation_gate(
+                    root, spec=spec, as_of=args.as_of
+                )
+                problems = gate["problems"]
+                if not problems:
+                    print("GATE PASS: spec is structurally complete and fresh.")
+                else:
+                    print("GATE FAIL:")
+                    for problem in problems:
+                        print(f"- {problem}")
+            elif args.recommendation_command == "freshness":
+                rec_fresh = runtime.recommendation_freshness(
+                    root, rec_id=args.id, as_of=args.as_of
+                )
+                print(
+                    f"{args.id}: freshness_date {rec_fresh['freshness_date']}, "
+                    f"age {rec_fresh['age_days']}d -> "
+                    f"{'FRESH' if rec_fresh['fresh'] else 'STALE'}"
+                )
+            return 0
+        except (OSError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
     if args.command == "modes":
         try:
             objects, _ = runtime.validate_repository(args.root.resolve())

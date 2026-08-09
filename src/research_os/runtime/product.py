@@ -159,6 +159,12 @@ from research_os.services.promote import (
     prepare_promote,
     render_promote_plan,
 )
+from research_os.services.recommendation import (
+    apply_recommendation_draft,
+    prepare_recommendation_draft,
+    recommendation_freshness,
+    recommendation_gate,
+)
 from research_os.services.release import (
     release_readiness,
     render_release_readiness,
@@ -174,6 +180,12 @@ from research_os.services.reviews import (
     render_review_queue,
     review_queue,
 )
+from research_os.services.scenario_workflow import (
+    extract_scenario_sections,
+    render_scenario_template,
+    scenario_set_for_valuation,
+    validate_scenario_set,
+)
 from research_os.services.status import render_status
 from research_os.services.triage import (
     dismiss_candidate,
@@ -183,6 +195,12 @@ from research_os.services.triage import (
     restore_candidate,
 )
 from research_os.services.validation import count_by_type, validate_repository
+from research_os.services.valuation import (
+    apply_valuation_draft,
+    compute_valuation,
+    prepare_valuation_draft,
+    valuation_freshness,
+)
 from research_os.services.workflow import (
     EventDraftSpec,
     ReportDraftSpec,
@@ -203,6 +221,8 @@ __all__ = [
     "apply_forecast_draft",
     "apply_open_forecast",
     "apply_resolution",
+    "apply_recommendation_draft",
+    "apply_valuation_draft",
     "apply_company_update_proposal",
     "apply_indexes",
     "apply_impact_draft",
@@ -213,10 +233,12 @@ __all__ = [
     "compare_runs",
     "brief_path",
     "daily_brief",
+    "compute_valuation",
     "dedup_paths",
     "detect_contradictions",
     "due_forecasts",
     "expand_impact_paths",
+    "extract_scenario_sections",
     "find_mode",
     "render_daily_brief",
     "write_daily_brief",
@@ -260,7 +282,9 @@ __all__ = [
     "prepare_impact_draft",
     "prepare_open_forecast",
     "prepare_resolution_draft",
+    "prepare_recommendation_draft",
     "prepare_run",
+    "prepare_valuation_draft",
     "overdue_forecasts",
     "propose_direct_impacts",
     "propose_thesis",
@@ -282,6 +306,9 @@ __all__ = [
     "render_discovery_result",
     "render_forecast_rows",
     "render_forecast_status",
+    "render_scenario_template",
+    "recommendation_freshness",
+    "recommendation_gate",
     "run_discovery",
     "due_channels",
     "render_candidate_detail",
@@ -294,7 +321,10 @@ __all__ = [
     "restore_candidate",
     "queue_rows",
     "queue_show",
+    "scenario_set_for_valuation",
     "unresolved_forecasts",
+    "validate_scenario_set",
+    "valuation_freshness",
     "render_indexes",
     "render_impact",
     "render_gate_packet",

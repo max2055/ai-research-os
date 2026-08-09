@@ -8,6 +8,15 @@ from typing import Any
 
 REVIEW_STATUSES = frozenset({"pending", "reviewed", "rejected", "superseded"})
 RELATIONSHIPS = frozenset({"supporting", "contradicting", "contextual"})
+
+# Phase 5 §7 posture ceiling: a Recommendation may not direct buy/sell/position
+# sizing without a separate Portfolio & Execution RCP. 买方/卖方 (market-structure
+# nouns) are intentionally NOT flagged — only the action verbs.
+FORBIDDEN_INVESTMENT_ACTIONS = re.compile(
+    r"(买入|卖出|买进|抛售|建仓|加仓|减仓|清仓|加注|梭哈|"
+    r"\bbuy\b|\bsell\b|position size|仓位|目标价|target price)",
+    re.IGNORECASE,
+)
 ID_PATTERNS = {
     "source": re.compile(r"^SRC-\d{8}-\d{3}$"),
     "event": re.compile(r"^EVT-\d{8}-\d{3}$"),
