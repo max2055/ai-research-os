@@ -1,6 +1,6 @@
 # v0.3 Master Backlog 与实施波次
 
-状态：`wave5-completed`（Wave 0-4 已完成；Wave 5 工程完成（WP-530 future-date dependent）；Wave 6 ready）
+状态：`wave6-engineering-completed`（Wave 0-5 工程完成；WP-530 future-date dependent；Wave 6 WP-600～612 工程完成，WP-620 保持真实时间依赖）
 规则：本文件是执行索引；任务细节以各 Phase 文件为准。Agent 不得只读本表就开工。
 
 ## 1. 状态枚举
@@ -248,9 +248,9 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-601 | F-004～006 | Sector/Company/Candidate UI | completed |
 | WP-602 | F-007～009 | Impact/Analysis/Decision UI | completed |
 | WP-603 | F-010～011 | Operations/Health | completed |
-| WP-610 | F-012～014 | profile/SLO/security | proposed |
-| WP-611 | F-015～018 | license/backup/recovery/migration | proposed |
-| WP-612 | F-019～020 | runbook/limitations | proposed |
+| WP-610 | F-012～014 | profile/SLO/security | completed |
+| WP-611 | F-015～018 | license/backup/recovery/migration | completed |
+| WP-612 | F-019～020 | runbook/limitations | completed |
 | WP-620 | F-021～022 | 30-day Pilot/resolutions | future-date dependent |
 | WP-630 | F-023～025 | release check/human decision/tag | WP-620 | proposed |
 
@@ -282,6 +282,22 @@ WP-603 close-out（2026-08-09）：F-010~011 落地，Operations/Health 由统�
 - **F-011**：`health_snapshot` + `/health`——覆盖 repository validation、global/project index drift、Source asset integrity、Candidate DB `quick_check`/schema version、Channel review/license/robots metadata、failed Job/Analysis Run、Candidate backup age、disk/timezone、secret/config presence 与 model/cost status。secret 仅返回 `present/missing`，不返回值。
 - **Candidate DB**：新增 `candidate_db_health`，read-only URI 打开，不存在时不创建、不迁移；区分 `ok/missing/corrupt/migration_required`，不返回 Candidate 内容。
 - **测试**：`test_candidate_db.py`、`test_channels.py`、`test_schedule.py`、`test_m5_dashboard_jobs.py` 全绿；相关 ruff/mypy clean。当前 backup 缺失与 cost budget 未配置会诚实显示注意状态，由 WP-611/F-016 接续。
+
+WP-610 close-out（2026-08-10）：F-012~014 完成实测性能与安全门禁。
+- **F-012/F-013**：`v0.3_Performance_Benchmark.md` 记录 1034 正式对象/1490 Candidate 的真实 read-model profile。cProfile 定位 request 内重复 validation（Home 8 次、Company 3 次），改为一次校验后传不可变 objects，不加 persistent cache；Home p95 7.6751s→1.0059s，Company 2.9061s→0.9628s，所有实测 SLO 通过且 authoritative writes=0。1501 对象 synthetic baseline 1.4161s、0 errors；10k Candidate SLO 未实测，保留 limitation。
+- **F-014**：`test_m6_security.py` 覆盖 HTML escape、path traversal/symlink、secret sentinel、输入上限、prompt injection 作为 data、mutation allowlist；非 GET route 仍仅 `/llm/config`、`/llm/models`、`/llm/test`。
+
+WP-611 close-out（2026-08-10）：F-015~018 完成许可、备份、恢复与迁移工程证据。
+- **F-015**：`v0.3_Channel_License_Audit.md` 精确覆盖 20/20 enabled Channels；仅证明 repository metadata governance 完整，不声称 fresh legal/robots verification。
+- **F-016**：Candidate SQLite live backup、atomic rename、integrity、SHA-256 manifest、age status、CLI dry-run/`--apply` 与 `backup-candidate` Job 已落地。基线 snapshot schema v2 / integrity `ok` / SHA-256 `07c3e245...`；二进制与 manifest 保持 operational/untracked，不作为 Markdown 权威提交。
+- **F-017**：`v0.3_Recovery_Drill.md` 在 disposable clean clone 恢复 Git、真实 assets 与 Candidate snapshot；RTO 21m26s、snapshot-based RPO 上限 2m51s；148/148 archived Source hash、Candidate→Source→asset 抽样链、validate/index/full pytest/ruff/mypy/UI/discovery dry-run 均通过。secrets/launchd/private remote 明确保留在恢复边界外。
+- **F-018**：`v0.3_Migration_Rehearsal.md` 在另一 disposable clone 对 8 个 v0.2 legacy Company 做 v1→v2 plan/apply；1027/1027 unowned objects apply 期间不变。故障注入触发 `rollback precondition changed` 且拒绝覆盖；修复 after-hash 后 1035/1035 正式对象字节级恢复，Candidate DB hash/schema v2 不变；forward/rollback 后 validate/index/full pytest 通过。
+
+WP-612 close-out（2026-08-10）：F-019~020 完成 operator 与决策边界文档。
+- **F-019**：`v0.3_User_Runbook.md` 覆盖 install/config、loopback Dashboard、daily/weekly/monthly、Candidate/Evidence/Impact/Analysis/Forecast/Decision review、backup/restore、P0~P3 failure response、secrets/escalation；所有写命令明确 dry-run 与 `--apply` 边界。
+- **F-020**：`v0.3_Known_Limitations.md` 以 Facts/Inferences/Judgments 分离数据/时效、模型/provider retention、许可、SQLite/single-user、read-only Web、校准、投资行为边界；release completeness tests 固化文档必备项与 WP-530/WP-620 状态。
+- **真实时间门不变**：WP-530 最早真实 Forecast resolution 仍为 2026-10-31；WP-620 仍需真实 30-day Pilot/natural resolutions；不生成 synthetic outcome、reviewer、date 或 approval。WP-630 继续等待这些 Gate 与 human release packet。
+- **release check 边界**：当前 `research-os release check` 仍是 v0.2 的 18 Gate（当前 18/18 Ready），不是 v0.3 发布判定；v0.3 machine-verifiable check 属 WP-630/F-023，未借本次工程 close-out 提前实现或批准。
 
 ## 10. 建议首批派发顺序
 

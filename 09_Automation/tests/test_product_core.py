@@ -371,6 +371,49 @@ tags: []
 
 
 class MigrationTests(unittest.TestCase):
+    def test_rollback_refuses_drift_and_preserves_unowned_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            company = root / "02_Knowledge" / "Companies" / "COM-legacy.md"
+            thesis = root / "03_Theses" / "THS-001.md"
+            company.parent.mkdir(parents=True)
+            thesis.parent.mkdir(parents=True)
+            company.write_text(
+                "---\nid: COM-legacy\ntype: company\nschema_version: 1\n---\nBody\n",
+                encoding="utf-8",
+            )
+            thesis.write_text(
+                "---\nid: THS-001\ntype: thesis\n---\nManual thesis\n",
+                encoding="utf-8",
+            )
+            company_before = company.read_bytes()
+            thesis_before = thesis.read_bytes()
+            migration = AddFieldMigration(
+                migration_id="MIG-TEST-PRESERVE",
+                field_name="schema_version",
+                value=2,
+                object_types=frozenset({"company"}),
+            )
+            engine = MigrationEngine(root)
+            plan = engine.plan(migration)
+            self.assertEqual(1, len(plan.changes))
+            engine.apply(plan)
+            self.assertEqual(thesis_before, thesis.read_bytes())
+
+            migrated = company.read_text(encoding="utf-8")
+            company.write_text(migrated + "drift\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                TransactionError,
+                "rollback precondition changed",
+            ):
+                engine.rollback("MIG-TEST-PRESERVE")
+            self.assertTrue(company.read_text(encoding="utf-8").endswith("drift\n"))
+
+            company.write_text(plan.changes[0].after_text, encoding="utf-8")
+            engine.rollback("MIG-TEST-PRESERVE")
+            self.assertEqual(company_before, company.read_bytes())
+            self.assertEqual(thesis_before, thesis.read_bytes())
+
     def test_plan_apply_idempotency_and_rollback(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

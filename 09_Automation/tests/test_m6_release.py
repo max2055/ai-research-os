@@ -17,6 +17,127 @@ from test_cli import run_cli
 
 
 class ReleaseReadinessTests(unittest.TestCase):
+    def test_v03_recovery_drill_records_rto_rpo_and_restored_chain(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        record = (root / "00_System/v0.3_Recovery_Drill.md").read_text(
+            encoding="utf-8"
+        )
+        for text in (
+            "Status: passed",
+            "842636f22b4a068f674464c69e5e35b37dea33cd",
+            "2026-08-10T00:18:04+08:00",
+            "2026-08-10T00:39:30+08:00",
+            "21 minutes 26 seconds",
+            "2 minutes 51 seconds",
+            "07c3e245cb92ab9ab3dadad60824a36272450386e9089390e7e8133c5a222171",
+            "148/148",
+            "CND-042b3f5ca3064ec5a72e",
+            "SRC-20260806-077",
+            "4ff48b41c7867608aab12ff7af81adf29969917c819fc39c8e4ae106b0f8480e",
+            "discovery dry-run",
+            "secrets",
+            "launchd",
+        ):
+            self.assertIn(text, record)
+
+    def test_v03_migration_rehearsal_records_forward_and_rollback_gates(
+        self,
+    ) -> None:
+        root = Path(__file__).resolve().parents[2]
+        record = (root / "00_System/v0.3_Migration_Rehearsal.md").read_text(
+            encoding="utf-8"
+        )
+        for text in (
+            "Status: passed",
+            "v0.2 legacy Company",
+            "v0.3 schema_version 2",
+            "MIG-v0.3-F018-company-schema-v2",
+            "8/8",
+            "1027/1027",
+            "1035/1035",
+            "rollback precondition changed",
+            "Candidate DB schema version: 2",
+            "07c3e245cb92ab9ab3dadad60824a36272450386e9089390e7e8133c5a222171",
+            "11 minutes 42 seconds",
+            "Full pytest",
+            "0 errors, 0 warnings",
+        ):
+            self.assertIn(text, record)
+
+    def test_v03_user_runbook_covers_operating_and_failure_workflows(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        runbook = (root / "00_System/v0.3_User_Runbook.md").read_text(
+            encoding="utf-8"
+        )
+        for text in (
+            "Install and configure",
+            "Dashboard",
+            "Daily workflow",
+            "Weekly workflow",
+            "Monthly workflow",
+            "Candidate triage",
+            "Evidence review",
+            "Impact review",
+            "Analysis review",
+            "Forecast review",
+            "Decision review",
+            "Backup",
+            "Restore",
+            "Failure response",
+            "Secrets",
+            "Escalation",
+            "P0",
+            "P1",
+            "P2",
+            "P3",
+            "--dry-run",
+            "--apply",
+            "PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python",
+        ):
+            self.assertIn(text, runbook)
+
+    def test_v03_known_limitations_separate_claim_types_and_real_time_gates(
+        self,
+    ) -> None:
+        root = Path(__file__).resolve().parents[2]
+        limitations = (root / "00_System/v0.3_Known_Limitations.md").read_text(
+            encoding="utf-8"
+        )
+        normalized = " ".join(limitations.split()).lower()
+        for text in (
+            "Facts",
+            "Inferences",
+            "Judgments",
+            "coverage and freshness",
+            "model uncertainty",
+            "provider retention",
+            "license",
+            "SQLite",
+            "single-user",
+            "read-only Web UI",
+            "calibration",
+            "no automated investment action",
+            "WP-530",
+            "WP-620",
+            "2026-10-31",
+            "release check is v0.2-only",
+            "not buy, sell, position-size, or execution instructions",
+        ):
+            self.assertIn(text.lower(), normalized)
+
+        backlog = (
+            root
+            / "00_System/v0.3_AI_Industry_Intelligence_OS/09_Master_Backlog.md"
+        ).read_text(encoding="utf-8")
+        wp530 = next(
+            line for line in backlog.splitlines() if line.startswith("| WP-530")
+        )
+        wp620 = next(
+            line for line in backlog.splitlines() if line.startswith("| WP-620")
+        )
+        self.assertIn("future-date dependent", wp530)
+        self.assertIn("future-date dependent", wp620)
+
     def test_v03_license_audit_covers_every_enabled_channel(self) -> None:
         root = Path(__file__).resolve().parents[2]
         objects, _ = validate_repository(root)
