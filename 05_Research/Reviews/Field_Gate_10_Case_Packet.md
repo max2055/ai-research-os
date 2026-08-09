@@ -199,3 +199,26 @@ No majority voting: convergence weight must come from evidence quality, mechanis
   （no facts outside inputs）。结论：red-team 对单事件输入（NVIDIA 交期）难以约束在冻结证据内，
   是该模式的真实失败模式，需在人工评审时专项关注（或考虑为 red-team 提供更丰富的冻结输入）。
 
+## 人工评分结果（2026-08-09，max 确认）
+
+状态：**PASS**（11/11 run；整体均分 0.989）
+
+| Case | Run | 引用准确 | 无外事实 | 问题覆盖 | 反证完整 | 假设显式 | 分歧可解释 | 节省时间 | 过度结论(反) | 均分 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| case-1-dram-shar | ANL-20260809-002 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
+| case-1-dram-shar | ANL-20260809-003 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
+| case-1-dram-shar | ANL-20260809-004 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
+| case-1-dram-shar | ANL-20260809-016 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
+| case-2-ai-demand | ANL-20260809-006 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
+| case-2-ai-demand | ANL-20260809-014 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
+| case-2-ai-demand | ANL-20260809-015 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
+| case-2-ai-demand | ANL-20260809-017 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
+| case-3-lead-time | ANL-20260809-010 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 1.0 | 1.0 | 0.99 |
+| case-3-lead-time | ANL-20260809-018 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 1.0 | 1.0 | 0.99 |
+| case-3-lead-time | ANL-20260809-019 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
+
+§11 阈值判定：citation_resolvable_100pct=True；no_outside_facts=True；question_coverage_ge_90pct=True；counterevidence_omission_lt_10pct=True；human_incremental_value_ge_70pct=True；open_discovery_judgeable=n/a-batch1；no_majority_voting=True
+
+**Open gap**：case-3-lead-times red-team: 6 attempts blocked by D-004 (persistent SRC-20260805-040 citation outside frozen inputs); recorded as documented gap, remediation pending max decision
+
+确认人：max；判断初稿由 agent 起草，扣分仅两处（case-1/2 分歧可解释 0.9，NVIDIA run 反证诚实缺失 0.9）。
