@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from collections import Counter
 from pathlib import Path
 
 try:
@@ -38,14 +39,16 @@ class GateSampleTests(unittest.TestCase):
             self.assertIn(bucket, QUOTA)
         self.assertIsInstance(shortfalls, list)
 
-    def test_shortfall_reports_missing_buckets(self) -> None:
+    def test_real_repo_sample_is_complete(self) -> None:
+        """C-018 data supplement filled every §11 bucket: 20/20, no shortfalls."""
         objects, findings = load_objects(ROOT)
         self.assertEqual([], findings)
-        _, shortfalls = gate_sample(objects)
-        # shortfalls are reported as "bucket: count/quota" lines when any
-        # bucket is under its §11 quota.
-        self.assertTrue(shortfalls)
-        self.assertTrue(all("/" in line for line in shortfalls))
+        assigned, shortfalls = gate_sample(objects)
+        self.assertEqual(20, len(assigned))
+        self.assertEqual([], shortfalls)
+        counts = Counter(assigned.values())
+        for bucket, quota in QUOTA.items():
+            self.assertGreaterEqual(counts.get(bucket, 0), quota)
 
 
 class GateMetricsTests(unittest.TestCase):
