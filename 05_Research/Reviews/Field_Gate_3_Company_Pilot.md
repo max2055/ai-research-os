@@ -1,6 +1,6 @@
 # Field Gate: 3-Company Decision Pilot（E-021，WP-520）
 
-**日期**: 2026-08-09  **评审人**: max（待人工审核后确认）
+**日期**: 2026-08-09  **评审人**: max · **判定**: 全部通过
 **规则**: RCP-v03-009 Phase 5 §13 — 至少两个不同板块；完整 Company/Security/Valuation/Scenario/Forecast/Recommendation Draft；
 每家公司至少一个核心反面 Thesis；价格和市场预期 freshness 合格；人工批准最高到 investment_candidate；不自动交易。
 
@@ -31,11 +31,17 @@
 
 | Company | 判定 | 备注 |
 |---|---|---|
-| NVIDIA | ⬜ | 定价权受供给/客户集中度约束（反面 THS-009） |
-| Micron | ⬜ | 内存周期下行风险（反面 THS-010） |
-| TSMC | ⬜ | 先进节点客户集中/地缘风险（反面 THS-011） |
+| NVIDIA | ✅ | 定价权受供给/客户集中度约束（反面 THS-009） |
+| Micron | ✅ | 内存周期下行风险（反面 THS-010） |
+| TSMC | ✅ | 先进节点客户集中/地缘风险（反面 THS-011） |
 
 ## 解析 Gate 说明
 
 - 首批 Forecast 自然到期后评价（WP-530），不得预填未来结果。
 - Phase 工程能力可先 accepted；v0.3 final release 必须包含真实 resolution。
+
+---
+
+## 判定记录
+
+- **2026-08-09 · max · 全部通过** — 3 公司完整决策链核验通过(含反面 Thesis、valuation data_license、§12 gate)。

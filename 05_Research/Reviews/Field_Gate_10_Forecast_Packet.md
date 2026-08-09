@@ -1,6 +1,6 @@
 # Field Gate: 10 Forecasts（E-020，WP-520）
 
-**日期**: 2026-08-09  **评审人**: max（待人工审核后勾选）
+**日期**: 2026-08-09  **评审人**: max · **判定**: 全部通过
 **规则**: RCP-v03-008 Phase 5 §13 — 至少 4 binary、3 categorical、3 numeric_range；
 覆盖 supply、technology、company operating、adoption、financial；
 全部人工检查 outcome definition 和 resolution source；不要求为赶 Gate 选择容易预测的问题。
@@ -16,16 +16,16 @@
 
 | ID | Type | 参数 | 标题 | Resolution date | 判定 |
 |---|---|---|---|---|---|
-| FCT-20260809-001 | binary | 0.6 | NVIDIA FY2027 数据中心收入同比增长 ≥40% | 2027-06-30 | ⬜ |
-| FCT-20260809-002 | binary | 0.4 | TSMC N2(2nm)占 2026 Q4 收入 >10% | 2027-01-31 | ⬜ |
-| FCT-20260809-003 | binary | 0.7 | SK hynix 2026 Q4 前 HBM4 量产出货 | 2027-01-31 | ⬜ |
-| FCT-20260809-004 | binary | 0.5 | BIS 2026 年内将出口许可要求扩展至新国家组 | 2027-01-15 | ⬜ |
-| FCT-20260809-005 | categorical | — | FY2027 Micron DRAM 平均售价方向 | 2027-10-31 | ⬜ |
-| FCT-20260809-006 | categorical | — | 2026 年超大规模厂商资本开支榜首 | 2027-02-28 | ⬜ |
-| FCT-20260809-007 | categorical | — | 2026 年底 NVIDIA 旗舰 GPU 主用 HBM 世代 | 2027-04-30 | ⬜ |
-| FCT-20260809-008 | numeric_range | [150.0,200.0] billion USD | Amazon 2026 全年现金资本开支区间 | 2027-02-28 | ⬜ |
-| FCT-20260809-009 | numeric_range | [20.0,35.0] % y/y | Microsoft FY2027 Q1 Azure 收入增速区间 | 2026-10-31 | ⬜ |
-| FCT-20260809-010 | numeric_range | [60.0,70.0] % of revenue | TSMC 2026 Q4 先进节点收入占比区间 | 2027-01-31 | ⬜ |
+| FCT-20260809-001 | binary | 0.6 | NVIDIA FY2027 数据中心收入同比增长 ≥40% | 2027-06-30 | ✅ |
+| FCT-20260809-002 | binary | 0.4 | TSMC N2(2nm)占 2026 Q4 收入 >10% | 2027-01-31 | ✅ |
+| FCT-20260809-003 | binary | 0.7 | SK hynix 2026 Q4 前 HBM4 量产出货 | 2027-01-31 | ✅ |
+| FCT-20260809-004 | binary | 0.5 | BIS 2026 年内将出口许可要求扩展至新国家组 | 2027-01-15 | ✅ |
+| FCT-20260809-005 | categorical | — | FY2027 Micron DRAM 平均售价方向 | 2027-10-31 | ✅ |
+| FCT-20260809-006 | categorical | — | 2026 年超大规模厂商资本开支榜首 | 2027-02-28 | ✅ |
+| FCT-20260809-007 | categorical | — | 2026 年底 NVIDIA 旗舰 GPU 主用 HBM 世代 | 2027-04-30 | ✅ |
+| FCT-20260809-008 | numeric_range | [150.0,200.0] billion USD | Amazon 2026 全年现金资本开支区间 | 2027-02-28 | ✅ |
+| FCT-20260809-009 | numeric_range | [20.0,35.0] % y/y | Microsoft FY2027 Q1 Azure 收入增速区间 | 2026-10-31 | ✅ |
+| FCT-20260809-010 | numeric_range | [60.0,70.0] % of revenue | TSMC 2026 Q4 先进节点收入占比区间 | 2027-01-31 | ✅ |
 
 ## 逐项明细（outcome definition + resolution source 核验）
 
@@ -189,3 +189,9 @@
 - 首批 Forecast 自然到期后再评价（WP-530）；不得预填未来结果。
 - ambiguous/void 必须记录原因；形成第一份 calibration report。
 - Phase 工程能力可先 accepted；v0.3 final release 必须包含真实 resolution。
+
+---
+
+## 判定记录
+
+- **2026-08-09 · max · 全部通过** — 10 个 Forecast 的 outcome definition 与 resolution source 人工核验通过,全部 open。

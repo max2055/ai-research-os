@@ -1,0 +1,291 @@
+<!doctype html>
+<title>Phase 5 场门评估包 · WP-520</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #f4f4f0;
+    --surface: #ffffff;
+    --ink: #1b1e26;
+    --muted: #5d636e;
+    --accent: #0d6e68;
+    --accent-soft: #e3f0ee;
+    --judge: #a06a12;
+    --judge-soft: #f6ecd9;
+    --pass: #1d7a3f;
+    --line: #e2e2dc;
+    --card: #fbfbf8;
+    --code: #8a2d2d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161b;
+      --surface: #1c1f26;
+      --ink: #e8e7e2;
+      --muted: #9aa1ab;
+      --accent: #5ec3ba;
+      --accent-soft: #14332f;
+      --judge: #e0a84f;
+      --judge-soft: #33290f;
+      --pass: #6fc98b;
+      --line: #2b2f38;
+      --card: #1a1d24;
+      --code: #e08a8a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161b;
+    --surface: #1c1f26;
+    --ink: #e8e7e2;
+    --muted: #9aa1ab;
+    --accent: #5ec3ba;
+    --accent-soft: #14332f;
+    --judge: #e0a84f;
+    --judge-soft: #33290f;
+    --pass: #6fc98b;
+    --line: #2b2f38;
+    --card: #1a1d24;
+    --code: #e08a8a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 48px 24px 80px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin: 0 0 8px;
+  }
+  h1 { font-size: 30px; margin: 0 0 6px; text-wrap: balance; letter-spacing: -.01em; }
+  .lede { color: var(--muted); margin: 0 0 28px; max-width: 60ch; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 20px;
+    color: var(--muted); font-size: 13px; margin: 0 0 40px;
+    padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+  section.gate { margin: 0 0 56px; }
+  .gate-head { display: flex; align-items: baseline; gap: 12px; margin: 0 0 4px; }
+  .gate-head h2 { font-size: 21px; margin: 0; }
+  .tag {
+    font-size: 12px; padding: 2px 10px; border-radius: 999px; font-weight: 600;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; max-width: 72ch; }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--surface); border: 1px solid var(--line); }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-size: 12px; letter-spacing: .05em; color: var(--muted); font-weight: 600;
+    background: var(--card); white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--card); }
+  .id { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; color: var(--code); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .type { white-space: nowrap; }
+  .pill { display: inline-block; font-size: 11.5px; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.binary { background: var(--accent-soft); color: var(--accent); }
+  .pill.categorical { background: #ece9f8; color: #5b4a9e; }
+  .pill.numeric { background: var(--judge-soft); color: var(--judge); }
+  .pill.status { background: var(--accent-soft); color: var(--accent); }
+  .judge { font-size: 18px; text-align: center; }
+  .judge .box { display: inline-block; width: 22px; height: 22px; border: 2px solid var(--muted); border-radius: 5px; }
+  .judge .box.checked { border-color: var(--pass); background: var(--pass); color: #fff; text-align: center; line-height: 18px; font-size: 14px; font-weight: 700; }
+  .params { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .prob { color: var(--accent); font-weight: 600; }
+  .detail { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px;
+  }
+  .card .cid { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--code); }
+  .card h4 { margin: 4px 0 10px; font-size: 14.5px; line-height: 1.45; text-wrap: balance; }
+  .kv { margin: 0; }
+  .kv dt { font-size: 11.5px; letter-spacing: .05em; color: var(--muted); text-transform: uppercase; margin: 8px 0 2px; }
+  .kv dd { margin: 0 0 8px; font-size: 13px; color: var(--ink); }
+  .kv dd ul { margin: 0; padding-left: 18px; }
+  .checklist { list-style: none; padding: 0; margin: 0; }
+  .checklist li { padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist .ok { color: var(--pass); font-weight: 700; margin-right: 6px; }
+  .checklist code { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--code); }
+  .note {
+    margin-top: 40px; padding: 14px 18px; border-left: 3px solid var(--accent);
+    background: var(--accent-soft); border-radius: 0 8px 8px 0; font-size: 13.5px;
+  }
+  .note b { color: var(--accent); }
+  .foot { margin-top: 48px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 16px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .card { transition: border-color .15s ease; }
+    .card:hover { border-color: var(--accent); }
+  }
+</style>
+<main class="wrap">
+
+  <p class="eyebrow">AI Research OS · Phase 5 Field Gate</p>
+  <h1>场门评估包 — WP-520</h1>
+  <p class="lede">两个场门的评审面：10-forecast 场门（E-020）与 3-company 决策 Pilot（E-021）。判定表已全部通过（max · 2026-08-09）。逐项明细供 outcome definition 与 resolution source 复核。</p>
+  <div class="meta">
+    <span>日期 <b>2026-08-09</b></span>
+    <span>评审人 <b>max</b></span>
+    <span>状态 <b>已通过</b> · max · 2026-08-09</span>
+    <span>规则 <b>RCP-v03-008 / v03-009 · Phase 5 §13</b></span>
+  </div>
+
+  <section class="gate">
+    <div class="gate-head"><h2>一 · 10-Forecast 场门</h2><span class="tag">E-020</span></div>
+    <p class="sub">分布 4 binary / 3 categorical / 3 numeric_range ✓；覆盖 financial · technology · adoption · company operating · supply（+ regulation 附加）。全部基于已审核事件。</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>ID</th><th>Type</th><th>参数</th><th>标题</th><th>Resolution date</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td class="id">FCT-…-001</td><td class="type"><span class="pill binary">binary</span></td><td class="params prob">0.6</td><td>NVIDIA FY2027 数据中心收入同比增长 ≥40%</td><td>2027-06-30</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-002</td><td class="type"><span class="pill binary">binary</span></td><td class="params prob">0.4</td><td>TSMC N2(2nm) 占 2026 Q4 收入 &gt;10%</td><td>2027-01-31</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-003</td><td class="type"><span class="pill binary">binary</span></td><td class="params prob">0.7</td><td>SK hynix 2026 Q4 前 HBM4 量产出货</td><td>2027-01-31</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-004</td><td class="type"><span class="pill binary">binary</span></td><td class="params prob">0.5</td><td>BIS 2026 年内将出口许可扩展至新国家组</td><td>2027-01-15</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-005</td><td class="type"><span class="pill categorical">categorical</span></td><td class="params">up/flat/down</td><td>FY2027 Micron DRAM 平均售价方向</td><td>2027-10-31</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-006</td><td class="type"><span class="pill categorical">categorical</span></td><td class="params">MSFT/AMZN/META/GOOG</td><td>2026 年超大规模厂商资本开支榜首</td><td>2027-02-28</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-007</td><td class="type"><span class="pill categorical">categorical</span></td><td class="params">HBM4/HBM3e/both</td><td>2026 年底 NVIDIA 旗舰 GPU 主用 HBM 世代</td><td>2027-04-30</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-008</td><td class="type"><span class="pill numeric">numeric_range</span></td><td class="params">[150, 200] bn USD</td><td>Amazon 2026 全年现金资本开支区间</td><td>2027-02-28</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-009</td><td class="type"><span class="pill numeric">numeric_range</span></td><td class="params">[20, 35] % y/y</td><td>Microsoft FY2027 Q1 Azure 收入增速区间</td><td>2026-10-31</td><td class="judge"><span class="box checked">✓</span></td></tr>
+          <tr><td class="id">FCT-…-010</td><td class="type"><span class="pill numeric">numeric_range</span></td><td class="params">[60, 70] % rev</td><td>TSMC 2026 Q4 先进节点收入占比区间</td><td>2027-01-31</td><td class="judge"><span class="box checked">✓</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="detail">
+      <div class="card"><div class="cid">FCT-20260809-001</div><h4>NVIDIA FY2027 数据中心收入同比增长 ≥40%</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>NVIDIA FY2027 Form 10-K 报告 Data Center 收入较 FY2026 增长 ≥40%。</dd>
+        <dt>Resolution source</dt><dd>NVIDIA FY2027 10-K</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260520-038（创纪录 $75.2B 季收入）</li><li>EVT-20260302-041（AI 需求）</li></ul></dd>
+        <dt>Assumptions</dt><dd>AI 资本开支维持扩张；HBM/先进封装供给不成为硬约束</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-002</div><h4>TSMC N2(2nm) 占 2026 Q4 收入 &gt;10%</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>TSMC 2026 Q4 财报披露 N2(2nm) 占季度收入 &gt;10%。</dd>
+        <dt>Resolution source</dt><dd>TSMC 2026 Q4 财报</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260416-033（2nm/CoWoS）</li><li>EVT-20260716-037（先进节点 63%）</li></ul></dd>
+        <dt>Assumptions</dt><dd>N2 良率爬坡按计划；AI 客户 N2 需求如期放量</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-003</div><h4>SK hynix 2026 Q4 前 HBM4 量产出货</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>SK hynix 2026 Q4 财报或官方披露确认 HBM4 已量产/出货。</dd>
+        <dt>Resolution source</dt><dd>SK hynix 2026 Q4 财报 / 官方新闻稿</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260728-036（HBM4 量产）</li><li>EVT-20260725-035（HBM 合作）</li><li>EVT-20260316-042（Samsung HBM4）</li></ul></dd>
+        <dt>Assumptions</dt><dd>Vera Rubin 平台按计划；HBM4 良率达阈值</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-004</div><h4>BIS 2026 年内将出口许可扩展至新国家组</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>BIS 在 Federal Register 发布规则，将先进 AI 芯片出口许可扩展至当前未受限的国家组。</dd>
+        <dt>Resolution source</dt><dd>BIS Federal Register 规则</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260531-049</li><li>EVT-20260407-050</li></ul></dd>
+        <dt>Assumptions</dt><dd>出口管制政策延续收紧方向</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-005</div><h4>FY2027 Micron DRAM 平均售价方向</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>类别 {up, flat, down}：Micron FY2027 10-K 披露 DRAM ASP 同比变化。</dd>
+        <dt>Resolution source</dt><dd>Micron FY2027 10-K / TrendForce</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20251003-001（ASP ±40% 波动）</li><li>EVT-20260601-044（份额）</li></ul></dd>
+        <dt>Assumptions</dt><dd>AI 内存需求持续；HBM 挤占通用 DRAM 产能</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-006</div><h4>2026 年超大规模厂商资本开支榜首</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>类别 {Microsoft, Amazon, Meta, Google}：按 FY2026 年报现金资本开支排序取榜首。</dd>
+        <dt>Resolution source</dt><dd>各家 FY2026 年报 10-K</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260430-001（Amazon capex）</li><li>EVT-20260429-039（Microsoft）</li><li>EVT-20260731-040（AWS-OpenAI）</li></ul></dd>
+        <dt>Assumptions</dt><dd>AI 基础设施投资为主要开支方向</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-007</div><h4>2026 年底 NVIDIA 旗舰 GPU 主用 HBM 世代</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>类别 {HBM4, HBM3e, both}：以 NVIDIA FY2027 Q1 10-Q 产品披露为准。</dd>
+        <dt>Resolution source</dt><dd>NVIDIA FY2027 Q1 10-Q / 产品资料</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260725-035</li><li>EVT-20260728-036</li><li>EVT-20260316-042</li></ul></dd>
+        <dt>Assumptions</dt><dd>Vera Rubin 平台采用 HBM4</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-008</div><h4>Amazon 2026 全年现金资本开支区间</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>Amazon FY2026 10-K 披露全年现金资本开支（十亿美元）。</dd>
+        <dt>Resolution source</dt><dd>Amazon FY2026 10-K</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260430-001（Q1 $43.2B）</li></ul></dd>
+        <dt>Assumptions</dt><dd>2026 单季 capex 维持 $40B+</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-009</div><h4>Microsoft FY2027 Q1 Azure 收入增速区间</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>Microsoft FY2027 Q1 财报披露 Azure 收入同比增速（%）。</dd>
+        <dt>Resolution source</dt><dd>Microsoft FY2027 Q1 财报</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260429-039</li><li>EVT-20260429-004</li></ul></dd>
+        <dt>Assumptions</dt><dd>Azure AI 需求持续但基数增大导致增速回落</dd>
+      </dl></div>
+
+      <div class="card"><div class="cid">FCT-20260809-010</div><h4>TSMC 2026 Q4 先进节点收入占比区间</h4><dl class="kv">
+        <dt>Outcome definition</dt><dd>TSMC 2026 Q4 财报披露先进节点（3nm/5nm）占季度收入比重（%）。</dd>
+        <dt>Resolution source</dt><dd>TSMC 2026 Q4 财报</dd>
+        <dt>Evidence</dt><dd><ul><li>EVT-20260716-037（2Q26 63%）</li><li>EVT-20260416-033</li></ul></dd>
+        <dt>Assumptions</dt><dd>AI 加速器先进节点需求延续 63% 水平</dd>
+      </dl></div>
+    </div>
+  </section>
+
+  <section class="gate">
+    <div class="gate-head"><h2>二 · 3-Company 决策 Pilot</h2><span class="tag">E-021</span></div>
+    <p class="sub">3 个板块（compute-silicon / memory-storage / foundry-packaging-test），每家完整 Company-Security-Valuation-Scenario-Forecast-Recommendation 链 + 1 个 reviewed 反面 Thesis。</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Company</th><th>Sector</th><th>Security</th><th>Valuation 现价 (2026-08-07)</th><th>Forecast</th><th>反面 Thesis</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          <tr><td class="id">COM-nvidia</td><td>compute-silicon</td><td class="id">INS-NASDAQ-NVDA</td><td><b>$223.96</b> USD</td><td class="id">FCT-…-001</td><td class="id">THS-009</td><td class="id">REC-…-001</td></tr>
+          <tr><td class="id">COM-micron</td><td>memory-storage</td><td class="id">INS-NASDAQ-MU</td><td><b>$877.57</b> USD</td><td class="id">FCT-…-005</td><td class="id">THS-010</td><td class="id">REC-…-002</td></tr>
+          <tr><td class="id">COM-tsmc</td><td>foundry-packaging-test</td><td class="id">INS-NYSE-TSM</td><td><b>$420.04</b> USD</td><td class="id">FCT-…-010</td><td class="id">THS-011</td><td class="id">REC-…-003</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin-top:14px">数据许可：Yahoo Finance 免费延迟行情（<span class="id">yahoo-finance-free-delayed</span>），provider/timestamp/license 已记录，freshness_threshold 7d。</p>
+
+    <div class="detail">
+      <div class="card"><div class="cid">THS-009</div><h4>NVIDIA 定价权受 HBM/先进封装供给与客户集中度约束</h4><dl class="kv">
+        <dt>Evidence</dt><dd><ul><li>EVT-20260225-035（ASP 双向）</li><li>EVT-20260520-032（长交期）</li><li>EVT-20260302-047（竞争）</li></ul></dd>
+        <dt>Contradicting</dt><dd>EVT-20260520-038（创纪录收入）、EVT-20260731-040（$100B 承诺）</dd>
+      </dl></div>
+      <div class="card"><div class="cid">THS-010</div><h4>内存周期下行将重演，侵蚀 Micron 高位盈利</h4><dl class="kv">
+        <dt>Evidence</dt><dd><ul><li>EVT-20251003-001（ASP ±40%）</li><li>EVT-20260601-044（份额）</li></ul></dd>
+        <dt>Contradicting</dt><dd>EVT-20260625-001（HBM 需求）、EVT-20260728-036（SK hynix 创纪录）</dd>
+      </dl></div>
+      <div class="card"><div class="cid">THS-011</div><h4>TSMC 先进节点客户集中与地缘风险</h4><dl class="kv">
+        <dt>Evidence</dt><dd><ul><li>EVT-20260716-037（先进节点 63%）</li><li>EVT-20260302-047（竞争）</li></ul></dd>
+        <dt>Contradicting</dt><dd>EVT-20260416-033（2nm）、EVT-20260302-048（GB300 部署）</dd>
+      </dl></div>
+    </div>
+
+    <h3 style="font-size:17px;margin:28px 0 12px">完整性检查</h3>
+    <ul class="checklist">
+      <li><span class="ok">✓</span>Company — COM-nvidia / COM-micron / COM-tsmc 均存在</li>
+      <li><span class="ok">✓</span>Security — NVDA / MU / TSM ADR 均关联</li>
+      <li><span class="ok">✓</span>Valuation — 市场价快照 + <code>data_license</code> 记录 + freshness 合格</li>
+      <li><span class="ok">✓</span>Scenario — 三情景 worksheet（Downside/Base/Upside + 两变量敏感性 + 证伪）</li>
+      <li><span class="ok">✓</span>Forecast — 每家公司至少 1 个 open reviewed</li>
+      <li><span class="ok">✓</span>Recommendation Draft — 3 个 active，最高 research（未超 investment_candidate）</li>
+      <li><span class="ok">✓</span>反面 Thesis — 每家公司 1 个 reviewed（THS-009/010/011）</li>
+      <li><span class="ok">✓</span>不交易 — 无 buy/sell/position-size，§7 ceiling 合规</li>
+    </ul>
+
+    <div class="table-scroll" style="margin-top:20px">
+      <table>
+        <thead><tr><th>Company</th><th>判定</th><th>备注</th></tr></thead>
+        <tbody>
+          <tr><td class="id">NVIDIA</td><td class="judge"><span class="box checked">✓</span></td><td>定价权受供给/客户集中度约束（反面 THS-009）</td></tr>
+          <tr><td class="id">Micron</td><td class="judge"><span class="box checked">✓</span></td><td>内存周期下行风险（反面 THS-010）</td></tr>
+          <tr><td class="id">TSMC</td><td class="judge"><span class="box checked">✓</span></td><td>先进节点客户集中/地缘风险（反面 THS-011）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="note">
+    <b>解析 Gate（WP-530）</b> — 首批 Forecast 自然到期后再评价，不得预填未来结果；ambiguous/void 必须记录原因，形成第一份 calibration report。Phase 工程能力可先 accepted；v0.3 final release 必须包含真实 resolution。最早到期：FCT-…-009（2026-10-31）。
+  </div>
+
+  <p class="foot">AI Research OS · Phase 5 Field Gate WP-520 · 只读评审页 · 判定表在仓库内 <span class="id">05_Research/Reviews/</span> 更新</p>
+</main>
