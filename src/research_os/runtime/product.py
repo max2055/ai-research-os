@@ -43,6 +43,10 @@ from research_os.services.brief import (
     render_daily_brief,
     write_daily_brief,
 )
+from research_os.services.calibration import (
+    calibration_report,
+    render_calibration_report,
+)
 from research_os.services.candidate_queue import (
     enrich_candidates,
     queue_rows,
@@ -165,6 +169,12 @@ from research_os.services.recommendation import (
     recommendation_freshness,
     recommendation_gate,
 )
+from research_os.services.recommendation_lifecycle import (
+    activate_recommendation,
+    close_recommendation,
+    supersede_recommendation,
+    supersede_valuation,
+)
 from research_os.services.release import (
     release_readiness,
     render_release_readiness,
@@ -223,6 +233,9 @@ __all__ = [
     "apply_resolution",
     "apply_recommendation_draft",
     "apply_valuation_draft",
+    "activate_recommendation",
+    "close_recommendation",
+    "calibration_report",
     "apply_company_update_proposal",
     "apply_indexes",
     "apply_impact_draft",
@@ -307,8 +320,11 @@ __all__ = [
     "render_forecast_rows",
     "render_forecast_status",
     "render_scenario_template",
+    "render_calibration_report",
     "recommendation_freshness",
     "recommendation_gate",
+    "supersede_recommendation",
+    "supersede_valuation",
     "run_discovery",
     "due_channels",
     "render_candidate_detail",

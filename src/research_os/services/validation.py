@@ -684,6 +684,7 @@ def validate_valuation_rec_semantics(
                     obj,
                     "reviewed ValuationSnapshot requires >=1 reviewed Source",
                 )
+        _check_supersession(obj, by_id, findings, "VAL003")
         price = obj.metadata.get("market_price")
         shares = obj.metadata.get("shares")
         if isinstance(price, (int, float)) and price < 0:
@@ -703,6 +704,7 @@ def validate_valuation_rec_semantics(
                 "shares must be positive",
             )
     elif obj.object_type == "recommendation":
+        _check_supersession(obj, by_id, findings, "REC003")
         if obj.metadata.get("status") == "active" and obj.metadata.get(
             "review_status"
         ) != "reviewed":
@@ -724,6 +726,37 @@ def validate_valuation_rec_semantics(
                 "REC002",
                 obj,
                 "Recommendation body directs buy/sell/position sizing (§7 ceiling)",
+            )
+
+
+def _check_supersession(
+    obj: ResearchObject,
+    by_id: dict[str, ResearchObject],
+    findings: list[Finding],
+    code: str,
+) -> None:
+    """E-014: superseded_by <-> supersedes pointers must be reciprocal."""
+    successor_id = obj.metadata.get("superseded_by")
+    if successor_id:
+        successor = by_id.get(str(successor_id))
+        if successor and successor.metadata.get("supersedes") != obj.object_id:
+            add(
+                findings,
+                "error",
+                code,
+                obj,
+                f"superseded_by is not reciprocal in {successor_id}",
+            )
+    prior_id = obj.metadata.get("supersedes")
+    if prior_id:
+        prior = by_id.get(str(prior_id))
+        if prior and prior.metadata.get("superseded_by") != obj.object_id:
+            add(
+                findings,
+                "error",
+                code,
+                obj,
+                f"supersedes is not reciprocal in {prior_id}",
             )
 
 

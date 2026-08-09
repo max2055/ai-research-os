@@ -401,6 +401,9 @@ def parse_args() -> argparse.Namespace:
         "status", help="due/overdue/unresolved report"
     )
     forecast_status.add_argument("--as-of", default=date.today().isoformat())
+    forecast_commands.add_parser(
+        "calibration", help="E-015 §9 calibration report (Brier/buckets/coverage)"
+    )
     forecast_open = forecast_commands.add_parser(
         "open", help="open a reviewed Forecast (draft -> open)"
     )
@@ -434,6 +437,14 @@ def parse_args() -> argparse.Namespace:
     )
     valuation_fresh.add_argument("--id", required=True)
     valuation_fresh.add_argument("--as-of", default=date.today().isoformat())
+    valuation_supersede = valuation_commands.add_parser(
+        "supersede", help="supersede a ValuationSnapshot (market-data error)"
+    )
+    valuation_supersede.add_argument("--old-id", required=True)
+    valuation_supersede.add_argument("--new-id", required=True)
+    valuation_supersede.add_argument("--actor", default="max")
+    valuation_supersede.add_argument("--date", default=date.today().isoformat())
+    valuation_supersede.add_argument("--apply", action="store_true")
 
     scenario = subparsers.add_parser(
         "scenario", help="Scenario workflow (WP-510, E-012)"
@@ -474,6 +485,29 @@ def parse_args() -> argparse.Namespace:
     )
     rec_fresh.add_argument("--id", required=True)
     rec_fresh.add_argument("--as-of", default=date.today().isoformat())
+    rec_activate = recommendation_commands.add_parser(
+        "activate", help="activate a reviewed Recommendation (draft -> active)"
+    )
+    rec_activate.add_argument("--id", required=True)
+    rec_activate.add_argument("--actor", default="max")
+    rec_activate.add_argument("--date", default=date.today().isoformat())
+    rec_activate.add_argument("--apply", action="store_true")
+    rec_close = recommendation_commands.add_parser(
+        "close", help="close an active Recommendation (active -> closed)"
+    )
+    rec_close.add_argument("--id", required=True)
+    rec_close.add_argument("--actor", default="max")
+    rec_close.add_argument("--date", default=date.today().isoformat())
+    rec_close.add_argument("--reason", required=True)
+    rec_close.add_argument("--apply", action="store_true")
+    rec_supersede = recommendation_commands.add_parser(
+        "supersede", help="link a new Recommendation as the old one's successor"
+    )
+    rec_supersede.add_argument("--old-id", required=True)
+    rec_supersede.add_argument("--new-id", required=True)
+    rec_supersede.add_argument("--actor", default="max")
+    rec_supersede.add_argument("--date", default=date.today().isoformat())
+    rec_supersede.add_argument("--apply", action="store_true")
 
     modes = subparsers.add_parser("modes", help="Analysis Modes (D-014)")
     modes_commands = modes.add_subparsers(dest="modes_command", required=True)
@@ -1772,6 +1806,14 @@ def main() -> int:
             except (OSError, ValueError) as exc:
                 print(f"ERROR: {exc}")
                 return 2
+        if args.forecast_command == "calibration":
+            try:
+                calib = runtime.calibration_report(root)
+                print(runtime.render_calibration_report(calib), end="")
+                return 0
+            except (OSError, ValueError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
         if args.forecast_command == "open":
             try:
                 if args.apply:
@@ -1843,6 +1885,26 @@ def main() -> int:
                     f"{fresh['threshold_days']}d -> "
                     f"{'FRESH' if fresh['fresh'] else 'STALE'}"
                 )
+            elif args.valuation_command == "supersede":
+                if args.apply:
+                    runtime.supersede_valuation(
+                        root,
+                        old_val_id=args.old_id,
+                        new_val_id=args.new_id,
+                        actor=args.actor,
+                        as_of=args.date,
+                    )
+                    print(
+                        f"superseded {args.old_id} by {args.new_id} "
+                        f"(dual pointers updated)"
+                    )
+                else:
+                    print(
+                        "DRY-RUN: would set "
+                        f"{args.old_id}.superseded_by={args.new_id} and "
+                        f"{args.new_id}.supersedes={args.old_id}; "
+                        "rerun with --apply"
+                    )
             return 0
         except (OSError, TransactionError, ValueError) as exc:
             print(f"ERROR: {exc}")
@@ -1908,6 +1970,32 @@ def main() -> int:
                     f"{args.id}: freshness_date {rec_fresh['freshness_date']}, "
                     f"age {rec_fresh['age_days']}d -> "
                     f"{'FRESH' if rec_fresh['fresh'] else 'STALE'}"
+                )
+            elif args.recommendation_command == "activate":
+                runtime.activate_recommendation(
+                    root, rec_id=args.id, actor=args.actor, as_of=args.date
+                )
+                print(f"activated {args.id} (status=active)")
+            elif args.recommendation_command == "close":
+                runtime.close_recommendation(
+                    root,
+                    rec_id=args.id,
+                    actor=args.actor,
+                    as_of=args.date,
+                    reason=args.reason,
+                )
+                print(f"closed {args.id} (status=closed)")
+            elif args.recommendation_command == "supersede":
+                runtime.supersede_recommendation(
+                    root,
+                    old_rec_id=args.old_id,
+                    new_rec_id=args.new_id,
+                    actor=args.actor,
+                    as_of=args.date,
+                )
+                print(
+                    f"superseded {args.old_id} by {args.new_id} "
+                    f"(dual pointers updated)"
                 )
             return 0
         except (OSError, TransactionError, ValueError) as exc:
