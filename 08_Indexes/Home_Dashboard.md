@@ -8,8 +8,8 @@
 
 ## Projects
 
-- [[PRJ-001]] — AI Agent 企业软件价值链重构 · active · next review 2026-08-05
-- [[PRJ-002]] — AI Coding Agent 价值链与商业化 · active · next review 2026-08-05
+- [[PRJ-001]] — AI Agent 企业软件价值链重构 · active · next review 2026-08-12
+- [[PRJ-002]] — AI Coding Agent 价值链与商业化 · active · next review 2026-08-12
 
 ## Review queue
 
@@ -67,6 +67,10 @@
 | [[IMP-20260808-016]] | impact_assertion | 2026-08-08 |
 | [[IMP-20260808-017]] | impact_assertion | 2026-08-08 |
 | [[IMP-20260808-018]] | impact_assertion | 2026-08-08 |
+| [[IMP-20260809-001]] | impact_assertion | 2026-08-09 |
+| [[IMP-20260809-002]] | impact_assertion | 2026-08-09 |
+| [[IMP-20260809-003]] | impact_assertion | 2026-08-09 |
+| [[IMP-20260809-004]] | impact_assertion | 2026-08-09 |
 | [[REL-20260805-004]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-005]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260805-006]] | ontology_assertion | 2026-08-05 |
@@ -283,7 +287,6 @@
 | [[REL-20260805-253]] | ontology_assertion | 2026-08-05 |
 | [[REL-20260806-257]] | ontology_assertion | 2026-08-06 |
 | [[REL-20260806-258]] | ontology_assertion | 2026-08-06 |
-| [[SRC-20260806-057]] | source | 2026-08-06 |
 | [[SRC-20260806-058]] | source | 2026-08-06 |
 | [[SRC-20260806-059]] | source | 2026-08-06 |
 | [[SRC-20260806-060]] | source | 2026-08-06 |
@@ -293,10 +296,8 @@
 | [[SRC-20260806-064]] | source | 2026-08-06 |
 | [[SRC-20260806-065]] | source | 2026-08-06 |
 | [[SRC-20260806-066]] | source | 2026-08-06 |
-| [[SRC-20260806-067]] | source | 2026-08-06 |
 | [[SRC-20260806-068]] | source | 2026-08-06 |
 | [[SRC-20260806-069]] | source | 2026-08-06 |
-| [[SRC-20260806-070]] | source | 2026-08-06 |
 | [[SRC-20260806-071]] | source | 2026-08-06 |
 | [[SRC-20260806-072]] | source | 2026-08-06 |
 | [[SRC-20260806-073]] | source | 2026-08-06 |
@@ -305,7 +306,6 @@
 | [[SRC-20260806-076]] | source | 2026-08-06 |
 | [[SRC-20260806-077]] | source | 2026-08-06 |
 | [[SRC-20260806-078]] | source | 2026-08-06 |
-| [[SRC-20260806-079]] | source | 2026-08-06 |
 | [[SRC-20260806-080]] | source | 2026-08-06 |
 | [[SRC-20260806-081]] | source | 2026-08-06 |
 | [[SRC-20260806-082]] | source | 2026-08-06 |
@@ -409,6 +409,7 @@
 
 ## Failed jobs
 
+- [[JOB-20260809094218-001]] — discover: ValueError: discovery failed for CHN-sec-amazon: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1032)>
 - [[JOB-20260808050741-001]] — discover: ValueError: discovery failed for CHN-skhynix-ir: <urlopen error [Errno 8] nodename nor servname provided, or not known>
 - [[JOB-20260808050712-001]] — discover: ValueError: discovery failed for CHN-sec-tsmc: <urlopen error [Errno 8] nodename nor servname provided, or not known>
 - [[JOB-20260808050651-001]] — discover: ValueError: discovery failed for CHN-sec-nvidia: <urlopen error [Errno 8] nodename nor servname provided, or not known>
@@ -418,4 +419,3 @@
 - [[JOB-20260808050512-001]] — discover: ValueError: discovery failed for CHN-sec-coreweave: <urlopen error [Errno 8] nodename nor servname provided, or not known>
 - [[JOB-20260808050450-001]] — discover: ValueError: discovery failed for CHN-sec-amazon: <urlopen error [Errno 8] nodename nor servname provided, or not known>
 - [[JOB-20260808050422-001]] — discover: ValueError: discovery failed for CHN-github-openai: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050401-001]] — discover: ValueError: discovery failed for CHN-github-microsoft: <urlopen error [Errno 8] nodename nor servname provided, or not known>

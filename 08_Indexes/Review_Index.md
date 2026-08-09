@@ -184,3 +184,6 @@
 | REV-20260808-006 | 2026-08-08 | reject | ANL-20260808-001 | max |  |
 | REV-20260808-007 | 2026-08-08 | approve | MOD-ANL-technology-curve-v1, MOD-ANL-company-fundamental-v1, MOD-ANL-competitive-dynamics-v1, MOD-ANL-expectations-valuation-v1, MOD-ANL-scenario-v1, MOD-ANL-open-discovery-v1 | max |  |
 | REV-20260809-001 | 2026-08-09 | approve | MOD-ANL-scenario-v2 | max |  |
+| REV-20260809-002 | 2026-08-09 | approve | EVT-20260430-001, EVT-20251003-001, EVT-20260225-035 | max | PRJ-001 |
+| REV-20260809-003 | 2026-08-09 | approve | SRC-20260806-057, SRC-20260806-070, SRC-20260806-079 | max | PRJ-001 |
+| REV-20260809-004 | 2026-08-09 | approve | EVT-20260625-001, SRC-20260806-067 | max | PRJ-001 |

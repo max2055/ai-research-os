@@ -2,11 +2,11 @@
 
 <!-- Generated from structured Project objects. -->
 
-更新时间：2026-08-08
+更新时间：2026-08-09
 
 | Project ID | Research question | Owner | Charter | Queue | Current Report | Review cadence | Next review | Status |
 |---|---|---|---|---|---|---|---|---|
-| PRJ-002 | AI Coding Agent 正在把软件开发价值重新分配到哪些环节？ | max | `05_Research/AI-Coding-Agents/Research_Charter.md` | `05_Research/AI-Coding-Agents/Research_Queue.md` | RPT-20260730-ai-coding-agent-value-chain-v0-1 | Weekly + Monthly | 2026-08-05 | active |
+| PRJ-002 | AI Coding Agent 正在把软件开发价值重新分配到哪些环节？ | max | `05_Research/AI-Coding-Agents/Research_Charter.md` | `05_Research/AI-Coding-Agents/Research_Queue.md` | RPT-20260730-ai-coding-agent-value-chain-v0-1 | Weekly + Monthly | 2026-08-12 | active |
 
 ## Registration rules
 
