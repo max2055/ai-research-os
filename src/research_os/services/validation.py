@@ -684,6 +684,29 @@ def validate_valuation_rec_semantics(
                     obj,
                     "reviewed ValuationSnapshot requires >=1 reviewed Source",
                 )
+            if not str(obj.metadata.get("data_license", "")).strip():
+                add(
+                    findings,
+                    "error",
+                    "VAL004",
+                    obj,
+                    "reviewed ValuationSnapshot requires a recorded data_license "
+                    "(E-019, Phase 5 §6)",
+                )
+            if not any(
+                str(by_id[str(sid)].metadata.get("publisher", "")).strip()
+                and str(by_id[str(sid)].metadata.get("accessed_at", "")).strip()
+                for sid in source_ids
+                if str(sid) in by_id
+            ):
+                add(
+                    findings,
+                    "error",
+                    "VAL005",
+                    obj,
+                    "reviewed ValuationSnapshot requires a Source with provider "
+                    "(publisher) and access timestamp (accessed_at)",
+                )
         _check_supersession(obj, by_id, findings, "VAL003")
         price = obj.metadata.get("market_price")
         shares = obj.metadata.get("shares")

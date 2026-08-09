@@ -31,6 +31,9 @@ try:
         scenario_set_for_valuation,
         validate_scenario_set,
     )
+    from research_os.services.validation import (
+        validate_valuation_rec_semantics,
+    )
     from research_os.services.valuation import (
         apply_valuation_draft,
         compute_valuation,
@@ -426,6 +429,86 @@ class E013RecommendationTests(unittest.TestCase):
             self.assertTrue(path.exists())
             with self.assertRaises(FileExistsError):
                 apply_recommendation_draft(root, relative, content)
+
+
+class E019LicenseValidationTests(unittest.TestCase):
+    """E-019: reviewed valuation requires data_license + provider/timestamp."""
+
+    def _val_meta(self, **overrides: object) -> dict[str, object]:
+        meta: dict[str, object] = {
+            "id": "VAL-20260809-001",
+            "type": "valuation_snapshot",
+            "title": "v",
+            "review_status": "reviewed",
+            "company_id": "COM-micron",
+            "as_of": "2026-08-09",
+            "market_price": 100.0,
+            "shares": 1e9,
+            "data_license": "SEC-public-domain",
+            "source_ids": ["SRC-20260809-001"],
+        }
+        meta.update(overrides)
+        return meta
+
+    def _source_meta(self, **overrides: object) -> dict[str, object]:
+        meta: dict[str, object] = {
+            "id": "SRC-20260809-001",
+            "type": "source",
+            "title": "s",
+            "review_status": "reviewed",
+            "publisher": "MICRON TECHNOLOGY INC",
+            "accessed_at": "2026-08-09",
+        }
+        meta.update(overrides)
+        return meta
+
+    def _codes(
+        self,
+        val_meta: dict[str, object],
+        source_meta: dict[str, object],
+    ) -> list[str]:
+        from research_os.domain.models import Finding
+
+        val = ResearchObject(
+            path=Path("05_Research/Valuations/VAL-20260809-001.md"),
+            metadata=val_meta,
+            body="",
+        )
+        source = ResearchObject(
+            path=Path("01_Inbox/Articles/SRC-20260809-001.md"),
+            metadata=source_meta,
+            body="",
+        )
+        findings: list[Finding] = []
+        validate_valuation_rec_semantics(
+            val, {source.object_id: source}, findings
+        )
+        return [finding.code for finding in findings]
+
+    def test_compliant_reviewed_valuation_passes(self) -> None:
+        codes = self._codes(self._val_meta(), self._source_meta())
+        self.assertEqual([], codes)
+
+    def test_missing_data_license_flagged(self) -> None:
+        codes = self._codes(
+            self._val_meta(data_license=""), self._source_meta()
+        )
+        self.assertIn("VAL004", codes)
+
+    def test_source_without_provider_timestamp_flagged(self) -> None:
+        codes = self._codes(
+            self._val_meta(),
+            self._source_meta(publisher="", accessed_at=""),
+        )
+        self.assertIn("VAL005", codes)
+
+    def test_unreviewed_valuation_not_flagged(self) -> None:
+        codes = self._codes(
+            self._val_meta(review_status="pending", data_license=""),
+            self._source_meta(),
+        )
+        self.assertNotIn("VAL004", codes)
+        self.assertNotIn("VAL005", codes)
 
 
 if __name__ == "__main__":

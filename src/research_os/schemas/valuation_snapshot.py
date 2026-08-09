@@ -49,5 +49,7 @@ class ValuationSnapshotSchema(ResearchObjectSchema):
     event_ids: list[EventRef] = Field(default_factory=list)
     scenario_set: str = ""  # reference to a scenario analysis run/name
     freshness_threshold: str = ""  # e.g. "7d"
+    data_license: str = ""  # e.g. "SEC-public-domain", "provider-name-trial"
 
-    # review_status inherited; reviewed snapshots require reviewed sources.
+    # review_status inherited; reviewed snapshots require reviewed sources
+    # and a recorded data_license (E-019, Phase 5 §6).

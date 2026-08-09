@@ -68,6 +68,7 @@ _VAL_FIELD_ORDER = [
     "event_ids",
     "scenario_set",
     "freshness_threshold",
+    "data_license",
 ]
 
 
@@ -292,6 +293,7 @@ def _valuation_meta(
         "event_ids": [str(v) for v in spec.get("event_ids", [])],
         "scenario_set": str(spec.get("scenario_set", "")).strip(),
         "freshness_threshold": str(spec.get("freshness_threshold", "7d")).strip(),
+        "data_license": str(spec.get("data_license", "")).strip(),
     }
 
 
