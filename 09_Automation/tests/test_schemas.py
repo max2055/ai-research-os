@@ -53,18 +53,21 @@ class SchemaTests(unittest.TestCase):
                 "analysis_mode": 10,  # WP-410 first 9 + scenario-v2 (2026-08-09)
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 54,  # EvWP; Gate30; Field gap; +4 pricing/capex/demand
+                "forecast": 10,  # WP-520 10-forecast field gate (2026-08-09)
                 "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
                 "product": 5,  # WP-120 Product entities
                 "project": 2,
+                "recommendation": 3,  # WP-520 3-company pilot (2026-08-09)
                 "report": 2,
-                # +11: C-018 BIS + mode activations + ANL-001 reject + v2 REV +
-                #       3 pricing/capex/demand reviews (2026-08-09)
-                "review": 181,
+                # +16: C-018 BIS + mode activations + ANL-001 reject + v2 REV +
+                #       pricing/capex/demand + WP-520 reviews (forecast/src/val/th/rec)
+                "review": 186,
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "security": 10,  # Field Gate §9.3 securities
-                "source": 153,  # +2 C-018 BIS sources +42 8-K +2 github +26 arxiv
+                "source": 156,  # +3 WP-520 Yahoo market-data quotes (2026-08-09)
                 "source_channel": 24,  # WP-201: 6 first-batch + 18 Pilot G1 batch
-                "thesis": 8,
+                "thesis": 11,  # +3 WP-520 contrarian pilot theses (THS-009/010/011)
+                "valuation_snapshot": 3,  # WP-520 3-company pilot snapshots
             },
             counts,
         )
