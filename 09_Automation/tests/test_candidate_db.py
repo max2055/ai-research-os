@@ -10,12 +10,30 @@ from research_os.repositories.transaction import TransactionError
 from research_os.services.candidate_db import (
     SCHEMA_VERSION,
     apply_migrations,
+    candidate_db_health,
     current_version,
     rollback_migrations,
 )
 
 
 class CandidateDbTests(unittest.TestCase):
+    def test_health_reports_ok_missing_and_corrupt_without_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            path = folder / "candidates.db"
+            self.assertEqual("missing", candidate_db_health(path)["status"])
+
+            apply_migrations(path)
+            healthy = candidate_db_health(path)
+            self.assertEqual("ok", healthy["status"])
+            self.assertEqual("ok", healthy["integrity"])
+            self.assertEqual(SCHEMA_VERSION, healthy["schema_version"])
+            self.assertNotIn("candidates", repr(healthy).lower())
+
+            corrupt = folder / "corrupt.db"
+            corrupt.write_bytes(b"not a sqlite database")
+            self.assertEqual("corrupt", candidate_db_health(corrupt)["status"])
+
     def test_apply_migrations_creates_versioned_schema(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "candidates.db"

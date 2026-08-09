@@ -247,7 +247,7 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-600 | F-001～003 | IA/read model/Industry Home | completed |
 | WP-601 | F-004～006 | Sector/Company/Candidate UI | completed |
 | WP-602 | F-007～009 | Impact/Analysis/Decision UI | completed |
-| WP-603 | F-010～011 | Operations/Health | proposed |
+| WP-603 | F-010～011 | Operations/Health | completed |
 | WP-610 | F-012～014 | profile/SLO/security | proposed |
 | WP-611 | F-015～018 | license/backup/recovery/migration | proposed |
 | WP-612 | F-019～020 | runbook/limitations | proposed |
@@ -276,6 +276,12 @@ WP-602 close-out（2026-08-09）：F-007~009 落地，三类研究工作台改�
 - **F-008**：`analysis_workspace_snapshot` + `/analysis`——冻结输入 ID、Mode/model/template 版本、input/prompt/output hash、Evaluator、D-018 metrics 及双 Run shared facts/evidence omitted/conflicting signals 比较；无 Thesis/Recommendation 自动提升。
 - **F-009**：`decision_desk_snapshot` + `/decision`——open/due/overdue Forecast、校准样本、Valuation freshness、Recommendation catalysts/falsifiers/risks/unknowns/Scenario 引用、Resolution history。当前真实 Resolution 为 0，明确 `insufficient_sample`，不回填未来 outcome。
 - **边界与测试**：Dashboard 写路由仍仅 3 个 `/llm` 本地配置例外；WP-530/WP-620 不变。`test_impact_path.py`、`test_analysis_evaluator.py`、`test_mode_metrics.py`、`test_phase5_lifecycle.py`、`test_phase5_valuation.py`、`test_m5_dashboard_jobs.py` 全绿；相关 ruff/mypy clean。
+
+WP-603 close-out（2026-08-09）：F-010~011 落地，Operations/Health 由统一只读 snapshot 驱动。
+- **F-010**：`operations_snapshot` + `/operations`——汇总 due Channel schedule、最近 Jobs、open/in-progress Actions、到期研究评审、due/overdue Forecast 与 stale active Recommendation；所有空队列保留明确空态，页面不触发调度或权威写入。
+- **F-011**：`health_snapshot` + `/health`——覆盖 repository validation、global/project index drift、Source asset integrity、Candidate DB `quick_check`/schema version、Channel review/license/robots metadata、failed Job/Analysis Run、Candidate backup age、disk/timezone、secret/config presence 与 model/cost status。secret 仅返回 `present/missing`，不返回值。
+- **Candidate DB**：新增 `candidate_db_health`，read-only URI 打开，不存在时不创建、不迁移；区分 `ok/missing/corrupt/migration_required`，不返回 Candidate 内容。
+- **测试**：`test_candidate_db.py`、`test_channels.py`、`test_schedule.py`、`test_m5_dashboard_jobs.py` 全绿；相关 ruff/mypy clean。当前 backup 缺失与 cost budget 未配置会诚实显示注意状态，由 WP-611/F-016 接续。
 
 ## 10. 建议首批派发顺序
 

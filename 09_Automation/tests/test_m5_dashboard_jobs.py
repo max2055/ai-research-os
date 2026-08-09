@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import tempfile
 import unittest
@@ -19,6 +20,7 @@ from research_os.services.indexing import (
     render_project_indexes,
 )
 from research_os.services.jobs import job_rows, run_job
+from research_os.services.operations_health import health_snapshot, operations_snapshot
 from research_os.services.read_model import (
     analysis_workspace_snapshot,
     decision_desk_snapshot,
@@ -492,6 +494,79 @@ class ResearchWorkspaceSnapshotTests(unittest.TestCase):
             if route.path in expectations:
                 methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
                 self.assertEqual({"GET"}, methods, route.path)
+
+
+class OperationsHealthSnapshotTests(unittest.TestCase):
+    @property
+    def root(self) -> Path:
+        return Path(__file__).resolve().parents[2]
+
+    def test_operations_unifies_all_due_work(self) -> None:
+        snapshot = operations_snapshot(self.root, as_of="2026-08-09")
+        for key in (
+            "schedules",
+            "jobs",
+            "actions",
+            "reviews",
+            "forecasts",
+            "recommendations",
+        ):
+            self.assertIn(key, snapshot)
+        self.assertTrue(snapshot["jobs"])
+        with self.assertRaisesRegex(ValueError, "YYYY-MM-DD"):
+            operations_snapshot(self.root, as_of="09-08-2026")
+
+    def test_health_covers_every_required_category_without_secret_values(self) -> None:
+        sentinel = "do-not-render-this-secret"
+        with patch.dict(os.environ, {"OPENAI_API_KEY": sentinel}):
+            snapshot = health_snapshot(self.root)
+        for key in (
+            "validation",
+            "indexes",
+            "assets",
+            "candidate_db",
+            "channels",
+            "failed_runs",
+            "backup",
+            "host",
+            "config",
+            "model_cost",
+        ):
+            self.assertIn(key, snapshot)
+        self.assertNotIn(sentinel, repr(snapshot))
+        self.assertEqual("present", snapshot["config"]["OPENAI_API_KEY"])
+        self.assertIn("free_bytes", snapshot["host"]["disk"])
+        self.assertTrue(snapshot["host"]["timezone"])
+
+    def test_operations_and_health_pages_render_all_sections(self) -> None:
+        client = TestClient(create_app(self.root))
+        operations = client.get("/operations")
+        self.assertEqual(200, operations.status_code)
+        for label in (
+            "调度",
+            "Jobs",
+            "Actions",
+            "研究评审",
+            "到期 Forecast",
+            "过期 Recommendation",
+        ):
+            self.assertIn(label, operations.text)
+
+        health = client.get("/health")
+        self.assertEqual(200, health.status_code)
+        for label in (
+            "仓库校验",
+            "索引",
+            "Source assets",
+            "Candidate DB",
+            "Channels / License",
+            "失败运行",
+            "备份",
+            "磁盘与时区",
+            "配置存在性",
+            "模型与成本",
+        ):
+            self.assertIn(label, health.text)
 
     def test_pipeline_pages_graceful_without_candidate_db(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

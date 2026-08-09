@@ -18,7 +18,6 @@ from fastapi.responses import (
 
 from research_os.domain.models import ResearchObject
 from research_os.llm import llm_adapter, llm_config, model_fetch, provider_catalog
-from research_os.services.actions import action_rows
 from research_os.services.analysis_compare import compare_runs
 from research_os.services.analysis_evaluator import (
     evaluate_run,
@@ -32,10 +31,6 @@ from research_os.services.analysis_registry import (
 )
 from research_os.services.candidate_queue import promoted_rows, queue_rows, queue_show
 from research_os.services.channels import channel_rows
-from research_os.services.indexing import (
-    index_drift,
-    render_project_indexes,
-)
 from research_os.services.ingestion import verify_source_assets
 from research_os.services.metrics import (
     load_metrics_snapshot,
@@ -45,6 +40,7 @@ from research_os.services.metrics import (
 )
 from research_os.services.mode_metrics import mode_metrics
 from research_os.services.ontology import render_impact
+from research_os.services.operations_health import health_snapshot, operations_snapshot
 from research_os.services.pilot import pilot_status
 from research_os.services.projects import objects_for_project
 from research_os.services.read_model import (
@@ -1185,90 +1181,157 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
 
 
 def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
-    objects, _, selected = repo.scoped(project_id)
-    overdue = action_rows(
+    _, _, selected = repo.scoped(project_id)
+    snapshot = operations_snapshot(
         repo.root,
+        as_of=date.today().isoformat(),
         project_id=selected,
-        overdue_as_of=date.today().isoformat(),
     )
-    due_projects = [
-        obj
-        for obj in objects
-        if obj.object_type == "project"
-        and str(obj.metadata.get("next_review_date")) <= date.today().isoformat()
-    ]
-    open_rows = [
+    schedule_rows = [
         [
-            object_link(obj),
-            esc(obj.metadata.get("owner")),
-            esc(obj.metadata.get("due_date")),
-            badge(obj.metadata.get("status"), warning=True),
+            esc(row["channel_id"]),
+            esc(row["schedule"]),
+            esc(row["last_run"] or "never"),
+            badge(row["status"], warning=True),
         ]
-        for obj in overdue
+        for row in snapshot["schedules"]
     ]
-    due_rows = [
+    job_rows_ = [
         [
-            object_link(obj),
-            esc(obj.metadata.get("review_cadence")),
-            esc(obj.metadata.get("next_review_date")),
+            esc(row["id"]),
+            esc(row["job_name"]),
+            esc(row["started_at"]),
+            badge(row["status"], warning=row["status"] == "failed"),
+            esc(row["message"]),
         ]
-        for obj in due_projects
+        for row in snapshot["jobs"]
+    ]
+    action_rows_ = [
+        [
+            esc(row["id"]),
+            esc(row["owner"]),
+            esc(row["due_date"]),
+            badge(row["timing"], warning=row["timing"] == "overdue"),
+        ]
+        for row in snapshot["actions"]
+    ]
+    review_rows = [
+        [
+            esc(row["id"]),
+            esc(row["review_cadence"]),
+            esc(row["next_review_date"]),
+        ]
+        for row in snapshot["reviews"]
+    ]
+    forecast_rows = [
+        [
+            esc(row["id"]),
+            esc(row["title"]),
+            esc(row["resolution_date"]),
+            badge(row["timing"], warning=True),
+        ]
+        for row in snapshot["forecasts"]
+    ]
+    recommendation_rows = [
+        [
+            esc(row["id"]),
+            esc(row["company_id"]),
+            esc(row["age_days"]),
+            badge(row["freshness"], warning=True),
+        ]
+        for row in snapshot["recommendations"]
     ]
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>运营</h2>
-<p>从结构化元数据读取逾期行动与到期的研究评审。</p>
-</div><div><div class="eyebrow">逾期行动</div><h2>{len(overdue)}</h2>
-<p class="muted">截至 {date.today().isoformat()}</p></div></section>
-<section class="grid">
-<div class="panel"><h3>管线健康</h3>
+<p>统一读取调度、Jobs、Actions、研究评审与决策到期项；页面不执行任务。</p>
+</div><div><div class="eyebrow">待处理</div><h2>{esc(len(snapshot['schedules']) + len(snapshot['actions']) + len(snapshot['reviews']) + len(snapshot['forecasts']) + len(snapshot['recommendations']))}</h2>
+<p class="muted">截至 {esc(snapshot['as_of'])}</p></div></section>
+<section class="panel"><h3>调度</h3>{table(["Channel", "Schedule", "Last run", "状态"], schedule_rows)}</section>
+<section class="panel"><h3>Jobs</h3>{table(["Job", "名称", "Started", "状态", "消息"], job_rows_)}</section>
+<section class="panel"><h3>Actions</h3>{table(["Action", "Owner", "Due", "时点"], action_rows_)}</section>
+<section class="panel"><h3>研究评审</h3>{table(["Project", "Cadence", "Next review"], review_rows)}</section>
+<section class="panel"><h3>到期 Forecast</h3>{table(["Forecast", "标题", "Resolution date", "时点"], forecast_rows)}</section>
+<section class="panel"><h3>过期 Recommendation</h3>{table(["Recommendation", "公司", "年龄(天)", "状态"], recommendation_rows)}</section>
+<section class="panel"><h3>管线健康</h3>
 <p><a href="/pipeline">打开管线看板 →</a></p>
-<p class="muted">候选管线 / 通道 / 指标已移至管线页面。</p></div>
-<div class="panel"><h3>逾期行动</h3>
-{table(["行动", "负责人", "截止", "状态"], open_rows)}</div>
-<div class="panel"><h3>到期评审</h3>
-{table(["项目", "节奏", "下次评审"], due_rows)}</div>
-</section>"""
+<p class="muted">候选管线 / 通道 / 指标已移至管线页面。</p></section>
+"""
     return shell("运营", content, project_id=selected)
 
 
 def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
-    objects, findings, selected = repo.scoped(project_id)
-    rendered = render_project_indexes(objects, selected)
-    drift = index_drift(repo.root, rendered)
-    asset_failures = [
-        result
-        for result in verify_source_assets(repo.root)
-        if result.status in {"missing", "invalid", "hash_mismatch"}
-    ]
-    job_failures = [
-        obj
-        for obj in objects
-        if obj.object_type == "job" and obj.metadata.get("status") == "failed"
-    ]
+    _, _, selected = repo.scoped(project_id)
+    snapshot = health_snapshot(repo.root, project_id=selected)
+    validation = snapshot["validation"]
     finding_rows = [
         [
             badge(
-                finding.level,
-                warning=finding.level == "warning",
-                danger=finding.level == "error",
+                finding["level"],
+                warning=finding["level"] == "warning",
+                danger=finding["level"] == "error",
             ),
-            esc(finding.code),
-            esc(finding.path.relative_to(repo.root)),
-            esc(finding.message),
+            esc(finding["code"]),
+            esc(finding["path"]),
+            esc(finding["message"]),
         ]
-        for finding in findings
+        for finding in validation["findings"]
     ]
+    index_rows = [[esc(path)] for path in snapshot["indexes"]["drift"]]
+    asset_rows = [
+        [esc(row["source_id"]), esc(row["status"]), esc(row["message"])]
+        for row in snapshot["assets"]["failures"]
+    ]
+    db = snapshot["candidate_db"]
+    channel_rows_ = [
+        [
+            esc(row["channel_id"]),
+            badge("enabled" if row["enabled"] else "disabled"),
+            badge(row["review_status"], warning=row["review_status"] != "reviewed"),
+            badge(row["license_status"], warning=row["license_status"] != "reviewed"),
+            esc(row["robots_checked_at"] or "—"),
+        ]
+        for row in snapshot["channels"]
+    ]
+    failed_rows = [
+        [esc(row["id"]), esc(row["type"]), esc(row["status"]), esc(row["message"])]
+        for row in snapshot["failed_runs"]
+    ]
+    config_rows = [
+        [esc(key), badge(value, warning=value == "missing")]
+        for key, value in snapshot["config"].items()
+    ]
+    backup = snapshot["backup"]
+    disk = snapshot["host"]["disk"]
+    model_cost = snapshot["model_cost"]
+    attention = any(
+        (
+            validation["status"] != "ok",
+            snapshot["indexes"]["status"] != "ok",
+            snapshot["assets"]["status"] != "ok",
+            db["status"] != "ok",
+            backup["status"] != "fresh",
+            disk["status"] != "ok",
+            bool(snapshot["failed_runs"]),
+        )
+    )
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>系统健康</h2>
-<p>所有值均在请求时从仓库文件重建。</p></div>
+<p>仓库、operational store、许可、备份与主机状态均在请求时只读检查。</p></div>
 <div><div class="eyebrow">状态</div>
-<h2>{badge("健康") if not drift and not asset_failures and not job_failures else badge("注意", warning=True)}</h2>
-<p class="muted">{len(drift)} 处漂移 · {len(asset_failures)} 个资产失败 ·
-{len(job_failures)} 个失败任务</p></div></section>
-<section class="panel"><h3>校验发现</h3>
+<h2>{badge("注意", warning=True) if attention else badge("健康")}</h2>
+<p class="muted">{esc(len(snapshot['indexes']['drift']))} 处漂移 · {esc(len(snapshot['assets']['failures']))} 个资产失败 · {esc(len(snapshot['failed_runs']))} 个失败运行</p></div></section>
+<section class="panel"><h3>仓库校验</h3>
 {table(["级别", "编码", "路径", "消息"], finding_rows)}</section>
-<section class="panel" style="margin-top:1rem"><h3>失败任务</h3>
-{table(["任务", "名称", "消息"], [[object_link(job), esc(job.metadata.get("job_name")), esc(job.metadata.get("message"))] for job in job_failures])}
+<section class="panel"><h3>索引</h3><p>scope={esc(snapshot['indexes']['scope'])} · {badge(snapshot['indexes']['status'], warning=snapshot['indexes']['status'] != 'ok')}</p>{table(["Drift"], index_rows) if index_rows else "<p class='muted'>无索引漂移。</p>"}</section>
+<section class="panel"><h3>Source assets</h3>{table(["Source", "状态", "消息"], asset_rows) if asset_rows else "<p class='muted'>资产完整性通过。</p>"}</section>
+<section class="panel"><h3>Candidate DB</h3>{_kv_table([["状态", badge(db['status'], warning=db['status'] != 'ok')], ["Integrity", esc(db['integrity'])], ["Schema", f"{esc(db['schema_version'])} / {esc(db['expected_schema_version'])}"], ["Size", esc(db['size_bytes'])], ["Modified", esc(db['modified_at'] or '—')]])}</section>
+<section class="panel"><h3>Channels / License</h3>{table(["Channel", "Enabled", "Review", "License", "Robots checked"], channel_rows_)}</section>
+<section class="panel"><h3>失败运行</h3>{table(["ID", "Type", "状态", "消息"], failed_rows)}</section>
+<section class="grid">
+<div class="panel"><h3>备份</h3>{_kv_table([["状态", badge(backup['status'], warning=backup['status'] != 'fresh')], ["Age hours", esc(backup['age_hours'] if backup['age_hours'] is not None else '—')], ["Manifest", esc(backup['manifest'] or '—')]])}</div>
+<div class="panel"><h3>磁盘与时区</h3>{_kv_table([["Free bytes", esc(disk['free_bytes'])], ["Disk status", badge(disk['status'], warning=disk['status'] != 'ok')], ["Timezone", esc(snapshot['host']['timezone'])]])}</div>
+<div class="panel"><h3>配置存在性</h3>{table(["配置", "状态"], config_rows)}</div>
+<div class="panel"><h3>模型与成本</h3>{_kv_table([["状态", esc(model_cost['status'])], ["记录数", esc(model_cost['records'])], ["预算配置", badge('present' if model_cost['budget_configured'] else 'missing', warning=not model_cost['budget_configured'])]])}</div>
 </section>"""
     return shell("健康", content, project_id=selected)
 

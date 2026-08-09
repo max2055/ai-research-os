@@ -9,7 +9,9 @@ roll back atomically.
 from __future__ import annotations
 
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from research_os.repositories.transaction import TransactionError
 
@@ -130,6 +132,49 @@ def current_version(path: Path) -> int:
         return int(row[0]) if row else 0
     finally:
         connection.close()
+
+
+def candidate_db_health(path: Path) -> dict[str, Any]:
+    """Inspect the operational SQLite store without creating or mutating it."""
+    if not path.is_file():
+        return {
+            "status": "missing",
+            "integrity": "unknown",
+            "schema_version": 0,
+            "expected_schema_version": SCHEMA_VERSION,
+            "size_bytes": 0,
+            "modified_at": None,
+        }
+    stat = path.stat()
+    result: dict[str, Any] = {
+        "status": "ok",
+        "integrity": "unknown",
+        "schema_version": 0,
+        "expected_schema_version": SCHEMA_VERSION,
+        "size_bytes": stat.st_size,
+        "modified_at": datetime.fromtimestamp(stat.st_mtime, UTC).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ),
+    }
+    connection: sqlite3.Connection | None = None
+    try:
+        uri = f"file:{path.resolve().as_posix()}?mode=ro"
+        connection = sqlite3.connect(uri, uri=True)
+        integrity = connection.execute("PRAGMA quick_check").fetchone()
+        version = connection.execute("PRAGMA user_version").fetchone()
+        result["integrity"] = str(integrity[0]) if integrity else "unknown"
+        result["schema_version"] = int(version[0]) if version else 0
+        if result["integrity"] != "ok":
+            result["status"] = "corrupt"
+        elif result["schema_version"] != SCHEMA_VERSION:
+            result["status"] = "migration_required"
+    except sqlite3.DatabaseError:
+        result["status"] = "corrupt"
+        result["integrity"] = "corrupt"
+    finally:
+        if connection is not None:
+            connection.close()
+    return result
 
 
 def apply_migrations(path: Path) -> int:
