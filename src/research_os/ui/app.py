@@ -48,7 +48,11 @@ from research_os.services.mode_metrics import mode_metrics
 from research_os.services.ontology import render_impact
 from research_os.services.pilot import pilot_status
 from research_os.services.projects import objects_for_project
-from research_os.services.read_model import industry_home_snapshot
+from research_os.services.read_model import (
+    company_snapshot,
+    industry_home_snapshot,
+    sector_snapshot,
+)
 from research_os.services.review_cadence import current_next_review_date
 from research_os.services.validation import validate_repository
 
@@ -849,6 +853,108 @@ def _candidate_facts(detail: dict[str, Any]) -> str:
     ) + "</dl>"
 
 
+def _proposal_rows(proposal: dict[str, Any]) -> list[list[str]]:
+    rows = []
+    for key, value in proposal.items():
+        if isinstance(value, list):
+            text = "、".join(str(item) for item in value)
+        elif isinstance(value, dict):
+            text = json.dumps(value, ensure_ascii=False)
+        else:
+            text = str(value)
+        rows.append([esc(str(key)), esc(text)])
+    return rows
+
+
+def _scoring_panel(detail: dict[str, Any]) -> str:
+    scoring = detail.get("scoring")
+    if not scoring or not scoring.get("subscores"):
+        if detail.get("model_version"):
+            return (
+                '<section class="panel"><h3>评分分项</h3>'
+                f'<p>{badge("model version mismatch", warning=True)} · '
+                f"评分版本 {esc(detail.get('model_version'))} 与当前不一致，跳过数值。</p></section>"
+            )
+        return ""
+    subs = scoring["subscores"]
+    tiles = "".join(
+        f'<div class="metric"><strong>{esc(subs.get(key))}</strong>'
+        f"<span>{esc(key)}</span></div>"
+        for key in (
+            "scope_relevance",
+            "source_quality",
+            "novelty",
+            "materiality",
+            "time_sensitivity",
+            "evidence_potential",
+            "duplication_penalty",
+            "uncertainty_penalty",
+        )
+    )
+    return (
+        '<section class="panel"><h3>评分分项'
+        f"（{esc(scoring.get('model') or 'deterministic-v1')}）</h3>"
+        f'<section class="metrics">{tiles}</section></section>'
+    )
+
+
+def _suggestion_panel(detail: dict[str, Any]) -> str:
+    hints: list[str] = []
+    score = detail.get("priority_score")
+    if (
+        detail.get("status") == "new"
+        and not detail.get("existing_source_id")
+        and score is not None
+        and score >= 0.6
+    ):
+        hints.append(badge("建议 promote"))
+    if (
+        not detail.get("is_representative", True)
+        or detail.get("status") in {"dismissed", "expired", "failed"}
+    ):
+        hints.append(badge("建议 dismiss", warning=True))
+    if not hints:
+        return ""
+    return (
+        '<section class="panel"><h3>处理建议（只读）</h3>'
+        f"<p>{' · '.join(hints)} · 写入请走 CLI（dry-run → --apply）</p></section>"
+    )
+
+
+def _reviewed_evidence(
+    repo: DashboardRepository,
+    entity: dict[str, Any],
+    existing_source_id: str | None,
+) -> str:
+    links: list[str] = []
+    if existing_source_id:
+        links.append(
+            f'<p>已有正式来源：<a href="/sources/{esc(existing_source_id)}">'
+            f"{esc(existing_source_id)}</a></p>"
+        )
+    entity_id = entity.get("entity_id")
+    event_rows: list[list[str]] = []
+    if entity_id:
+        objects, _ = repo.all()
+        event_rows = [
+            [
+                f'<a href="/events/{esc(obj.object_id)}">{esc(obj.object_id)}</a>',
+                esc(obj.metadata.get("event_date")),
+                esc(obj.metadata.get("title")),
+            ]
+            for obj in objects
+            if obj.object_type == "event"
+            and obj.metadata.get("review_status") == "reviewed"
+            and entity_id in (obj.metadata.get("companies") or [])
+        ][:10]
+    if not links and not event_rows:
+        return '<p><span class="muted">无已评审证据关联该候选。</span></p>'
+    return (
+        "".join(links)
+        + table(["已评审事件", "日期", "标题"], event_rows)
+    )
+
+
 def _pipeline_candidate(repo: DashboardRepository, candidate_id: str) -> str:
     detail = queue_show(repo.root, candidate_id)
     if detail is None:
@@ -877,11 +983,15 @@ def _pipeline_candidate(repo: DashboardRepository, candidate_id: str) -> str:
 <p>{badge(detail.get("status"))} · {esc(detail.get("channel_id"))}</p></div>
 <div><div class="eyebrow">优先级</div><h2>{esc(priority)}</h2>
 <p class="muted">{esc(detail.get("model_version")) or "启发式打分"}</p></div></section>"""
-    panels = f"""{_candidate_facts(detail)}
+    panels = f"""<section class="panel"><h3>候选区</h3>{_candidate_facts(detail)}</section>
 <section class="grid" style="margin-top:1rem">
-<div class="panel"><h3>实体建议</h3><pre>{esc(json.dumps(entity, ensure_ascii=False, indent=2))}</pre></div>
-<div class="panel"><h3>板块建议</h3><pre>{esc(json.dumps(sector, ensure_ascii=False, indent=2))}</pre></div>
+<div class="panel"><h3>实体建议</h3>{table(["字段", "值"], _proposal_rows(entity))}</div>
+<div class="panel"><h3>板块建议</h3>{table(["字段", "值"], _proposal_rows(sector))}</div>
 </section>
+{_scoring_panel(detail)}
+{_suggestion_panel(detail)}
+<section class="panel" style="border-top:2px solid var(--accent)"><h3>已评审证据区</h3>
+{_reviewed_evidence(repo, entity, detail.get("existing_source_id"))}</section>
 <section class="grid" style="margin-top:1rem">
 <div class="panel"><h3>理由编码</h3>
 {table(["编码"], reason_rows)}</div>
@@ -920,6 +1030,19 @@ def _pipeline_queue(
             return badge("变体", warning=True)
         return "—"
 
+    def entity_cell(entity_id: Any) -> str:
+        if isinstance(entity_id, str) and entity_id.startswith("COM-"):
+            return f'<a href="/companies/{esc(entity_id)}">{esc(entity_id)}</a>'
+        return esc(str(entity_id or "—"))
+
+    def sector_cell(sector_ids: Any) -> str:
+        if not sector_ids:
+            return "—"
+        return "、".join(
+            f'<a href="/sectors/{esc(sid)}">{esc(sid)}</a>'
+            for sid in sector_ids
+        )
+
     body_rows = [
         [
             (
@@ -929,9 +1052,10 @@ def _pipeline_queue(
             ),
             badge(row["status"]),
             dup_cell(row),
-            esc(row["entity_id"] or row["entity_status"]),
-            esc(len(row["sector_ids"])),
+            entity_cell(row.get("entity_id")),
+            sector_cell(row.get("sector_ids")),
             esc(row["channel_id"]),
+            esc(row.get("discovered_at") or ""),
             f'<a href="/pipeline/queue/{esc(row["candidate_id"])}">{esc(row["title"])}</a>',
         ]
         for row in rows
@@ -958,7 +1082,7 @@ def _pipeline_queue(
 <label style="margin-left:1rem"><input type="checkbox" name="show_dups" value="1"{dup_check}> 显示重复</label>
 <button type="submit">筛选</button>
 </form></section>
-<section class="panel">{table(["优先级", "状态", "重复", "实体", "板块", "通道", "标题"], body_rows)}</section>"""
+<section class="panel">{table(["优先级", "状态", "重复", "实体", "板块", "通道", "发布时间", "标题"], body_rows)}</section>"""
     return shell("管线队列", content)
 
 
@@ -1273,6 +1397,283 @@ def _reports_page(repo: DashboardRepository) -> str:
 {_intel_tabs("reports")}
 <section class="panel" style="margin-top:1rem">{table(["报告", "类型", "状态", "更新"], rows)}</section>"""
     return shell("研究报告", content)
+
+
+def _object_cell(obj: ResearchObject) -> str:
+    return (
+        f'<a href="{object_url(obj)}">{esc(obj.object_id)}</a>'
+        f'<br><span class="muted">{esc(obj.metadata.get("title") or "")}</span>'
+    )
+
+
+def _company_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
+    snapshot = company_snapshot(repo.root, obj.object_id)
+    identity = snapshot["identity"]
+    coverage = snapshot["coverage"]
+    if coverage:
+        coverage_badges = (
+            badge(
+                "身份" if coverage.get("identity_complete") else "身份缺失",
+                warning=not coverage.get("identity_complete"),
+            )
+            + " · "
+            + badge(
+                "已证据" if coverage.get("sourced") else "无证据",
+                warning=not coverage.get("sourced"),
+            )
+            + " · "
+            + badge(
+                "已关联" if coverage.get("related") else "无关联",
+                warning=not coverage.get("related"),
+            )
+        )
+    else:
+        coverage_badges = badge("无覆盖数据", warning=True)
+
+    hero = f"""<section class="hero"><div>
+<div class="eyebrow">企业雷达 → 公司</div><h2>{esc(identity.get("title") or obj.object_id)}</h2>
+<p>{esc(identity.get("legal_name"))} · {badge(identity.get("coverage_tier"))}</p></div>
+<div><div class="eyebrow">覆盖</div>{coverage_badges}
+<p><a href="/impact/{esc(obj.object_id)}">查看关系网络</a></p></div></section>"""
+
+    security_rows = [
+        [
+            _object_cell(security),
+            esc(security.metadata.get("ticker")),
+            esc(security.metadata.get("exchange")),
+            esc(security.metadata.get("currency")),
+            esc(security.metadata.get("instrument_type")),
+            esc(security.metadata.get("active_from")),
+            esc(security.metadata.get("active_to")),
+        ]
+        for security in snapshot["securities"]
+    ]
+    product_rows = [[_object_cell(p)] for p in snapshot["products"]]
+    tech_rows = [[_object_cell(t)] for t in snapshot["technologies"]]
+    sector_rows = [[_object_cell(s)] for s in snapshot["sectors"]]
+
+    assertion_groups: dict[str, list[list[str]]] = {}
+    for assertion in snapshot["assertions"]:
+        predicate = str(assertion.metadata.get("predicate") or "")
+        counterpart = (
+            assertion.metadata.get("object_id")
+            if assertion.metadata.get("subject_id") == obj.object_id
+            else assertion.metadata.get("subject_id")
+        )
+        row = [
+            esc(counterpart),
+            esc(assertion.metadata.get("valid_from")),
+            badge(assertion.metadata.get("review_status")),
+        ]
+        assertion_groups.setdefault(predicate, []).append(row)
+    assertion_panels = "".join(
+        f'<div class="panel"><h3>{esc(predicate)}</h3>'
+        f'{table(["对手实体", "生效", "评审"], rows)}</div>'
+        for predicate, rows in assertion_groups.items()
+    ) or '<div class="panel"><h3>供应链断言</h3><p><span class="muted">无记录</span></p></div>'
+
+    channel_rows_html = [
+        [
+            esc(channel["channel_id"]),
+            esc(channel["title"]),
+            badge(channel["freshness"], warning=channel["freshness"] != "fresh"),
+        ]
+        for channel in snapshot["channels"]
+    ]
+    metric_rows = [[_object_cell(m), esc(m.metadata.get("unit"))] for m in snapshot["metrics"]]
+    event_rows = [
+        [
+            _object_cell(event),
+            esc(event.metadata.get("event_date")),
+            esc(event.metadata.get("confidence")),
+        ]
+        for event in snapshot["events"]
+    ]
+    run_rows = [
+        [
+            _object_cell(run),
+            esc(run.metadata.get("mode_id")),
+            esc(run.metadata.get("as_of")),
+            badge(run.metadata.get("status")),
+        ]
+        for run in snapshot["analysis_runs"]
+    ]
+    forecast_rows = [
+        [
+            _object_cell(forecast),
+            esc(forecast.metadata.get("resolution_date")),
+            badge(forecast.metadata.get("status")),
+        ]
+        for forecast in snapshot["forecasts"]
+    ]
+    valuation_rows = [
+        [
+            _object_cell(valuation),
+            esc(valuation.metadata.get("as_of")),
+            esc(valuation.metadata.get("market_price")),
+        ]
+        for valuation in snapshot["valuations"]
+    ]
+    rec_rows = [
+        [
+            _object_cell(rec),
+            esc(rec.metadata.get("research_posture")),
+            esc(rec.metadata.get("direction")),
+            esc(rec.metadata.get("conviction")),
+            badge(rec.metadata.get("status")),
+        ]
+        for rec in snapshot["recommendations"]
+    ]
+    thesis_rows = [
+        [
+            _object_cell(thesis),
+            esc(thesis.metadata.get("confidence")),
+            badge(thesis.metadata.get("review_status")),
+        ]
+        for thesis in snapshot["theses"]
+    ]
+
+    content = (
+        hero
+        + _intel_tabs("companies")
+        + f"""
+<section class="panel" style="margin-top:1rem"><h3>主体与证券分离</h3>
+{table(["证券", "代码", "交易所", "货币", "类型", "生效", "失效"], security_rows)}</section>
+<section class="grid">
+  <div class="panel"><h3>产品</h3>{table(["产品"], product_rows)}</div>
+  <div class="panel"><h3>技术</h3>{table(["技术"], tech_rows)}</div>
+  <div class="panel"><h3>板块</h3>{table(["板块"], sector_rows)}</div>
+</section>
+<section class="grid">{assertion_panels}</section>
+<section class="panel"><h3>来源通道新鲜度</h3>
+{table(["通道", "标题", "新鲜度"], channel_rows_html)}</section>
+<section class="panel"><h3>指标（定义层）</h3>
+{table(["指标", "单位"], metric_rows)}</section>
+<section class="panel full"><h3>证据时间线</h3>
+{table(["事件", "日期", "置信度"], event_rows)}</section>
+<section class="panel full"><h3>分析运行</h3>
+{table(["运行", "模式", "as-of", "状态"], run_rows)}</section>
+<section class="grid">
+  <div class="panel"><h3>预测历史</h3>{table(["预测", "到期", "状态"], forecast_rows)}</div>
+  <div class="panel"><h3>估值快照历史</h3>{table(["估值", "as-of", "价格"], valuation_rows)}</div>
+  <div class="panel"><h3>推荐历史</h3>{table(["推荐", "姿态", "方向", "置信", "状态"], rec_rows)}</div>
+  <div class="panel"><h3>观点</h3>{table(["观点", "置信度", "评审"], thesis_rows)}</div>
+</section>"""
+    )
+    return shell(f"{obj.object_id} · 企业雷达", content)
+
+
+def _sector_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
+    snapshot = sector_snapshot(repo.root, obj.object_id)
+    identity = snapshot["identity"]
+    rollup = snapshot["coverage_rollup"]
+    members = snapshot["members"]
+    company_rows = [
+        [
+            _object_cell(company),
+            esc(company.metadata.get("legal_name")),
+            esc(company.metadata.get("region_primary")),
+            esc(company.metadata.get("company_stage")),
+            badge(company.metadata.get("coverage_tier")),
+        ]
+        for company in snapshot["companies"]
+    ]
+    product_rows = [[_object_cell(p)] for p in snapshot["products"]]
+    tech_rows = [[_object_cell(t)] for t in snapshot["technologies"]]
+    metric_rows = [[_object_cell(m), esc(m.metadata.get("unit"))] for m in snapshot["metrics"]]
+    event_rows = [
+        [_object_cell(event), esc(event.metadata.get("event_date"))]
+        for event in snapshot["events"]
+    ]
+    impact_rows = [
+        [
+            f'<a href="/impact/{esc(impact.object_id)}">{esc(impact.object_id)}</a>',
+            esc(impact.metadata.get("target_id")),
+            esc(impact.metadata.get("impact_type")),
+            badge(impact.metadata.get("direction")),
+        ]
+        for impact in snapshot["impacts"]
+    ]
+    thesis_rows = [
+        [_object_cell(thesis), badge(thesis.metadata.get("review_status"))]
+        for thesis in snapshot["theses"]
+    ]
+    forecast_rows = [
+        [_object_cell(forecast), badge(forecast.metadata.get("status"))]
+        for forecast in snapshot["forecasts"]
+    ]
+    member_flag_rows = [
+        [
+            f'<a href="/companies/{esc(row["company_id"])}">{esc(row["company_id"])}</a>',
+            badge("身份" if row.get("identity_complete") else "缺失", warning=not row.get("identity_complete")),
+            badge("已证据" if row.get("sourced") else "无", warning=not row.get("sourced")),
+            badge("已关联" if row.get("related") else "无", warning=not row.get("related")),
+        ]
+        for row in snapshot["member_flags"]
+    ]
+
+    def rate_cell(value: float) -> str:
+        return f"{value * 100:.0f}%"
+
+    hero = f"""<section class="hero"><div>
+<div class="eyebrow">板块 → {esc(obj.object_id)}</div><h2>{esc(identity.get("title") or obj.object_id)}</h2>
+<p>{esc(identity.get("value_chain_position"))} · <a href="/impact/{esc(obj.object_id)}">查看关系网络</a></p></div>
+<div><div class="eyebrow">覆盖</div>
+<p class="muted">身份 {rate_cell(rollup["identity_rate"])} · 证据 {rate_cell(rollup["source_rate"])} · 关联 {rate_cell(rollup["relationship_rate"])}</p></div></section>
+<section class="metrics">
+  <div class="metric"><strong>{len(members)}</strong><span>成员企业</span></div>
+  <div class="metric"><strong>{len(snapshot["events"])}</strong><span>事件</span></div>
+  <div class="metric"><strong>{len(snapshot["impacts"])}</strong><span>reviewed 影响</span></div>
+</section>"""
+
+    assertion_rows = [
+        [
+            esc(
+                assertion.metadata.get("object_id")
+                if assertion.metadata.get("subject_id") == obj.object_id
+                else assertion.metadata.get("subject_id")
+            ),
+            esc(assertion.metadata.get("predicate")),
+            badge(assertion.metadata.get("review_status")),
+        ]
+        for assertion in snapshot["assertions"]
+    ]
+    definition = f"""<section class="panel"><h3>定义 / 范围 / 价值链</h3>
+<p>{esc(identity.get("definition"))}</p>
+<p><strong>价值链位置：</strong>{esc(identity.get("value_chain_position"))}</p>
+<p><strong>范围内：</strong>{esc(identity.get("in_scope"))}</p>
+<p><strong>范围外：</strong>{esc(identity.get("out_of_scope"))}</p>
+<p><strong>关键输入：</strong>{esc(identity.get("key_inputs"))}</p>
+<p><strong>关键输出：</strong>{esc(identity.get("key_outputs"))}</p></section>
+<section class="panel"><h3>上下游断言</h3>
+{table(["对端实体", "谓词", "评审"], assertion_rows)}</section>"""
+
+    content = (
+        hero
+        + _intel_tabs("sectors")
+        + definition
+        + f"""
+<section class="panel" style="margin-top:1rem"><h3>核心与追踪企业</h3>
+{table(["企业", "法定名称", "区域", "阶段", "分层"], company_rows)}</section>
+<section class="grid">
+  <div class="panel"><h3>产品</h3>{table(["产品"], product_rows)}</div>
+  <div class="panel"><h3>技术</h3>{table(["技术"], tech_rows)}</div>
+  <div class="panel"><h3>指标</h3>{table(["指标", "单位"], metric_rows)}</div>
+</section>
+<section class="panel full"><h3>事件时间线</h3>
+{table(["事件", "日期"], event_rows)}</section>
+<section class="panel full"><h3>已评审影响路径</h3>
+{table(["影响", "目标", "类型", "方向"], impact_rows)}</section>
+<section class="grid">
+  <div class="panel"><h3>活跃观点</h3>{table(["观点", "评审"], thesis_rows)}</div>
+  <div class="panel"><h3>预测</h3>{table(["预测", "状态"], forecast_rows)}</div>
+</section>
+<section class="panel full"><h3>成员覆盖完整度</h3>
+<table><thead><tr><th>企业</th><th>身份</th><th>证据</th><th>关联</th></tr></thead>
+<tbody>{''.join('<tr>' + ''.join(f'<td>{c}</td>' for c in row) + '</tr>' for row in member_flag_rows)}</tbody></table>
+</section>"""
+    )
+    return shell(f"{obj.object_id} · 板块", content)
 
 
 def _impact_page(repo: DashboardRepository) -> str:
@@ -2332,6 +2733,11 @@ def create_app(root: Path) -> FastAPI:
 
     def generic_detail(object_id: str) -> HTMLResponse:
         try:
+            obj = repo.one(object_id)
+            if obj.object_type == "company":
+                return HTMLResponse(_company_detail(repo, obj))
+            if obj.object_type == "sector":
+                return HTMLResponse(_sector_detail(repo, obj))
             return HTMLResponse(_generic_page(repo, object_id))
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=object_id) from exc

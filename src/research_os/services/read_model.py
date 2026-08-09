@@ -15,8 +15,9 @@ from research_os.domain.policies import is_iso_date
 from research_os.services.actions import action_rows
 from research_os.services.brief import daily_brief
 from research_os.services.candidate_db import candidate_db_path
+from research_os.services.discovery import due_channels
 from research_os.services.forecast_due import forecast_status_report
-from research_os.services.metrics import pipeline_metrics
+from research_os.services.metrics import pipeline_metrics, universe_coverage
 from research_os.services.validation import validate_repository
 
 RECENT_EVENT_DAYS = 30
@@ -210,4 +211,295 @@ def industry_home_snapshot(
         "sector_heatmap": _sector_heatmap(objects, as_of, stale, never_run),
         "freshness": freshness,
         "failed_runs": brief["failed_runs"],
+    }
+
+
+def _coverage_index(root: Path) -> dict[str, dict[str, Any]]:
+    coverage = universe_coverage(root)
+    return {
+        str(row["company_id"]): row for row in coverage.get("companies", [])
+    }
+
+
+def _object_title(obj: ResearchObject) -> str:
+    return str(obj.metadata.get("title") or obj.object_id)
+
+
+def company_snapshot(root: Path, company_id: str) -> dict[str, Any]:
+    """Industry radar snapshot for one company (WP-601 F-005, no writes)."""
+    objects, findings = validate_repository(root)
+    if any(finding.level == "error" for finding in findings):
+        raise ValueError(
+            "repository validation must pass before Company queries"
+        )
+    company = next((o for o in objects if o.object_id == company_id), None)
+    if company is None:
+        raise KeyError(company_id)
+
+    securities = [
+        obj
+        for obj in objects
+        if obj.object_type == "security"
+        and obj.metadata.get("issuer_company_id") == company_id
+    ]
+    products = [
+        obj
+        for obj in objects
+        if obj.object_type == "product"
+        and company_id in _str_list(obj.metadata.get("owner_company_ids"))
+    ]
+    technologies = [
+        obj
+        for obj in objects
+        if obj.object_type == "technology"
+        and company_id in _str_list(obj.metadata.get("owner_company_ids"))
+    ]
+    sectors = [
+        obj
+        for obj in objects
+        if obj.object_type == "sector"
+        and (
+            company_id in _str_list(obj.metadata.get("core_company_ids"))
+            or company_id in _str_list(obj.metadata.get("tracked_company_ids"))
+            or obj.object_id in _str_list(company.metadata.get("sector_ids"))
+        )
+    ]
+    assertions = [
+        obj
+        for obj in objects
+        if obj.object_type == "ontology_assertion"
+        and (
+            obj.metadata.get("subject_id") == company_id
+            or obj.metadata.get("object_id") == company_id
+        )
+    ]
+    channel_by_id = {
+        obj.object_id: obj
+        for obj in objects
+        if obj.object_type == "source_channel"
+    }
+    linked_channels = sorted(_company_channel_ids(company, channel_by_id))
+    due = due_channels(root, db_path=candidate_db_path(root))
+    degraded = {item["channel_id"] for item in due if item["last_run"]}
+    never_run = {item["channel_id"] for item in due if not item["last_run"]}
+    channels = [
+        {
+            "channel_id": channel_id,
+            "title": _object_title(channel_by_id[channel_id])
+            if channel_id in channel_by_id
+            else channel_id,
+            "freshness": (
+                "stale"
+                if channel_id in degraded
+                else "never_run"
+                if channel_id in never_run
+                else "fresh"
+            ),
+        }
+        for channel_id in linked_channels
+    ]
+
+    events = [
+        obj
+        for obj in objects
+        if obj.object_type == "event"
+        and company_id in _str_list(obj.metadata.get("companies"))
+    ]
+    events.sort(
+        key=lambda obj: str(obj.metadata.get("event_date") or ""), reverse=True
+    )
+    event_ids = {obj.object_id for obj in events}
+    analysis_runs = [
+        obj
+        for obj in objects
+        if obj.object_type == "analysis_run"
+        and (
+            company_id in _str_list(obj.metadata.get("scope_ids"))
+            or set(_str_list(obj.metadata.get("input_event_ids"))) & event_ids
+        )
+    ]
+    forecasts = [
+        obj
+        for obj in objects
+        if obj.object_type == "forecast"
+        and company_id in _str_list(obj.metadata.get("scope_ids"))
+    ]
+    valuations = [
+        obj
+        for obj in objects
+        if obj.object_type == "valuation_snapshot"
+        and obj.metadata.get("company_id") == company_id
+    ]
+    recommendations = [
+        obj
+        for obj in objects
+        if obj.object_type == "recommendation"
+        and obj.metadata.get("company_id") == company_id
+    ]
+    theses = [
+        obj
+        for obj in objects
+        if obj.object_type == "thesis"
+        and company_id in _str_list(obj.metadata.get("companies"))
+    ]
+    metrics = [
+        obj
+        for obj in objects
+        if obj.object_type == "metric"
+        and (
+            company_id in _str_list(obj.metadata.get("owner_entity_ids"))
+            or obj.object_id in _str_list(company.metadata.get("key_metric_ids"))
+        )
+    ]
+    coverage = _coverage_index(root).get(company_id, {})
+
+    return {
+        "company_id": company_id,
+        "identity": company.metadata,
+        "securities": securities,
+        "products": products,
+        "technologies": technologies,
+        "sectors": sectors,
+        "assertions": assertions,
+        "channels": channels,
+        "metrics": metrics,
+        "events": events,
+        "analysis_runs": analysis_runs,
+        "forecasts": forecasts,
+        "valuations": valuations,
+        "recommendations": recommendations,
+        "theses": theses,
+        "coverage": coverage,
+    }
+
+
+def sector_snapshot(root: Path, sector_id: str) -> dict[str, Any]:
+    """Industry radar snapshot for one sector (WP-601 F-004, no writes)."""
+    objects, findings = validate_repository(root)
+    if any(finding.level == "error" for finding in findings):
+        raise ValueError(
+            "repository validation must pass before Sector queries"
+        )
+    sector = next((o for o in objects if o.object_id == sector_id), None)
+    if sector is None:
+        raise KeyError(sector_id)
+
+    companies = [obj for obj in objects if obj.object_type == "company"]
+    core_ids = set(_str_list(sector.metadata.get("core_company_ids")))
+    tracked_ids = set(_str_list(sector.metadata.get("tracked_company_ids")))
+    by_sector = {
+        obj.object_id
+        for obj in companies
+        if sector_id in _str_list(obj.metadata.get("sector_ids"))
+    }
+    members = core_ids | tracked_ids | by_sector
+    member_objects = [obj for obj in companies if obj.object_id in members]
+    member_objects.sort(key=lambda obj: obj.object_id)
+
+    products = [
+        obj
+        for obj in objects
+        if obj.object_type == "product"
+        and (
+            sector_id in _str_list(obj.metadata.get("sector_ids"))
+            or set(_str_list(obj.metadata.get("owner_company_ids"))) & members
+        )
+    ]
+    technologies = [
+        obj
+        for obj in objects
+        if obj.object_type == "technology"
+        and (
+            sector_id in _str_list(obj.metadata.get("sector_ids"))
+            or set(_str_list(obj.metadata.get("owner_company_ids"))) & members
+        )
+    ]
+    metrics = [
+        obj
+        for obj in objects
+        if obj.object_type == "metric"
+        and (
+            sector_id in _str_list(obj.metadata.get("owner_entity_ids"))
+            or obj.object_id in _str_list(sector.metadata.get("key_metrics"))
+        )
+    ]
+    assertions = [
+        obj
+        for obj in objects
+        if obj.object_type == "ontology_assertion"
+        and (
+            obj.metadata.get("subject_id") == sector_id
+            or obj.metadata.get("object_id") == sector_id
+        )
+    ]
+    events = [
+        obj
+        for obj in objects
+        if obj.object_type == "event"
+        and set(_str_list(obj.metadata.get("companies"))) & members
+    ]
+    events.sort(
+        key=lambda obj: str(obj.metadata.get("event_date") or ""), reverse=True
+    )
+    impacts = [
+        obj
+        for obj in objects
+        if obj.object_type == "impact_assertion"
+        and obj.metadata.get("review_status") == "reviewed"
+        and (
+            obj.metadata.get("target_id") == sector_id
+            or str(obj.metadata.get("target_id") or "") in members
+        )
+    ]
+    theses = [
+        obj
+        for obj in objects
+        if obj.object_type == "thesis"
+        and set(_str_list(obj.metadata.get("companies"))) & members
+    ]
+    forecasts = [
+        obj
+        for obj in objects
+        if obj.object_type == "forecast"
+        and (
+            sector_id in _str_list(obj.metadata.get("scope_ids"))
+            or set(_str_list(obj.metadata.get("scope_ids"))) & members
+        )
+    ]
+
+    coverage = _coverage_index(root)
+    member_flags = [
+        {"company_id": company_id, **coverage.get(company_id, {})}
+        for company_id in sorted(members)
+    ]
+
+    def rate(flag: str) -> float:
+        if not members:
+            return 0.0
+        complete = sum(
+            1
+            for row in member_flags
+            if row.get(flag) is True
+        )
+        return round(complete / len(members), 4)
+
+    return {
+        "sector_id": sector_id,
+        "identity": sector.metadata,
+        "members": members,
+        "companies": member_objects,
+        "products": products,
+        "technologies": technologies,
+        "metrics": metrics,
+        "assertions": assertions,
+        "events": events,
+        "impacts": impacts,
+        "theses": theses,
+        "forecasts": forecasts,
+        "coverage_rollup": {
+            "identity_rate": rate("identity_complete"),
+            "source_rate": rate("sourced"),
+            "relationship_rate": rate("related"),
+        },
+        "member_flags": member_flags,
     }

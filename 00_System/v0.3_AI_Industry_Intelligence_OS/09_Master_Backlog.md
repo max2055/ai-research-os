@@ -245,7 +245,7 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
 | WP-600 | F-001～003 | IA/read model/Industry Home | completed |
-| WP-601 | F-004～006 | Sector/Company/Candidate UI | proposed |
+| WP-601 | F-004～006 | Sector/Company/Candidate UI | completed |
 | WP-602 | F-007～009 | Impact/Analysis/Decision UI | proposed |
 | WP-603 | F-010～011 | Operations/Health | proposed |
 | WP-610 | F-012～014 | profile/SLO/security | proposed |
@@ -262,6 +262,14 @@ WP-600 close-out（2026-08-09）：F-001~003 落地，Wave 6 第一个 WP。
 - **F-003**：`/home` GET 路由（`_industry_home` 渲染，产业级无 project 过滤）+ nav「产业首页」；保留 `/` 为项目概览（方案 B）。只读不变量维持（非 GET 路由仍恰为 3 个 `/llm`）。
 - 测试：`test_m5_dashboard_jobs.py` +8（TestIndustryHomeSnapshot 5 + IndustryHomeTests 3）。**578 tests 全绿（+8）、validate 0 error、ruff/mypy clean、index drift 0**。真实仓库 /home 冒烟 200（22 COM/9 SEG 引用，FCT-0 正确因均未到期）。
 - **Known limitation**：`industry_home_snapshot` 多次调 `validate_repository`（每日历 4+ 次），诚实无缓存；超 §5 SLO 时由 WP-610 F-012 优化（传预载 objects，不改 `daily_brief` 公共签名）。stale_core_companies 依赖 `source_channel_ids`/channel `entity_ids`（当前多为空，面板常空——诚实）。
+
+WP-601 close-out（2026-08-09）：F-004~006 落地，Sector/Company/Candidate 页面增强。
+- **F-004**：`services/read_model.py` `sector_snapshot(root, sector_id)` + `_sector_detail`（app.py）——定义/范围/价值链、上下游断言、核心与追踪企业、产品/技术/指标、事件时间线、reviewed 影响路径、活跃观点/预测、成员覆盖完整度 rollup（聚合 universe_coverage）。
+- **F-005**：`company_snapshot(root, company_id)` + `_company_detail`（企业雷达）——主体与证券分离（issuer_company_id）、产品/技术/板块、供应链断言（按 predicate 分组）、来源通道新鲜度、指标、证据时间线、分析运行、预测/估值/推荐历史、覆盖 badge。
+- **F-006**：候选详情结构化——entity/sector proposals 从 raw JSON 改字段表；`queue_show` 附 `scoring`（重算 `score_candidate`，仅 model_version==SCORING_VERSION，否则 badge mismatch）；promote/dismiss 只读建议；候选区 vs 已评审证据区（existing_source 链接 + entity 相关 reviewed 事件）。列表加发布时间列 + 实体/板块链接。
+- **路由策略**：`generic_detail`（app.py）按 `object_type` 分支到 `_company_detail`/`_sector_detail`，其余类型保持 generic——不加路由、自动保只读不变量。
+- 测试：`test_m5_dashboard_jobs.py` +5（SectorCompanyDetailTests 2 + CandidateDetailTests 3）。**583 tests 全绿（+5）、validate 0 error、ruff/mypy clean、index drift 0**。真实仓库冒烟 `/companies/COM-nvidia`（证券/事件/运行面板）+ `/sectors/SEG-memory-storage`（覆盖 rollup）200。
+- **Known limitation**：company/sector 详情多处 inline 过滤（含一次 universe_coverage 调用）——诚实无缓存；sector 上下游仅展示 sector 自身的 ontology_assertion（成员级上下游未聚合，数据稀疏）；候选评分分项需 model_version 匹配才重算（评分版本演进时数值面板自动隐藏并提示）。
 
 ## 10. 建议首批派发顺序
 

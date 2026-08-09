@@ -17,7 +17,7 @@ from typing import Any
 from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
 from research_os.services.entity_resolution import EntityIndex, resolve
-from research_os.services.scoring import score_candidate
+from research_os.services.scoring import SCORING_VERSION, score_candidate
 from research_os.services.sector_classification import SectorIndex, classify
 from research_os.services.validation import validate_repository
 
@@ -387,7 +387,64 @@ def queue_show(
         str(detail.get("canonical_url") or "")
     )
     detail["is_representative"] = _is_representative(detail, cluster_stats)
+    detail["scoring"] = _recompute_scoring(detail, objects, cluster_stats)
     return detail
+
+
+def _recompute_scoring(
+    detail: dict[str, Any],
+    objects: list[Any],
+    cluster_stats: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Deterministically recompute the score breakdown (WP-601 F-006).
+
+    Sub-scores are not persisted (only priority_score + reason_codes are),
+    so recompute via :func:`score_candidate` when the stored model version
+    matches the current scoring version; return ``None`` on mismatch.
+    """
+    if str(detail.get("model_version") or "") != str(SCORING_VERSION):
+        return None
+    channel = next(
+        (
+            obj
+            for obj in objects
+            if obj.object_type == "source_channel"
+            and obj.object_id == detail.get("channel_id")
+        ),
+        None,
+    )
+    entity_status = str(
+        (detail.get("entity_proposals") or {}).get("status") or "unknown"
+    )
+    sector_count = len((detail.get("sector_proposals") or {}).get("sector_ids") or [])
+    cluster_size = 1
+    if detail.get("duplicate_cluster_id"):
+        stats = cluster_stats.get(str(detail["duplicate_cluster_id"]))
+        if stats:
+            cluster_size = int(stats["size"])
+    score = score_candidate(
+        title=str(detail.get("title") or ""),
+        source_grade=(
+            str(channel.metadata.get("source_grade_proposal") or "B")
+            if channel
+            else "B"
+        ),
+        entity_status=entity_status,
+        sector_count=sector_count,
+        is_duplicate_representative=bool(detail.get("is_representative", True)),
+        cluster_size=cluster_size,
+        channel_type=(
+            str(channel.metadata.get("channel_type") or "web_page")
+            if channel
+            else "web_page"
+        ),
+    )
+    return {
+        "subscores": score["subscores"],
+        "priority_score": score["priority_score"],
+        "scoring_version": score["scoring_version"],
+        "model": score["model"],
+    }
 
 
 def render_candidate_list(rows: list[dict[str, Any]]) -> str:

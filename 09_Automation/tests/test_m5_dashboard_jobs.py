@@ -766,9 +766,9 @@ def _seed_home_candidates(root: Path) -> None:
             ("CAND-low-001", 0.2),
         ):
             connection.execute(
-                "UPDATE candidates SET priority_score = ? "
+                "UPDATE candidates SET priority_score = ?, model_version = ? "
                 "WHERE candidate_id = ?",
-                (score, candidate_id),
+                (score, "1", candidate_id),
             )
         connection.commit()
     finally:
@@ -804,6 +804,9 @@ Test.
 
 
 def _write_home_core_company(root: Path) -> None:
+    channel_dir = root / "02_Knowledge" / "Channels"
+    channel_dir.mkdir(parents=True, exist_ok=True)
+    (channel_dir / "CHN-test.md").write_text(CHANNEL_MD, encoding="utf-8")
     path = root / "02_Knowledge" / "Companies" / "COM-core-test.md"
     path.write_text(
         """---
@@ -1072,3 +1075,149 @@ class IndustryHomeTests(unittest.TestCase):
             self.assertEqual(
                 ["/llm/config", "/llm/models", "/llm/test"], write_routes
             )
+
+
+def _write_home_security(root: Path) -> str:
+    today = date.today()
+    security_id = "INS-TST-NASDAQ"
+    path = root / "02_Knowledge" / "Securities" / f"{security_id}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"""---
+id: {security_id}
+type: security
+title: "Test Security"
+schema_version: 2
+created_at: {today.isoformat()}
+updated_at: {today.isoformat()}
+project_ids: []
+status: active
+review_status: reviewed
+issuer_company_id: COM-core-test
+instrument_type: common_stock
+ticker: TST
+exchange: NASDAQ
+currency: USD
+country: US
+share_class: ""
+active_from: {today.isoformat()}
+tags: []
+---
+# Security
+
+## Description
+
+Test.
+""",
+        encoding="utf-8",
+    )
+    return security_id
+
+
+def _write_home_rel(root: Path) -> str:
+    today = date.today()
+    rel_id = f"REL-{today:%Y%m%d}-001"
+    path = root / "05_Research" / "Assertions" / f"{rel_id}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"""---
+id: {rel_id}
+type: ontology_assertion
+title: "COM-core-test SUPPLIES COM-test"
+schema_version: 2
+created_at: {today.isoformat()}
+updated_at: {today.isoformat()}
+project_ids: []
+status: active
+review_status: pending
+subject_id: COM-core-test
+predicate: SUPPLIES
+object_id: COM-test
+valid_from: {today.isoformat()}
+as_of: {today.isoformat()}
+evidence_ids: []
+source_ids: []
+confidence: 0.5
+scope: ""
+qualifiers: {{}}
+tags: []
+---
+# Ontology Assertion
+
+## Relation
+
+Test.
+""",
+        encoding="utf-8",
+    )
+    return rel_id
+
+
+class SectorCompanyDetailTests(unittest.TestCase):
+    """F-004 / F-005: bespoke sector + company detail pages (WP-601)."""
+
+    def test_sector_detail_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _write_home_sector(root)
+            _write_home_core_company(root)
+            client = TestClient(create_app(root))
+            page = client.get("/sectors/SEG-test")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("查看关系网络", page.text)
+            self.assertIn("核心与追踪企业", page.text)
+            self.assertIn("事件时间线", page.text)
+            self.assertIn("覆盖完整度", page.text)
+            self.assertIn("COM-test", page.text)
+
+    def test_company_detail_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _write_home_core_company(root)
+            _write_home_security(root)
+            _write_home_rel(root)
+            client = TestClient(create_app(root))
+            page = client.get("/companies/COM-core-test")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("查看关系网络", page.text)
+            self.assertIn("主体与证券分离", page.text)
+            self.assertIn("SUPPLIES", page.text)
+            self.assertIn("证据时间线", page.text)
+            self.assertIn("分析运行", page.text)
+            self.assertIn("INS-TST-NASDAQ", page.text)
+
+
+class CandidateDetailTests(unittest.TestCase):
+    """F-006: candidate queue list + detail enhancements (WP-601)."""
+
+    def test_candidate_detail_subscores(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            client = TestClient(create_app(root))
+            page = client.get("/pipeline/queue/CAND-new-001")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("评分分项", page.text)
+            self.assertIn("scope_relevance", page.text)
+            self.assertIn("novelty", page.text)
+
+    def test_candidate_reviewed_evidence_separation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            client = TestClient(create_app(root))
+            page = client.get("/pipeline/queue/CAND-new-001")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("候选区", page.text)
+            self.assertIn("已评审证据区", page.text)
+            self.assertIn("处理建议", page.text)
+
+    def test_candidate_queue_list_links(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            client = TestClient(create_app(root))
+            page = client.get("/pipeline/queue")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("发布时间", page.text)
+            self.assertIn("CAND-new-001", page.text)
