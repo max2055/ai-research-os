@@ -140,7 +140,7 @@ C-018 最小闭环 enablement（2026-08-07）：打通「物化 → review → G
 | WP-411 | D-011～013 | compare、Red Team、discovery sandbox | completed |
 | WP-412 | D-014～016 | CLI/UI/promotion proposal | completed |
 | WP-420 | D-017～018 | evaluator/metrics | completed |
-| WP-430 | D-019～020 | 10-case field Gate/recovery | proposed |
+| WP-430 | D-019～020 | 10-case field Gate/recovery | completed |
 
 所有 Mode 子包必须共用同一 output contract，不得各自创造不兼容的 Facts/Inference 字段。
 
@@ -193,6 +193,18 @@ max 确认第一批 §11 评分 PASS（`f49e592`）后，跑完剩余 7 case + 5
 - **13 个记录缺口（max 接受为发现，不烧 API 重试）**：scenario ×6（case-4/5/6/7/9/10）、value-chain ×3（case-4/5/7）、red-team ×2（case-3/10）、technology-curve ×1（case-7）、open-discovery ×1（case-9）。**根因两类**：①**scenario 模式脆弱**（6 分区含 Downside/Base/Upside，deepseek-v4-flash 输出不稳定，6/10 case 失败）；②**事件级顽固外部引用**（case-7 Samsung→SRC-20260806-052、case-9/10 Oracle/SAP→THS-004、case-3 red-team→SRC-20260805-040，D-004 契约持续拦截——模型对特定事件从训练记忆引入真实对象）。
 - **D-019 判定：PASS**（确定性 32/32 + 人工 0.992 + OD 门达标 + 缺口记录）。评估包 `05_Research/Reviews/Field_Gate_10_Case_Packet.md`（完整 10-case + 已确认人工评分 + 缺口文档）。
 - **Phase 4 结论**：多模式真实比较可行，但**scenario 模式需 prompt 强化/分区精简，外部引用需更强约束**（D-020 acceptance 项目）；model 输出语言已修（中文）。**WP-430 剩 D-020（acceptance/recovery：replay/hash/rebuild 通过验证）。**
+
+## D-020 验收（2026-08-09，WP-430 完成）
+
+`00_System/D020_Phase_4_Acceptance.md`（status passed）。Phase 4 §10/§12 验收通过：
+
+- **replay 创建新 ID**：`analyze replay ANL-20260809-002` dry-run → 预览新 ID ANL-20260809-041，不覆盖旧 run；`write_new_file` 拒绝已存在路径（FileExistsError）。
+- **hash 可重建**：input_snapshot_hash（重跑 resolve_inputs == 存储）、output_hash（sha256(body) == 存储）全部通过；prompt_hash 在模板未变时重建（020/040 ==）；**002 的 prompt_hash 因中文规则模板改动（`bd80478`）前创建而不匹配——正确行为，run 冻结创建时模板**。
+- **rebuild**：validate 0 error / index --apply 9 indexes 无 drift。
+- **失败不留半成品**：畸形输出（echo）/provider-failure → RunError 无半写入。
+- **回滚 §12**：模式 append-only 版本、run 不反向修改 Evidence、误生成 run 用 rejected/superseded（ANL-001 先例）、D-004 契约拦截外部引用即回滚防线。
+- 新增 `test_phase4_acceptance.py`（4 项）。**478 tests 全绿（+4），validate 0 error，ruff/mypy clean。**
+- **WP-430（D-019+D-020）全部完成，Phase 4 主线关闭。** 后续候选：Phase 5（Forecast/Decision，需 RCP-v03-008/009）、scenario 模式 prompt 强化、真实 provider 的其他接入。
 
 WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 - **D-014 CLI**：`modes list/show/check` + `analyze run/show/compare/replay/propose-thesis`。`modes check` 用 `require_runnable` 逐模式门禁；`analyze run` 走 D-009 全事务（dry-run 默认/`--apply`）；`analyze replay` 复用冻结输入以当前模型重放（创建新 ID，不覆盖）；错误退出码 2。
