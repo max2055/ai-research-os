@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import platform
 import sys
 from datetime import date
@@ -23,6 +24,16 @@ from research_os.adapters.url import UrlCaptureAdapter
 from research_os.llm import llm_config
 from research_os.repositories.transaction import TransactionError
 from research_os.runtime import product as runtime
+
+
+def _load_json_spec(path: Path) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"cannot read spec {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("spec must be a JSON object")
+    return payload
 
 
 def _resolved_model(
@@ -360,6 +371,51 @@ def parse_args() -> argparse.Namespace:
         choices=("pending", "reviewed", "rejected", "superseded"),
         default="pending",
     )
+
+    forecast = subparsers.add_parser(
+        "forecast", help="Forecast lifecycle (WP-501, E-007~010)"
+    )
+    forecast_commands = forecast.add_subparsers(
+        dest="forecast_command", required=True
+    )
+    forecast_draft = forecast_commands.add_parser(
+        "draft", help="dry-run/apply a Forecast spec -> pending FCT object"
+    )
+    forecast_draft.add_argument(
+        "--spec", type=Path, required=True, help="JSON spec file"
+    )
+    forecast_draft.add_argument("--date", default=date.today().isoformat())
+    forecast_draft.add_argument("--apply", action="store_true")
+    forecast_list = forecast_commands.add_parser(
+        "list", help="list Forecasts by status / due-before"
+    )
+    forecast_list.add_argument(
+        "--status",
+        choices=("draft", "open", "resolved", "void", "superseded"),
+        default=None,
+    )
+    forecast_list.add_argument(
+        "--due-before", default="", help="open Forecasts resolving on/before this date"
+    )
+    forecast_status = forecast_commands.add_parser(
+        "status", help="due/overdue/unresolved report"
+    )
+    forecast_status.add_argument("--as-of", default=date.today().isoformat())
+    forecast_open = forecast_commands.add_parser(
+        "open", help="open a reviewed Forecast (draft -> open)"
+    )
+    forecast_open.add_argument("--id", required=True)
+    forecast_open.add_argument("--actor", default="max")
+    forecast_open.add_argument("--date", default=date.today().isoformat())
+    forecast_open.add_argument("--apply", action="store_true")
+    forecast_resolve = forecast_commands.add_parser(
+        "resolve", help="dry-run/apply a Resolution closing an open Forecast"
+    )
+    forecast_resolve.add_argument(
+        "--spec", type=Path, required=True, help="JSON resolution spec file"
+    )
+    forecast_resolve.add_argument("--date", default=date.today().isoformat())
+    forecast_resolve.add_argument("--apply", action="store_true")
 
     modes = subparsers.add_parser("modes", help="Analysis Modes (D-014)")
     modes_commands = modes.add_subparsers(dest="modes_command", required=True)
@@ -1597,6 +1653,111 @@ def main() -> int:
                     ),
                     end="",
                 )
+                return 0
+            except (OSError, TransactionError, ValueError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
+    if args.command == "forecast":
+        root = args.root.resolve()
+        if args.forecast_command == "draft":
+            try:
+                spec = _load_json_spec(args.spec)
+                print(
+                    runtime.prepare_forecast_draft(
+                        root, spec=spec, created_at=args.date
+                    )[1]
+                    + (
+                        "\nDRY-RUN: no files changed; rerun with --apply to write"
+                        if not args.apply
+                        else ""
+                    ),
+                    end="",
+                )
+                if args.apply:
+                    relative, content = runtime.prepare_forecast_draft(
+                        root, spec=spec, created_at=args.date
+                    )
+                    runtime.apply_forecast_draft(root, relative, content)
+                return 0
+            except (OSError, TransactionError, ValueError, FileExistsError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
+        if args.forecast_command == "list":
+            try:
+                objects, _ = runtime.validate_repository(root)
+                forecasts = [
+                    obj
+                    for obj in objects
+                    if obj.object_type == "forecast"
+                    and (
+                        args.status is None
+                        or obj.metadata.get("status") == args.status
+                    )
+                ]
+                if args.due_before:
+                    forecasts = [
+                        obj
+                        for obj in forecasts
+                        if obj.metadata.get("status") == "open"
+                        and str(obj.metadata.get("resolution_date", ""))
+                        <= args.due_before
+                    ]
+                print(runtime.render_forecast_rows(forecasts), end="")
+                return 0
+            except (OSError, ValueError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
+        if args.forecast_command == "status":
+            try:
+                print(runtime.render_forecast_status(root, as_of=args.as_of), end="")
+                return 0
+            except (OSError, ValueError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
+        if args.forecast_command == "open":
+            try:
+                if args.apply:
+                    runtime.apply_open_forecast(
+                        root,
+                        forecast_id=args.id,
+                        actor=args.actor,
+                        as_of=args.date,
+                    )
+                    print(f"opened {args.id} (status=open)")
+                else:
+                    updates = runtime.prepare_open_forecast(
+                        root,
+                        forecast_id=args.id,
+                        actor=args.actor,
+                        as_of=args.date,
+                    )
+                    for _path, content in updates.items():
+                        print(content)
+                    print(
+                        "\nDRY-RUN: no files changed; rerun with --apply to write"
+                    )
+                return 0
+            except (OSError, TransactionError, ValueError) as exc:
+                print(f"ERROR: {exc}")
+                return 2
+        if args.forecast_command == "resolve":
+            try:
+                spec = _load_json_spec(args.spec)
+                if args.apply:
+                    paths = runtime.apply_resolution(
+                        root, spec=spec, created_at=args.date
+                    )
+                    print("WRITTEN:")
+                    for path in paths:
+                        print(f"- {path}")
+                else:
+                    relative, content = runtime.prepare_resolution_draft(
+                        root, spec=spec, created_at=args.date
+                    )
+                    print(f"# {relative}\n\n{content}")
+                    print(
+                        "\nDRY-RUN: no files changed; rerun with --apply to write"
+                    )
                 return 0
             except (OSError, TransactionError, ValueError) as exc:
                 print(f"ERROR: {exc}")

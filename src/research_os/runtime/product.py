@@ -72,6 +72,26 @@ from research_os.services.drafts import (
     split_values,
     write_new_file,
 )
+from research_os.services.forecast_draft import (
+    apply_forecast_draft,
+    prepare_forecast_draft,
+)
+from research_os.services.forecast_due import (
+    due_forecasts,
+    forecast_status_report,
+    overdue_forecasts,
+    render_forecast_rows,
+    render_forecast_status,
+    unresolved_forecasts,
+)
+from research_os.services.forecast_lifecycle import (
+    apply_open_forecast,
+    prepare_open_forecast,
+)
+from research_os.services.forecast_resolution import (
+    apply_resolution,
+    prepare_resolution_draft,
+)
 from research_os.services.impact_draft import (
     apply_impact_draft,
     prepare_impact_batch,
@@ -180,6 +200,9 @@ __all__ = [
     "apply_event_draft",
     "advance_review_date",
     "current_next_review_date",
+    "apply_forecast_draft",
+    "apply_open_forecast",
+    "apply_resolution",
     "apply_company_update_proposal",
     "apply_indexes",
     "apply_impact_draft",
@@ -192,6 +215,7 @@ __all__ = [
     "daily_brief",
     "dedup_paths",
     "detect_contradictions",
+    "due_forecasts",
     "expand_impact_paths",
     "find_mode",
     "render_daily_brief",
@@ -203,6 +227,7 @@ __all__ = [
     "enrich_candidates",
     "evaluate_run",
     "evaluator_metrics",
+    "forecast_status_report",
     "gate_metrics",
     "gate_metrics_from_reviews",
     "gate_sample",
@@ -230,9 +255,13 @@ __all__ = [
     "prepare_assertion_draft",
     "path_confidence",
     "prepare_review_date_update",
+    "prepare_forecast_draft",
     "prepare_impact_batch",
     "prepare_impact_draft",
+    "prepare_open_forecast",
+    "prepare_resolution_draft",
     "prepare_run",
+    "overdue_forecasts",
     "propose_direct_impacts",
     "propose_thesis",
     "prepare_company_update_proposal",
@@ -251,6 +280,8 @@ __all__ = [
     "set_channel_enabled",
     "render_compare_report",
     "render_discovery_result",
+    "render_forecast_rows",
+    "render_forecast_status",
     "run_discovery",
     "due_channels",
     "render_candidate_detail",
@@ -263,6 +294,7 @@ __all__ = [
     "restore_candidate",
     "queue_rows",
     "queue_show",
+    "unresolved_forecasts",
     "render_indexes",
     "render_impact",
     "render_gate_packet",

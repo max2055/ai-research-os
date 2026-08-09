@@ -585,6 +585,75 @@ def validate_reviewed_assertion_evidence(
     )
 
 
+def validate_forecast_semantics(
+    obj: ResearchObject,
+    by_id: dict[str, ResearchObject],
+    findings: list[Finding],
+) -> None:
+    """WP-501 (E-008/E-010): Forecast lifecycle and Resolution invariants.
+
+    RCP-v03-008 Phase 5 §3/§4/§12:
+    - ``open`` requires ``review_status=reviewed`` (FCT001);
+    - resolution_date must be strictly after forecast_as_of (FCT002);
+    - numeric_range forecasts need a bounded range and a unit (FCT003);
+    - a reviewed Resolution must cite >=1 reviewed Source (RES001).
+    """
+    if obj.object_type == "forecast":
+        status = obj.metadata.get("status")
+        if status == "open" and obj.metadata.get("review_status") != "reviewed":
+            add(
+                findings,
+                "error",
+                "FCT001",
+                obj,
+                "open Forecast requires review_status reviewed",
+            )
+        forecast_as_of = str(obj.metadata.get("forecast_as_of", "") or "")
+        resolution_date = str(obj.metadata.get("resolution_date", "") or "")
+        if (
+            is_iso_date(forecast_as_of)
+            and is_iso_date(resolution_date)
+            and resolution_date <= forecast_as_of
+        ):
+            add(
+                findings,
+                "error",
+                "FCT002",
+                obj,
+                "resolution_date must be after forecast_as_of",
+            )
+        if obj.metadata.get("outcome_type") == "numeric_range":
+            low = obj.metadata.get("range_low")
+            high = obj.metadata.get("range_high")
+            unit = obj.metadata.get("unit")
+            if low is None or high is None or float(low) > float(high) or not unit:
+                add(
+                    findings,
+                    "error",
+                    "FCT003",
+                    obj,
+                    "numeric_range Forecast requires range_low <= range_high "
+                    "and a unit",
+                )
+    elif (
+        obj.object_type == "forecast_resolution"
+        and obj.metadata.get("review_status") == "reviewed"
+    ):
+        source_ids = obj.metadata.get("source_ids", []) or []
+        if not any(
+            by_id[str(sid)].metadata.get("review_status") == "reviewed"
+            for sid in source_ids
+            if str(sid) in by_id
+        ):
+            add(
+                findings,
+                "error",
+                "RES001",
+                obj,
+                "reviewed ForecastResolution requires >=1 reviewed Source",
+            )
+
+
 def validate_source_assets(
     root: Path,
     objects: list[ResearchObject],
@@ -943,6 +1012,7 @@ def validate_repository(
         validate_generated_report(obj, by_id, findings)
         validate_report_supersession(obj, by_id, findings)
         validate_reviewed_assertion_evidence(obj, by_id, findings)
+        validate_forecast_semantics(obj, by_id, findings)
         validate_analysis_mode_semantics(root, obj, findings)
         validate_analysis_run_fingerprint(obj, findings)
         validate_run_contract(obj, by_id, findings)
