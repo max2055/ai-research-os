@@ -1,21 +1,58 @@
 from __future__ import annotations
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
 
 import test_research_os_core as fixtures
+from research_os.services.indexing import index_drift, render_project_indexes
 from research_os.services.release import (
     completed_cadence_records,
     release_readiness,
     render_release_readiness,
 )
-from research_os.services.indexing import index_drift, render_project_indexes
 from research_os.services.validation import validate_repository
 from test_cli import run_cli
 
 
 class ReleaseReadinessTests(unittest.TestCase):
+    def test_v03_license_audit_covers_every_enabled_channel(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        objects, _ = validate_repository(root)
+        enabled_ids = {
+            obj.object_id
+            for obj in objects
+            if obj.object_type == "source_channel" and obj.metadata.get("enabled")
+        }
+        audit = (root / "00_System/v0.3_Channel_License_Audit.md").read_text(
+            encoding="utf-8"
+        )
+        audited_ids = set(re.findall(r"^\| (CHN-[^ |]+) \|", audit, re.MULTILINE))
+        self.assertEqual(enabled_ids, audited_ids)
+        self.assertIn("metadata governance audit", audit)
+        self.assertIn("not fresh legal or robots verification", audit)
+
+    def test_v03_performance_record_contains_profile_scale_and_slo_evidence(
+        self,
+    ) -> None:
+        root = Path(__file__).resolve().parents[2]
+        record = (root / "00_System/v0.3_Performance_Benchmark.md").read_text(
+            encoding="utf-8"
+        )
+        for text in (
+            "Status: passed",
+            "1034",
+            "1490",
+            "1501",
+            "Home",
+            "Company",
+            "cProfile",
+            "authoritative writes: 0",
+            "no persistent cache",
+        ):
+            self.assertIn(text, record)
+
     def test_approved_v03_governance_and_project_indexes_are_current(self) -> None:
         root = Path(__file__).resolve().parents[2]
         charter = (
