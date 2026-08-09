@@ -1,6 +1,6 @@
 # v0.3 Master Backlog 与实施波次
 
-状态：`wave1-completed`（Wave 0 治理 + Wave 1 Taxonomy/Schema/Universe 已完成；Wave 2 起 proposed）
+状态：`wave5-completed`（Wave 0-4 已完成；Wave 5 工程完成（WP-530 future-date dependent）；Wave 6 proposed）
 规则：本文件是执行索引；任务细节以各 Phase 文件为准。Agent 不得只读本表就开工。
 
 ## 1. 状态枚举
@@ -97,9 +97,9 @@ test_m3_ingestion）。B-013 IR/list-page：SK hynix IR 以 RSS 通道实现（P
 | WP-300 | C-001～003 | RCP、Schema、rule map | completed |
 | WP-301 | C-004～005 | direct impact + mechanism validator | completed |
 | WP-310 | C-006～010 | temporal multi-hop/conflict/confidence | completed |
-| WP-311 | C-011～012 | spec/renderer/review | proposed |
-| WP-312 | C-013～016 | index/CLI/UI/report integration | proposed |
-| WP-320 | C-017～018 | metrics + 20-event field Gate | proposed |
+| WP-311 | C-011～012 | spec/renderer/review | completed |
+| WP-312 | C-013～016 | index/CLI/UI/report integration | completed（C-013～015 落地；C-016 report 集成 deferred → Phase 6 F-007）|
+| WP-320 | C-017～018 | metrics + 20-event field Gate | completed |
 | WP-321 | C-019～020 | benchmark/recovery/acceptance | completed |
 
 先通过 direct impact Field Gate，再决定是否把 2–3 hop proposal 设为 active。
@@ -253,6 +253,8 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-612 | F-019～020 | runbook/limitations | proposed |
 | WP-620 | F-021～022 | 30-day Pilot/resolutions | future-date dependent |
 | WP-630 | F-023～025 | release check/human decision/tag | WP-620 | proposed |
+
+Wave 6 开工前置：RCP-v03-010（Dashboard 写边界 + 产品 IA v2 + 发布 Gate）获批；F-001 页面/查询/边界批准同步完成。
 
 ## 10. 建议首批派发顺序
 

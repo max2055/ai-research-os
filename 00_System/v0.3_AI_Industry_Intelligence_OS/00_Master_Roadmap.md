@@ -86,9 +86,9 @@ Candidate 数据量预计远大于正式研究对象，因此不能把每条候�
 | 1 | AI Taxonomy、Ontology 与 Universe | 3–5 周 | 8–10 板块、30–50 Core Company、关系可验证 | 阶段 0 | ✅ 完成（2026-08-06）|
 | 2 | 每日情报发现与 Candidate Pipeline | 5–7 周 | 连续稳定运行、无静默丢失、可控噪声（触发条件见 B-026 §触发条件，非固定日期，见 D-CALENDAR-DECOUPLE）| 阶段 1 | ⬜ in_progress |
 | 3 | Impact Assertion 与跨板块传导 | 4–6 周 | 20 个真实事件的人工影响路径 Gate | 阶段 1–2 | ✅ 完成（2026-08-08，C-018 approved + 多跳激活）|
-| 4 | Analysis Mode Framework | 4–6 周 | 6 个模式、同证据可复现、差异可解释 | 阶段 3 | ⬜ in_progress |
-| 5 | Forecast、Valuation 与 Recommendation Draft | 5–7 周 | 可解析预测、三情景、人工建议 Gate | 阶段 4 | ⬜ proposed |
-| 6 | Dashboard、规模化、运行与发布 | 5–8 周 | 30 天 pilot、恢复、性能、治理和发布 Gate | 阶段 2–5 | ⬜ proposed |
+| 4 | Analysis Mode Framework | 4–6 周 | 6 个模式、同证据可复现、差异可解释 | 阶段 3 | ✅ 完成（2026-08-09，D-019 10-case Gate PASS + D-020 acceptance）|
+| 5 | Forecast、Valuation 与 Recommendation Draft | 5–7 周 | 可解析预测、三情景、人工建议 Gate | 阶段 4 | ⬜ in_progress（WP-500～520 完成；仅剩 WP-530 自然到期解析，未来日期依赖）|
+| 6 | Dashboard、规模化、运行与发布 | 5–8 周 | 30 天 pilot、恢复、性能、治理和发布 Gate | 阶段 2–5；RCP-v03-010 | ⬜ proposed |
 
 单 Agent 串行估算约 27–41 周。多个 Agent 可以并行处理 Adapter、UI、Schema 测试和
 Universe 数据，但 Schema、Taxonomy、同一对象和最终报告不得无人协调并行修改。

@@ -1,6 +1,6 @@
 # Phase 2：每日情报发现与 Candidate Pipeline
 
-状态：`proposed`  
+状态：`in_progress`（工程 WP-200～240 完成；WP-240 Pilot 观察中，验收按 B-026 触发条件）  
 建议周期：5–7 周  
 前置：Phase 1 Gate；RCP-v03-004～005 获批  
 

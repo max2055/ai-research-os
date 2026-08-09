@@ -1,6 +1,6 @@
 # Phase 5：Forecast、Valuation 与投资决策支持
 
-状态：`proposed`  
+状态：`in_progress`（WP-500～520 完成；仅剩 WP-530 自然到期解析，未来日期依赖）  
 建议周期：5–7 周，之后持续解析  
 前置：Phase 4；RCP-v03-008～009 获批  
 

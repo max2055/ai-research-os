@@ -1,6 +1,6 @@
 # Phase 0–1：产品重定义、AI Taxonomy、Ontology 与 Universe
 
-状态：`proposed`  
+状态：`completed`（2026-08-06，Phase 1 CLOSED）  
 建议周期：4–7 周  
 前置：v0.2 baseline 通过；RCP-v03-001～003 获批  
 

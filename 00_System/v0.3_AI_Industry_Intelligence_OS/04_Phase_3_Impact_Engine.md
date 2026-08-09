@@ -1,6 +1,6 @@
 # Phase 3：Impact Assertion 与跨板块影响引擎
 
-状态：`proposed`  
+状态：`completed`（2026-08-08，C-018 approved + 多跳激活）  
 建议周期：4–6 周  
 前置：Phase 1 Universe；Phase 2 有真实 reviewed Event；RCP-v03-006 获批  
 

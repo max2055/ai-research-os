@@ -1,6 +1,6 @@
 # Phase 4：Analysis Mode Framework
 
-状态：`proposed`  
+状态：`completed`（2026-08-09，D-019 10-case Gate PASS + D-020 acceptance）  
 建议周期：4–6 周  
 前置：reviewed Evidence + reviewed Impact；RCP-v03-007 获批  
 
