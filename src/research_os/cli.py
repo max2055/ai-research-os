@@ -25,10 +25,14 @@ from research_os.repositories.transaction import TransactionError
 from research_os.runtime import product as runtime
 
 
-def _resolved_model(provider_flag: str, model_flag: str) -> tuple[str, str]:
-    """Resolve provider/model from CLI flags, falling back to the saved llm
-    config (provider) and finally echo. An explicit flag always wins."""
-    config = llm_config.load_config()
+def _resolved_model(
+    root: Path, provider_flag: str, model_flag: str
+) -> tuple[str, str]:
+    """Resolve provider/model from CLI flags, falling back to the repo-root llm
+    config (provider) and finally echo. An explicit flag always wins. Reads the
+    config from ``root`` so operating on a different repo never bleeds in the
+    machine-global config."""
+    config = llm_config.load_config(root / "00_System" / "llm.local.json")
     configured_provider = str(config.get("provider") or "")
     provider = provider_flag or configured_provider or "echo"
     model = model_flag
@@ -1591,7 +1595,7 @@ def main() -> int:
             root = args.root.resolve()
             if args.analyze_command == "run":
                 provider, model_id = _resolved_model(
-                    args.model_provider, args.model_id
+                    root, args.model_provider, args.model_id
                 )
                 print(
                     runtime.run_analysis(
@@ -1635,7 +1639,7 @@ def main() -> int:
                 if source is None or source.object_type != "analysis_run":
                     raise ValueError(f"unknown analysis run {args.run_id!r}")
                 provider, model_id = _resolved_model(
-                    args.model_provider, args.model_id
+                    root, args.model_provider, args.model_id
                 )
                 print(
                     runtime.run_analysis(

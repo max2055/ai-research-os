@@ -615,6 +615,10 @@ class AnalysisCliTests(unittest.TestCase):
                 "EVT-20260729-001",
                 "--as-of",
                 "2026-08-08",
+                "--model-provider",
+                "echo",
+                "--model-id",
+                "echo",
             )
             self.assertEqual(2, result.returncode)
             self.assertIn("ERROR:", result.stdout)

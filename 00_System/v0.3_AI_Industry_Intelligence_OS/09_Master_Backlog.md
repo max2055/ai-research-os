@@ -169,6 +169,20 @@ WP-420 close-out（2026-08-08）：D-017~018 落地，Phase 4 评估层完成。
 - **已知边界**：仅 DeepSeek（openai_chat，responses 已实现+测试但无 preset）；无视觉供应商分离（项目无视觉功能）；无自定义供应商高级入口（缩窄攻击面）；token/cost 未捕获（D-008 协议仍只返回 str）；真实连接需 max 在 `/llm` 填 Key 或用 `! DEEPSEEK_API_KEY=... pytest ...` 跑 E2E。
 - **Next：max 在 /llm 配置 DeepSeek Key 并跑通真实 analyze run → D-019 10-case Gate（WP-430）。**
 
+## D-019 第一批（3 Sector case × 4 modes，2026-08-09）
+
+max 在 /llm 配好 Key（deepseek-v4-flash）后，D-019 10-case 真实比较 Gate 启动。
+
+- **运行**：第一批 3 个 Sector case（EVT-20260601-044 DRAM 份额 / EVT-20260302-041 AI 需求 / EVT-20260520-032 交期）× 4 modes（value-chain/supply-demand/scenario/red-team）= 12 组合。真实 DeepSeek 调用 `--apply` 落盘，失败自动重试。
+- **关键发现①（语言不一致）**：首轮 12 run 中 7 个模型输出为英文（red-team 全英文、case-2/3 的 supply-demand/scenario 英文、value-chain 全中文）——prompt 未指定输出语言，模板中文+分区名英文导致模型选择不一致。D-017 questions 启发式只查中文 bigram → 英文 run 假性 q=0.00。**修复：prompt 模板加「输出使用中文」规则 + 重跑 7 个英文 run**。
+- **关键发现②（契约拦截外部事实）**：case-3（NVIDIA 交期）的 red-team 6 次尝试全部被 D-004 拒绝——模型持续引用冻结输入外的 SRC-20260805-040（真实 NVIDIA 源）。契约正确拦截（no facts outside inputs）。**记录为真实失败模式**：red-team 对单事件输入难以约束在冻结证据内，case-3 缺 red-team run（3/4 模式落盘）。
+- **关键发现③（分区越多越不稳定）**：red-team（7 分区）/scenario（6 分区）比 value-chain/supply-demand（5 分区）更易漏分区，需重试。
+- **结果**：11 个中文 run 落盘（ANL-20260809-002/003/004/006/010/014-019），**确定性 Gate 11/11 PASS、整体 1.000**（citation/outside/sections/questions/counterev/placeholders 全满分）；case-3 red-team 缺（已记录）。评估包 `05_Research/Reviews/Field_Gate_10_Case_Packet.md`（含每 run 评分卡 + 每 case 多模式 D-011 比较 + §11 八维人工评分表 + 缺口注记）。
+- **顺带修复**：`_resolved_model` 改为按 repo root 读 llm 配置（避免 CLI 操作其他 root 时串入机器全局配置——曾致 test_cli echo 测试意外调真实 API）；test_cli pin echo。
+- **新增**：`services/field_gate.py`（D-019 review packet 服务：逐 run D-017 scorecard + 逐 case D-011 compare + 人工评分表 + 缺口/不匹配报告）。
+- 474 tests 全绿（+3 field_gate），validate 0 error，ruff/mypy clean。
+- **下一步：max 用评估包做 §11 八维人工评分（含 case-3 red-team 缺口的专项判断）→ 确认后再跑剩余 7 case（33 run，含 5 open-discovery）。**
+
 WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 - **D-014 CLI**：`modes list/show/check` + `analyze run/show/compare/replay/propose-thesis`。`modes check` 用 `require_runnable` 逐模式门禁；`analyze run` 走 D-009 全事务（dry-run 默认/`--apply`）；`analyze replay` 复用冻结输入以当前模型重放（创建新 ID，不覆盖）；错误退出码 2。
 - **D-015 Dashboard**：`/analysis` 工作区（概览 + modes/runs 列表 + mode/run detail + `?runs=` compare），只读 GET，渲染输入引用/版本/冻结哈希/共享事实与冲突信号；导航加「分析」。

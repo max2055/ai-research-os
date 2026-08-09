@@ -57,6 +57,8 @@ per line, in the given order, each with substantive content:
 {required_output_sections}
 
 Rules:
+- Output language: write the analysis body in Chinese (中文). Section
+  headings keep their required English names (## Facts used, ...).
 - Facts used may cite ONLY the frozen inputs above, by permanent id.
 - Separate Facts (what the inputs state) from Inferences (what follows) from
   Judgments (your assessment). Never blend them.
