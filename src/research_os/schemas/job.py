@@ -25,6 +25,7 @@ class JobSchema(ManagedObjectSchema):
         "discover",
         "expire",
         "daily-brief",
+        "forecast-alerts",
     ]
     started_at: DateTimeString
     finished_at: DateTimeString

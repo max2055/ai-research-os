@@ -32,6 +32,7 @@ from research_os.services.analysis_registry import (
 )
 from research_os.services.candidate_queue import promoted_rows, queue_rows, queue_show
 from research_os.services.channels import channel_rows
+from research_os.services.forecast_due import due_forecasts, overdue_forecasts
 from research_os.services.indexing import (
     index_drift,
     render_project_indexes,
@@ -182,6 +183,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
       <a href="/companies{project_query}">产业</a>
       <a href="/impact{project_query}">影响</a>
       <a href="/analysis{project_query}">分析</a>
+      <a href="/decision{project_query}">决策</a>
       <a href="/llm{project_query}">模型</a>
       <a href="/health{project_query}">健康</a>
     </nav>
@@ -1143,6 +1145,22 @@ def _mode_link(obj: ResearchObject) -> str:
     return f'<a href="/analysis/modes/{obj.object_id}">{esc(obj.object_id)}</a>'
 
 
+def _forecast_link(obj: ResearchObject) -> str:
+    return f'<a href="/decision/forecast/{obj.object_id}">{esc(obj.object_id)}</a>'
+
+
+def _val_link(obj: ResearchObject) -> str:
+    return f'<a href="/decision/valuation/{obj.object_id}">{esc(obj.object_id)}</a>'
+
+
+def _rec_link(obj: ResearchObject) -> str:
+    return f'<a href="/decision/recommendation/{obj.object_id}">{esc(obj.object_id)}</a>'
+
+
+def _res_link(obj: ResearchObject) -> str:
+    return f'<a href="/decision/resolution/{obj.object_id}">{esc(obj.object_id)}</a>'
+
+
 def _analysis_page(repo: DashboardRepository) -> str:
     objects, _ = repo.all()
     modes = [o for o in objects if o.object_type == "analysis_mode"]
@@ -1185,6 +1203,135 @@ def _analysis_page(repo: DashboardRepository) -> str:
 <p class="muted"><a href="/analysis/runs">全部运行</a> · <a href="/analysis/modes">全部模式</a> · <a href="/analysis/compare">模式比较</a> · <a href="/analysis/metrics">模式指标</a></p>
 </section>"""
     return shell("分析", content)
+
+
+def _decision_page(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    as_of = date.today().isoformat()
+    forecasts = [o for o in objects if o.object_type == "forecast"]
+    valuations = [o for o in objects if o.object_type == "valuation_snapshot"]
+    recs = [o for o in objects if o.object_type == "recommendation"]
+    resolutions = [o for o in objects if o.object_type == "forecast_resolution"]
+
+    by_status: dict[str, int] = {}
+    for f in forecasts:
+        key = str(f.metadata.get("status", "")) or "—"
+        by_status[key] = by_status.get(key, 0) + 1
+    due = due_forecasts(forecasts, as_of=as_of)
+    overdue = overdue_forecasts(forecasts, as_of=as_of)
+    overdue_ids = {o.object_id for o in overdue}
+
+    forecast_rows = [
+        [
+            _forecast_link(o),
+            esc(o.metadata.get("outcome_type", "")),
+            esc(o.metadata.get("resolution_date", "")),
+            badge(
+                o.metadata.get("status", ""),
+                warning=o.metadata.get("status") == "open"
+                and o.object_id in overdue_ids,
+            ),
+            badge(
+                o.metadata.get("review_status", ""),
+                warning=o.metadata.get("review_status") == "pending",
+            ),
+        ]
+        for o in sorted(forecasts, key=lambda o: o.object_id)
+    ][:30]
+    val_rows = [
+        [
+            _val_link(o),
+            esc(o.metadata.get("company_id", "")),
+            esc(o.metadata.get("as_of", "")),
+            esc(o.metadata.get("valuation_identity", "")),
+            badge(o.metadata.get("status", "")),
+        ]
+        for o in sorted(valuations, key=lambda o: o.object_id)
+    ][:30]
+    rec_rows = [
+        [
+            _rec_link(o),
+            esc(o.metadata.get("company_id", "")),
+            esc(o.metadata.get("research_posture", "")),
+            esc(o.metadata.get("direction", "")),
+            badge(o.metadata.get("status", ""), warning=o.metadata.get("status") == "active"),
+        ]
+        for o in sorted(recs, key=lambda o: o.object_id)
+    ][:30]
+    res_rows = [
+        [
+            _res_link(o),
+            esc(o.metadata.get("forecast_id", "")),
+            esc(o.metadata.get("resolved_at", "")),
+            badge(o.metadata.get("decision", ""), danger=o.metadata.get("decision") in {"void", "ambiguous"}),
+        ]
+        for o in sorted(resolutions, key=lambda o: o.object_id, reverse=True)
+    ][:30]
+
+    alert_lines = []
+    for o in due:
+        mark = "逾期" if o.object_id in overdue_ids else "到期"
+        alert_lines.append(
+            f"<li>{_forecast_link(o)}：{mark}（{esc(o.metadata.get('resolution_date',''))}）"
+        )
+    if not alert_lines:
+        alert_lines.append("<li class='muted'>无到期 Forecast。</li>")
+
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">决策工作区</div><h2>可证伪 · 可解析 · 可校准</h2>
+<p>Forecast → Scenario → Valuation → Recommendation Draft → 人工 review → active；到期 Forecast 用 Resolution 解析，原对象不改。</p>
+</div><div><div class="eyebrow">状态</div>
+<h2>{esc(len(forecasts))}</h2>
+<p class="muted">open {esc(by_status.get('open', 0))} · resolved {esc(by_status.get('resolved', 0))}</p>
+</div></section>
+<section class="metrics">
+<div class="metric"><strong>{esc(len(forecasts))}</strong><span>Forecast</span></div>
+<div class="metric"><strong>{esc(len(valuations))}</strong><span>Valuation</span></div>
+<div class="metric"><strong>{esc(len(recs))}</strong><span>Recommendation</span></div>
+<div class="metric"><strong>{esc(len(resolutions))}</strong><span>Resolution</span></div>
+</section>
+<section class="panel"><h3>到期提醒（E-018）</h3>
+<ul>{"".join(alert_lines)}</ul>
+<p class="muted">open Forecast 且 resolution_date 已到/逾期：需 Resolution 解析，原 Forecast 永不回改。</p>
+</section>
+<section class="panel"><h3>Forecasts</h3>
+{table(["ID", "Outcome", "Resolution date", "状态", "评审"], forecast_rows) if forecast_rows else "<p class='muted'>尚无 Forecast（WP-520 场门）。</p>"}
+</section>
+<section class="panel"><h3>Valuations</h3>
+{table(["ID", "公司", "As of", "口径", "状态"], val_rows) if val_rows else "<p class='muted'>尚无 Valuation Snapshot。</p>"}
+</section>
+<section class="panel"><h3>Recommendations</h3>
+{table(["ID", "公司", "姿态", "方向", "状态"], rec_rows) if rec_rows else "<p class='muted'>尚无 Recommendation（上限 investment_candidate）。</p>"}
+</section>
+<section class="panel"><h3>Resolutions 历史</h3>
+{table(["ID", "Forecast", "Resolved at", "Decision"], res_rows) if res_rows else "<p class='muted'>尚无 Resolution（等首批 Forecast 自然到期）。</p>"}
+</section>"""
+    return shell("决策", content)
+
+
+def _decision_detail(
+    repo: DashboardRepository,
+    object_id: str,
+    *,
+    title: str,
+) -> str:
+    objects, _ = repo.all()
+    obj = next((o for o in objects if o.object_id == object_id), None)
+    if obj is None:
+        raise HTTPException(status_code=404, detail=f"未知对象 {object_id}")
+    body = html.escape(obj.body)[:6000] or "（无正文）"
+    meta_lines = "".join(
+        f"<tr><td>{esc(key)}</td><td>{esc(value)}</td></tr>"
+        for key, value in sorted(obj.metadata.items())
+        if not isinstance(value, list)
+    )
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">{esc(title)}</div><h2>{esc(object_id)}</h2>
+</div></section>
+<section class="panel"><h3>元数据</h3>
+<table><tbody>{meta_lines}</tbody></table></section>
+<section class="panel"><pre>{body}</pre></section>"""
+    return shell(f"{title} · {object_id}", content)
 
 
 def _analysis_metrics_panel(objects: list[ResearchObject]) -> str:
@@ -1769,6 +1916,34 @@ def create_app(root: Path) -> FastAPI:
     @app.get("/analysis", response_class=HTMLResponse)
     def analysis_overview(project: str | None = Query(default=None)) -> HTMLResponse:
         return HTMLResponse(_analysis_page(repo))
+
+    @app.get("/decision", response_class=HTMLResponse)
+    def decision_overview(project: str | None = Query(default=None)) -> HTMLResponse:
+        return HTMLResponse(_decision_page(repo))
+
+    @app.get("/decision/forecast/{object_id}", response_class=HTMLResponse)
+    def decision_forecast(object_id: str) -> HTMLResponse:
+        return HTMLResponse(
+            _decision_detail(repo, object_id, title="Forecast")
+        )
+
+    @app.get("/decision/valuation/{object_id}", response_class=HTMLResponse)
+    def decision_valuation(object_id: str) -> HTMLResponse:
+        return HTMLResponse(
+            _decision_detail(repo, object_id, title="Valuation")
+        )
+
+    @app.get("/decision/recommendation/{object_id}", response_class=HTMLResponse)
+    def decision_recommendation(object_id: str) -> HTMLResponse:
+        return HTMLResponse(
+            _decision_detail(repo, object_id, title="Recommendation")
+        )
+
+    @app.get("/decision/resolution/{object_id}", response_class=HTMLResponse)
+    def decision_resolution(object_id: str) -> HTMLResponse:
+        return HTMLResponse(
+            _decision_detail(repo, object_id, title="Resolution")
+        )
 
     @app.get("/analysis/modes", response_class=HTMLResponse)
     def analysis_modes(project: str | None = Query(default=None)) -> HTMLResponse:

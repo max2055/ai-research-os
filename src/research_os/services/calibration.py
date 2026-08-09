@@ -16,6 +16,7 @@ functions are assembled by ``calibration_report``.
 
 from __future__ import annotations
 
+import re
 import statistics
 from datetime import date
 from pathlib import Path
@@ -25,7 +26,6 @@ from research_os.domain.models import ResearchObject
 from research_os.domain.policies import is_iso_date
 from research_os.services.validation import validate_repository
 
-_BINARY_DECISIONS = {"correct", "incorrect"}
 _BUCKET_EDGES = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0001)
 
 
@@ -179,14 +179,57 @@ def void_ambiguous_rate(
     }
 
 
-def calibration_report(root: Path) -> dict[str, Any]:
-    """Aggregate §9 calibration metrics over reviewed resolutions."""
+def _forecast_modes(
+    objects: list[ResearchObject],
+    forecast: ResearchObject,
+) -> set[str]:
+    """Analysis-mode slugs a forecast's runs were produced under."""
+    by_id = {obj.object_id: obj for obj in objects}
+    modes: set[str] = set()
+    for run_id in forecast.metadata.get("analysis_run_ids", []) or []:
+        run = by_id.get(str(run_id))
+        if run and run.object_type == "analysis_run":
+            mode_id = str(run.metadata.get("mode_id", ""))
+            match = re.fullmatch(r"MOD-ANL-(.+)-v\d+", mode_id)
+            if match:
+                modes.add(match.group(1))
+    return modes
+
+
+def _forecast_sectors(forecast: ResearchObject) -> set[str]:
+    return {
+        str(scope)
+        for scope in forecast.metadata.get("scope_ids", []) or []
+        if str(scope).startswith("SEG-")
+    }
+
+
+def calibration_report(
+    root: Path,
+    *,
+    mode: str | None = None,
+    sector: str | None = None,
+) -> dict[str, Any]:
+    """Aggregate §9 calibration metrics over reviewed resolutions.
+
+    ``mode`` restricts to forecasts whose runs ran under that mode slug;
+    ``sector`` restricts to forecasts whose scope_ids include that SEG-*.
+    """
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
         raise ValueError(
             "repository validation must pass before a calibration report"
         )
     pairs = resolved_pairs(objects)
+    if mode or sector:
+        filtered: list[tuple[ResearchObject, ResearchObject]] = []
+        for forecast, res in pairs:
+            if mode and mode not in _forecast_modes(objects, forecast):
+                continue
+            if sector and sector not in _forecast_sectors(forecast):
+                continue
+            filtered.append((forecast, res))
+        pairs = filtered
     by_horizon: dict[str, list[tuple[ResearchObject, ResearchObject]]] = {}
     for forecast, res in pairs:
         horizon = str(forecast.metadata.get("horizon", "unknown")) or "unknown"

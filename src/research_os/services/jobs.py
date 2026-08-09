@@ -15,6 +15,7 @@ from research_os.services.brief import (
     render_daily_brief,
     write_daily_brief,
 )
+from research_os.services.decision_alerts import decision_alerts
 from research_os.services.discovery import run_discovery
 from research_os.services.indexing import (
     apply_indexes,
@@ -41,6 +42,7 @@ JOB_NAMES = frozenset(
         "discover",
         "expire",
         "daily-brief",
+        "forecast-alerts",
     }
 )
 
@@ -136,6 +138,14 @@ def _execute_job(
         except FileExistsError:
             return f"daily brief already exists: Daily_Brief_{as_of}.md"
         return f"daily brief created: {path.name}"
+    if job_name == "forecast-alerts":
+        report = decision_alerts(root, as_of=as_of)
+        return (
+            f"decision alerts: {report['due_count']} due "
+            f"({report['overdue_count']} overdue), "
+            f"{report['active_recommendations']} active recommendations; "
+            + "; ".join(report["alerts"])
+        )
     if job_name in {"indexes", "refresh"}:
         apply_indexes(root, render_indexes(objects))
         projects = [

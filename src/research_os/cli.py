@@ -401,8 +401,14 @@ def parse_args() -> argparse.Namespace:
         "status", help="due/overdue/unresolved report"
     )
     forecast_status.add_argument("--as-of", default=date.today().isoformat())
-    forecast_commands.add_parser(
+    forecast_calibration = forecast_commands.add_parser(
         "calibration", help="E-015 §9 calibration report (Brier/buckets/coverage)"
+    )
+    forecast_calibration.add_argument(
+        "--mode", default="", help="restrict to one Analysis Mode slug"
+    )
+    forecast_calibration.add_argument(
+        "--sector", default="", help="restrict to one SEG-* sector"
     )
     forecast_open = forecast_commands.add_parser(
         "open", help="open a reviewed Forecast (draft -> open)"
@@ -445,6 +451,9 @@ def parse_args() -> argparse.Namespace:
     valuation_supersede.add_argument("--actor", default="max")
     valuation_supersede.add_argument("--date", default=date.today().isoformat())
     valuation_supersede.add_argument("--apply", action="store_true")
+    valuation_commands.add_parser(
+        "list", help="list Valuation Snapshots"
+    )
 
     scenario = subparsers.add_parser(
         "scenario", help="Scenario workflow (WP-510, E-012)"
@@ -475,6 +484,14 @@ def parse_args() -> argparse.Namespace:
     rec_draft.add_argument("--spec", type=Path, required=True)
     rec_draft.add_argument("--date", default=date.today().isoformat())
     rec_draft.add_argument("--apply", action="store_true")
+    rec_list = recommendation_commands.add_parser(
+        "list", help="list Recommendations by status"
+    )
+    rec_list.add_argument(
+        "--status",
+        choices=("draft", "active", "closed", "superseded"),
+        default=None,
+    )
     rec_gate = recommendation_commands.add_parser(
         "gate", help="run the §12 completeness/freshness gate on a spec"
     )
@@ -851,6 +868,7 @@ def parse_args() -> argparse.Namespace:
             "discover",
             "expire",
             "daily-brief",
+            "forecast-alerts",
         ),
     )
     job_run.add_argument("--project")
@@ -1808,7 +1826,9 @@ def main() -> int:
                 return 2
         if args.forecast_command == "calibration":
             try:
-                calib = runtime.calibration_report(root)
+                calib = runtime.calibration_report(
+                    root, mode=args.mode or None, sector=args.sector or None
+                )
                 print(runtime.render_calibration_report(calib), end="")
                 return 0
             except (OSError, ValueError) as exc:
@@ -1905,6 +1925,12 @@ def main() -> int:
                         f"{args.new_id}.supersedes={args.old_id}; "
                         "rerun with --apply"
                     )
+            elif args.valuation_command == "list":
+                objects, _ = runtime.validate_repository(root)
+                vals = [
+                    obj for obj in objects if obj.object_type == "valuation_snapshot"
+                ]
+                print(runtime.render_valuation_rows(vals), end="")
             return 0
         except (OSError, TransactionError, ValueError) as exc:
             print(f"ERROR: {exc}")
@@ -1997,6 +2023,18 @@ def main() -> int:
                     f"superseded {args.old_id} by {args.new_id} "
                     f"(dual pointers updated)"
                 )
+            elif args.recommendation_command == "list":
+                objects, _ = runtime.validate_repository(root)
+                recs = [
+                    obj
+                    for obj in objects
+                    if obj.object_type == "recommendation"
+                    and (
+                        args.status is None
+                        or obj.metadata.get("status") == args.status
+                    )
+                ]
+                print(runtime.render_recommendation_rows(recs), end="")
             return 0
         except (OSError, TransactionError, ValueError) as exc:
             print(f"ERROR: {exc}")

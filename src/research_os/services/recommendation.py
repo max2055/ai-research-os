@@ -19,6 +19,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from research_os.domain.models import ResearchObject
 from research_os.domain.policies import FORBIDDEN_INVESTMENT_ACTIONS, is_iso_date
 from research_os.services.drafts import (
     ensure_known_ids,
@@ -164,6 +165,28 @@ def render_recommendation_draft(meta: dict[str, Any], body: str) -> str:
             lines.append(f"{key}: {_yaml_value(meta[key])}")
     lines.append("---")
     return "\n".join(lines) + "\n\n" + body
+
+
+def render_recommendation_rows(recommendations: list[ResearchObject]) -> str:
+    """Render a recommendation list as a markdown table (``recommendation list``)."""
+    lines = [
+        "| ID | Company | Posture | Direction | Status | Freshness date |",
+        "|---|---|---|---|---|---|",
+    ]
+    for obj in sorted(
+        recommendations,
+        key=lambda obj: (obj.metadata.get("status", ""), obj.object_id),
+    ):
+        lines.append(
+            f"| {obj.object_id} | {obj.metadata.get('company_id', '')} | "
+            f"{obj.metadata.get('research_posture', '')} | "
+            f"{obj.metadata.get('direction', '')} | "
+            f"{obj.metadata.get('status', '')} | "
+            f"{obj.metadata.get('freshness_date', '')} |"
+        )
+    if not recommendations:
+        lines.append("| — | No matching recommendations | — | — | — | — |")
+    return "\n".join(lines) + "\n"
 
 
 def recommendation_gate(

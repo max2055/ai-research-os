@@ -20,6 +20,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from research_os.domain.models import ResearchObject
 from research_os.domain.policies import is_iso_date
 from research_os.services.drafts import (
     ensure_known_ids,
@@ -199,6 +200,25 @@ def render_valuation_draft(meta: dict[str, Any], body: str) -> str:
             lines.append(f"{key}: {_yaml_value(meta[key])}")
     lines.append("---")
     return "\n".join(lines) + "\n\n" + body
+
+
+def render_valuation_rows(snapshots: list[ResearchObject]) -> str:
+    """Render a valuation list as a markdown table (``valuation list``)."""
+    lines = [
+        "| ID | Company | As of | Price | Identity | Status |",
+        "|---|---|---|---|---|---|",
+    ]
+    for obj in sorted(snapshots, key=lambda obj: obj.object_id):
+        lines.append(
+            f"| {obj.object_id} | {obj.metadata.get('company_id', '')} | "
+            f"{obj.metadata.get('as_of', '')} | "
+            f"{obj.metadata.get('market_price', '')} | "
+            f"{obj.metadata.get('valuation_identity', '')} | "
+            f"{obj.metadata.get('status', '')} |"
+        )
+    if not snapshots:
+        lines.append("| — | No valuation snapshots | — | — | — | — |")
+    return "\n".join(lines) + "\n"
 
 
 def valuation_freshness(

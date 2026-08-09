@@ -61,6 +61,10 @@ from research_os.services.channels import (
     render_channel_list,
     set_channel_enabled,
 )
+from research_os.services.decision_alerts import (
+    decision_alerts,
+    render_decision_alerts,
+)
 from research_os.services.discovery import (
     due_channels,
     render_discovery_result,
@@ -168,6 +172,7 @@ from research_os.services.recommendation import (
     prepare_recommendation_draft,
     recommendation_freshness,
     recommendation_gate,
+    render_recommendation_rows,
 )
 from research_os.services.recommendation_lifecycle import (
     activate_recommendation,
@@ -209,6 +214,7 @@ from research_os.services.valuation import (
     apply_valuation_draft,
     compute_valuation,
     prepare_valuation_draft,
+    render_valuation_rows,
     valuation_freshness,
 )
 from research_os.services.workflow import (
@@ -236,6 +242,7 @@ __all__ = [
     "activate_recommendation",
     "close_recommendation",
     "calibration_report",
+    "decision_alerts",
     "apply_company_update_proposal",
     "apply_indexes",
     "apply_impact_draft",
@@ -319,8 +326,11 @@ __all__ = [
     "render_discovery_result",
     "render_forecast_rows",
     "render_forecast_status",
+    "render_recommendation_rows",
     "render_scenario_template",
     "render_calibration_report",
+    "render_decision_alerts",
+    "render_valuation_rows",
     "recommendation_freshness",
     "recommendation_gate",
     "supersede_recommendation",
