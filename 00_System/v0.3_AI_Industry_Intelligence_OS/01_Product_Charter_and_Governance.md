@@ -1,6 +1,6 @@
 # v0.3 产品章程与治理边界
 
-状态：`proposed / pending human approval`  
+状态：`approved / authoritative`（RCP-v03-001～010 已按阶段批准）
 依赖：`00_Master_Roadmap.md`  
 
 ## 1. 产品定位
@@ -161,13 +161,13 @@ SQLite/PostgreSQL/graph/vector index 均为派生查询层，不接受绕过 Mar
 | RCP-v03-001 | 产品定位、Candidate/Source 权威边界 | 任何 v0.3 编码前 | **approved**（2026-08-05, max） |
 | RCP-v03-002 | Taxonomy v2 与稳定板块 ID | Phase 1 migration 前 | **approved**（2026-08-05, max；详见 `05_Research/Reviews/Proposals/RCP-v03-002_...md`） |
 | RCP-v03-003 | 新实体 Schema 和永久 ID | Phase 1 写对象前 | **approved**（2026-08-05, max；详见 `05_Research/Reviews/Proposals/RCP-v03-003_...md`） |
-| RCP-v03-004 | Candidate SQLite 与 retention | Phase 2 写数据库前 | proposed（reviewer=max, Wave 2） |
-| RCP-v03-005 | Source Channel、scheduler 和许可边界 | Phase 2 自动运行前 | proposed（reviewer=max, Wave 2） |
-| RCP-v03-006 | Ontology/Impact 关系语义 | Phase 3 写 assertion 前 | proposed（reviewer=max, Wave 3） |
+| RCP-v03-004 | Candidate SQLite 与 retention | Phase 2 写数据库前 | **approved**（2026-08-06, max） |
+| RCP-v03-005 | Source Channel、scheduler 和许可边界 | Phase 2 自动运行前 | **approved**（2026-08-06, max） |
+| RCP-v03-006 | Ontology/Impact 关系语义 | Phase 3 写 assertion 前 | **approved**（2026-08-07, max） |
 | RCP-v03-007 | Analysis Mode 与 Analysis Run 权威边界 | Phase 4 前 | approved（2026-08-08）|
 | RCP-v03-008 | Forecast、Resolution 和 calibration | Phase 5 前 | approved（2026-08-09）|
 | RCP-v03-009 | Recommendation 等级与人工批准规则 | Phase 5 前 | approved（2026-08-09）|
-| RCP-v03-010 | v0.3 数据库、备份和恢复策略 | Phase 6 发布前 | proposed（reviewer=max, Wave 6） |
+| RCP-v03-010 | v0.3 数据库、备份和恢复策略 | Phase 6 发布前 | **approved**（2026-08-09, max） |
 
 ## 9. 隐私、许可与合规
 
@@ -192,4 +192,3 @@ Phase 0 只有在以下人工决定完成后才能关闭（reviewer：max，2026
 - [x] 决定 Recommendation 最高权威等级。→ D7：人工批准、不得自动执行
 - [x] 批准 RCP-v03-001。→ D8：approved（详见 `05_Research/Reviews/Proposals/RCP-v03-001_...md`）
 - [x] 为其余 RCP 指定 reviewer 和计划日期。→ D9：按默认 Wave 排期，reviewer=max（详见 `WP-011_Charter_Decision_Options.md` §RCP 排期）
-

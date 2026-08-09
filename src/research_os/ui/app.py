@@ -1082,7 +1082,7 @@ def _pipeline_queue(
 <label style="margin-left:1rem"><input type="checkbox" name="show_dups" value="1"{dup_check}> 显示重复</label>
 <button type="submit">筛选</button>
 </form></section>
-<section class="panel">{table(["优先级", "状态", "重复", "实体", "板块", "通道", "发布时间", "标题"], body_rows)}</section>"""
+<section class="panel">{table(["优先级", "状态", "重复", "实体", "板块", "通道", "发现时间", "标题"], body_rows)}</section>"""
     return shell("管线队列", content)
 
 
@@ -1701,7 +1701,7 @@ def _impact_page(repo: DashboardRepository) -> str:
     ]
     content = f"""<section class="hero"><div>
 <div class="eyebrow">影响引擎</div><h2>事件 → 影响断言</h2>
-<p>仅 reviewed Event 生成；提案默认 pending，人工 review 后转 reviewed。多跳待 C-018 通过后激活。</p>
+<p>仅 reviewed Event 生成；提案默认 pending，人工 review 后转 reviewed。reviewed Impact 支持 1–3 跳路径；每跳保留机制、Evidence 与置信度。</p>
 </div><div><div class="eyebrow">Gate 样本</div>
 <h2>{esc(events_covered)}</h2>
 <p class="muted">事件覆盖</p></div></section>
@@ -1711,7 +1711,7 @@ def _impact_page(repo: DashboardRepository) -> str:
 <div class="metric"><strong>{esc(reviewed)}</strong><span>已审</span></div>
 </section>
 <section class="panel">{table(["Impact ID", "触发 Event", "Target", "类型", "方向", "Horizon", "置信度", "状态"], rows) if rows else "<p class='muted'>尚无影响断言。</p>"}</section>
-<p class="muted"><a href="/reports" style="display:none"></a>C-018 评估包见 <code>05_Research/Reviews/Field_Gate_20_Impact_Packet.md</code>。</p>"""
+<p class="muted"><a href="/reports" style="display:none"></a>C-018 已批准；评估包见 <code>05_Research/Reviews/Field_Gate_20_Impact_Packet.md</code>。</p>"""
     return shell("影响", content)
 
 

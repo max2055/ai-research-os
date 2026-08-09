@@ -1,13 +1,13 @@
 # Taxonomy v1 → v2 Mapping（A-002 使用审计）
 
-状态：`proposed / pending RCP-v03-002 approval`
+状态：`approved / authoritative mapping`（RCP-v03-002，2026-08-05，max）
 创建日期：2026-08-05
 工作包：WP-100 / A-002（只读审计 + 映射提案，不修改任何规则或对象）
 依赖：`00_System/Taxonomy.md`（v0.1）、`02_Phase_0_1_Ontology_and_Universe.md` §3
 
-> 本文件是审计输出与映射提案，**不是已生效的 Taxonomy 变更**。
-> 按 Taxonomy §5，修改现有分类含义、合并或废弃稳定标签、改变历史对象使用的标签
-> 均需人工审核（RCP-v03-002）。本提案不改动任何 v0.2 对象的 tag。
+> 本文件是 RCP-v03-002 已批准的审计输出与 v1→v2 权威映射。
+> 按 Taxonomy §5，后续修改现有分类含义、合并或废弃稳定标签、改变历史对象使用的
+> 标签仍需新的人审决定。本映射不改动任何 v0.2 对象的 tag。
 
 ## 1. 审计方法
 
@@ -18,8 +18,8 @@
 
 **重要口径**：`MOD-ANL` 仅出现在 v0.3 规划文档（`05_Research/Reviews/Proposals/`
 与 `00_System/v0.3_.../05_Phase_4_...md`），**不在任何 v0.2 正式研究对象的
-frontmatter**。它是 v0.3 新增前缀（Analysis Mode），属"已规划待 RCP-v03-003/007
-批准"，**不属于 v0.1 治理债**，不计入下表的 used-but-undefined。
+frontmatter**。它是 v0.3 新增前缀（Analysis Mode），已由 RCP-v03-003/007
+批准，**不属于 v0.1 治理债**，不计入下表的 used-but-undefined。
 
 ## 2. 审计结果
 
@@ -143,12 +143,12 @@ frontmatter**。它是 v0.3 新增前缀（Analysis Mode），属"已规划待 R
 | R5 | 父类聚合 tag deprecate 后迁移 | **父类沿用 R1：不回填，保留旧 tag** | INF-COMPUTE/MEMORY/NETWORK/DATACENTER |
 | R6 | SRV-DATA-LABELING 归属 | 默认归 Services；RCP-v03-002 现场定；若与 Data & AI Dev 重叠明显再调 | 本轮未触发 |
 
-> 决定已写入 `Taxonomy_v2_Proposal.md` §6，并落进 RCP-v03-002 草案。RCP 待 max 最终批准生效。
+> 决定已写入 `Taxonomy_v2_Proposal.md` §6，并由 max 于 2026-08-05 批准生效。
 
 ## 6. 不做的事
 
 - 不修改任何 v0.2 对象的 tag。
-- 不新增或废弃任何 Taxonomy 定义（本文件是 proposal）。
+- 不直接新增或废弃任何历史对象中的 Taxonomy 标签（本文件是映射记录）。
 - 不创建任何 Sector/Technology/Product 实体（需 RCP-v03-003）。
 - 不回填历史 tag。
 
@@ -157,4 +157,4 @@ frontmatter**。它是 v0.3 新增前缀（Analysis Mode），属"已规划待 R
 本映射表是 RCP-v03-002（Taxonomy v2 与稳定板块 ID）的证据底座：
 - 确认 v0.1 哪些标签稳定（keep）、哪些被实体引用取代（map）、哪些废弃（deprecate）；
 - 列出 13 个 L1 扇区与横向维度扩展项，供 RCP 起草 Taxonomy v2 定义（A-003）；
-- 标记 5 个人工待解项，RCP 必须逐项给出决定。
+- 记录 5 个人工边界项及 RCP-v03-002 的逐项决定。

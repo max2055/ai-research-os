@@ -10,10 +10,38 @@ from research_os.services.release import (
     release_readiness,
     render_release_readiness,
 )
+from research_os.services.indexing import index_drift, render_project_indexes
+from research_os.services.validation import validate_repository
 from test_cli import run_cli
 
 
 class ReleaseReadinessTests(unittest.TestCase):
+    def test_approved_v03_governance_and_project_indexes_are_current(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        charter = (
+            root
+            / "00_System/v0.3_AI_Industry_Intelligence_OS/"
+            "01_Product_Charter_and_Governance.md"
+        ).read_text(encoding="utf-8")
+        for decision in (
+            "RCP-v03-004",
+            "RCP-v03-005",
+            "RCP-v03-006",
+            "RCP-v03-010",
+        ):
+            row = next(line for line in charter.splitlines() if decision in line)
+            self.assertIn("approved", row)
+            self.assertNotIn("proposed", row)
+
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("10-Source 真实人审 Gate 待完成", readme)
+
+        objects, _ = validate_repository(root)
+        self.assertEqual(
+            [],
+            index_drift(root, render_project_indexes(objects, "PRJ-001")),
+        )
+
     def test_missing_pilot_is_reported_as_blockers_without_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = fixtures.RepositoryValidationTests().make_root(temp)

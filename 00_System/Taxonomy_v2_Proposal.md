@@ -1,14 +1,14 @@
-# Taxonomy v2 提案（A-003）
+# Taxonomy v2（A-003 批准基线）
 
 状态：`approved / authoritative`（RCP-v03-002 批准，reviewer：max，2026-08-05）
 创建日期：2026-08-05
-工作包：WP-100 / A-003（提案草稿，不修改任何规则或对象）
+工作包：WP-100 / A-003（批准基线，不自动修改历史对象）
 依赖：`Taxonomy_v2_Mapping.md`（A-002 审计）、`02_Phase_0_1_Ontology_and_Universe.md` §3
-reviewer（待）：max（按 D9，Wave 1）
+reviewer：max（2026-08-05）
 
-> 本文件是 Taxonomy v2 **提案草稿**，不是已生效的 Taxonomy。
-> 按 Taxonomy §5，新增一级/二级分类、修改现有含义、合并或废弃稳定标签、改变历史
-> 对象使用的标签，均需 RCP-v03-002 人工批准。本提案不改动任何 v0.2 对象。
+> 本文件是 RCP-v03-002 已批准生效的 Taxonomy v2 基线。
+> 按 Taxonomy §5，后续新增一级/二级分类、修改现有含义、合并或废弃稳定标签、改变
+> 历史对象使用的标签，仍需新的人审决定。本基线不自动改动任何 v0.2 对象。
 
 ## 1. v2 设计原则
 
@@ -116,9 +116,9 @@ Phase 0-1 §3 列出但 v0.1 无 ID，v2 需定：
 - [x] 横向维度扩展前缀不与既有冲突（REG/SUP/CAP/CYC/RGT，REG 与 RGT 已备注区分）
 - [x] APP-CODING、MOD-FOUNDATION、INF-CLOUD-AI 三个边界争议有人工决定（R1/R2/R3）
 - [x] 历史对象 tag 回填策略被人工批准（R5：不回填，保留旧 tag）
-- [ ] 与 `Metadata_Schema_v0.3_Proposal`（A-005/WP-101）的 Sector 实体 Schema 一致（待 WP-101 提案后核对）
-- [ ] SRV-DATA-LABELING 归属（R6）现场定
-- [ ] RCP-v03-002 最终人工批准（草案已备齐，待 max 审批生效）
+- [x] 与 `Metadata_Schema_v0.3_Proposal`（A-005/WP-101）的 Sector 实体 Schema 一致
+- [x] SRV-DATA-LABELING 归属按 R6 批准决定记录
+- [x] RCP-v03-002 最终人工批准（2026-08-05，max）
 
 ## 8. 不做的事
 

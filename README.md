@@ -16,9 +16,9 @@ AI Research OS 是一套面向 AI 产业研究的个人研究操作系统。
 
 ## 当前阶段
 
-阶段 0～6 已完成首轮建设，产品化 M0～M3 与 M5 已通过，M4 工程能力已验收且
-10-Source 真实人审 Gate 待完成；当前正在执行 v0.2 的 M6 第二项目真实试点与
-发布准备。Markdown 仍是唯一研究事实源。
+阶段 0～6 已完成首轮建设，产品化 M0～M5 与 10-Source 真实人审 Gate 已通过；
+当前正在执行 v0.2 的 M6 第二项目真实试点与发布准备，并推进已批准的 v0.3
+工程工作包。Markdown 仍是唯一研究事实源。
 
 当前研究主题：
 
@@ -112,11 +112,11 @@ research-os release check
 中期产品化路线图见：`00_System/Productization_Roadmap_v1.md`。
 
 面向 AI 全产业 Universe、每日情报、跨板块 Ontology、Analysis Mode、Forecast 与
-投资决策支持的 v0.3 扩展目前处于 proposed 状态，实施规划见：
+投资决策支持的 v0.3 扩展已批准进入分阶段实施，规划与执行状态见：
 
 - `00_System/v0.3_AI_Industry_Intelligence_OS/00_Master_Roadmap.md`
 
-该规划尚未改变现有 Research Rules、Taxonomy、Schema 或人工审核边界；实施前需按
-规划逐项建立并批准 Rule Change Proposal。
+该规划不静默改变 Research Rules、Taxonomy、Schema 或人工审核边界；相关 Rule
+Change Proposal 均按各阶段 Gate 留存人审决定与审计记录。
 
 恢复与备份边界见：`00_System/Recovery_Runbook.md`。

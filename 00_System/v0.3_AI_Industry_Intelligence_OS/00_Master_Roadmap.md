@@ -1,6 +1,6 @@
 # AI Industry Intelligence & Decision OS v0.3 总路线图
 
-状态：`proposed / pending human approval`  
+状态：`approved / execution in progress`（RCP-v03-001～010 已按阶段批准；发布仍受真实时间 Gate 约束）
 版本：v0.3-plan-1  
 制定日期：2026-08-04  
 继承基线：AI Research OS v0.2 Evidence Kernel  
@@ -193,4 +193,3 @@ v0.3 成功不是“抓到很多新闻”，而是：
 6. Recommendation Draft 同时包含估值、反证、风险和失效条件。
 7. 系统能从 Git、资产备份和 operational store snapshot 恢复。
 8. 研究者能在每日 30–60 分钟内完成核心情报审阅，而不是被候选淹没。
-

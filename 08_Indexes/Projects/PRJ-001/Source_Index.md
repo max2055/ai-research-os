@@ -147,3 +147,6 @@
 | SRC-20260806-152 | Unified Lookup-Table Inference with Signed-Digit K/V Caches for Ternary LLMs | paper | arXiv | B | captured | pending |
 | SRC-20260808-153 | BIS Advanced Computing Items Export License Requirement (May 2026) | report | U.S. Bureau of Industry and Security | A | registered | reviewed |
 | SRC-20260808-154 | BIS extends Authorized IC Designer application deadline to Dec 31 2026 (April 2026) | report | U.S. Federal Register / BIS | A | registered | reviewed |
+| SRC-20260809-155 | NVDA market price quote NVIDIA | other | Yahoo Finance | B | registered | reviewed |
+| SRC-20260809-156 | MU market price quote Micron Technology | other | Yahoo Finance | B | registered | reviewed |
+| SRC-20260809-157 | TSM market price quote Taiwan Semiconductor ADR | other | Yahoo Finance | B | registered | reviewed |

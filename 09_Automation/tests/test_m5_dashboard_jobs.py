@@ -288,6 +288,16 @@ class DashboardTests(unittest.TestCase):
             self.assertNotIn("PUT", pipeline_methods)
             self.assertNotIn("DELETE", pipeline_methods)
 
+    def test_candidate_queue_uses_discovery_time_label(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            self._seed_channel_and_candidates(root)
+            response = TestClient(create_app(root)).get("/pipeline/queue")
+
+        self.assertEqual(200, response.status_code)
+        self.assertIn("发现时间", response.text)
+        self.assertNotIn(">发布时间<", response.text)
+
     def test_impact_page_and_index_render(self) -> None:
         from research_os.domain.models import ResearchObject
         from research_os.services.indexing import render_impact_assertion_index
@@ -319,6 +329,8 @@ class DashboardTests(unittest.TestCase):
             page = client.get("/impact")
             self.assertEqual(200, page.status_code)
             self.assertIn("影响引擎", page.text)
+            self.assertIn("1–3 跳", page.text)
+            self.assertNotIn("多跳待 C-018", page.text)
 
     def test_intel_pages_render_and_are_read_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -1219,5 +1231,5 @@ class CandidateDetailTests(unittest.TestCase):
             client = TestClient(create_app(root))
             page = client.get("/pipeline/queue")
             self.assertEqual(200, page.status_code)
-            self.assertIn("发布时间", page.text)
+            self.assertIn("发现时间", page.text)
             self.assertIn("CAND-new-001", page.text)
