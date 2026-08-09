@@ -47,6 +47,7 @@ from research_os.services.mode_metrics import mode_metrics
 from research_os.services.ontology import render_impact
 from research_os.services.pilot import pilot_status
 from research_os.services.projects import objects_for_project
+from research_os.services.review_cadence import current_next_review_date
 from research_os.services.validation import validate_repository
 
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
@@ -251,6 +252,7 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
         key=lambda obj: str(obj.metadata.get("updated_at", "")),
         reverse=True,
     )
+    next_review = current_next_review_date(project)
     hero = f"""
 <section class="hero">
   <div>
@@ -260,7 +262,7 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
   </div>
   <div>
     <div class="eyebrow">下次评审</div>
-    <h2>{esc(project.metadata.get("next_review_date"))}</h2>
+    <h2>{esc(next_review)}</h2>
     <p class="muted">{esc(project.metadata.get("review_cadence"))} 节奏 · 负责人 {esc(project.metadata.get("owner"))}</p>
   </div>
 </section>
@@ -269,6 +271,18 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
   <div class="metric"><strong>{len(by_type["event"])}</strong><span>事件</span></div>
   <div class="metric"><strong>{len(pending)}</strong><span>待评审</span></div>
   <div class="metric"><strong>{len(open_actions)}</strong><span>未决行动</span></div>
+</section>"""
+    all_objects, _ = repo.all()
+    all_runs = [o for o in all_objects if o.object_type == "analysis_run"]
+    runs_pending = sum(
+        1 for r in all_runs if r.metadata.get("review_status") == "pending"
+    )
+    mode_count = sum(1 for o in all_objects if o.object_type == "analysis_mode")
+    phase4 = f"""
+<section class="panel"><h3>分析工作区（Phase 4）</h3>
+<p>{len(all_runs)} 个分析运行（{runs_pending} 待评审）· {mode_count} 个模式 ·
+<a href="/analysis">进入分析工作区</a> · <a href="/llm">模型配置</a> ·
+<a href="/impact">影响断言</a></p>
 </section>"""
     thesis_rows = [
         [
@@ -307,6 +321,7 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
     ]
     content = (
         hero
+        + phase4
         + f"""
 <section class="panel"><h3>产业情报</h3>
 <p><a href="/companies">企业名单</a> · <a href="/sectors">板块分类</a> · <a href="/reports">研究报告</a></p>

@@ -454,6 +454,13 @@ def parse_args() -> argparse.Namespace:
     project_create.add_argument("--next-review-date", required=True)
     project_create.add_argument("--tags", default="")
     project_create.add_argument("--apply", action="store_true")
+    project_advance = project_commands.add_parser(
+        "advance-review",
+        help="roll next_review_date forward by cadence when overdue (--apply writes)",
+    )
+    project_advance.add_argument("--id", required=True, help="PRJ-XXX")
+    project_advance.add_argument("--date", default=date.today().isoformat())
+    project_advance.add_argument("--apply", action="store_true")
 
     review = subparsers.add_parser("review", help="manage Review Decisions")
     review_commands = review.add_subparsers(dest="review_command", required=True)
@@ -1100,6 +1107,26 @@ def main() -> int:
                     ),
                     end="",
                 )
+                return 0
+            if args.project_command == "advance-review":
+                if args.apply:
+                    applied = runtime.advance_review_date(
+                        args.root.resolve(), args.id, today=args.date
+                    )
+                    if applied is None:
+                        print("ALREADY-CURRENT: next_review_date is not overdue")
+                    else:
+                        print(f"APPLIED: {applied}")
+                else:
+                    prepared = runtime.prepare_review_date_update(
+                        args.root.resolve(), args.id, today=args.date
+                    )
+                    if prepared is None:
+                        print("ALREADY-CURRENT: next_review_date is not overdue")
+                    else:
+                        computed, relative, content = prepared
+                        print(f"# {relative}\n\n{content}")
+                        print("DRY-RUN: no files changed; rerun with --apply to write")
                 return 0
             relative, content = runtime.prepare_project_draft(
                 args.root.resolve(),

@@ -143,6 +143,11 @@ from research_os.services.release import (
     release_readiness,
     render_release_readiness,
 )
+from research_os.services.review_cadence import (
+    advance_review_date,
+    current_next_review_date,
+    prepare_review_date_update,
+)
 from research_os.services.reviews import (
     apply_review,
     prepare_review,
@@ -173,6 +178,8 @@ __all__ = [
     "RunError",
     "UnknownMode",
     "apply_event_draft",
+    "advance_review_date",
+    "current_next_review_date",
     "apply_company_update_proposal",
     "apply_indexes",
     "apply_impact_draft",
@@ -222,6 +229,7 @@ __all__ = [
     "prepare_action_draft",
     "prepare_assertion_draft",
     "path_confidence",
+    "prepare_review_date_update",
     "prepare_impact_batch",
     "prepare_impact_draft",
     "prepare_run",

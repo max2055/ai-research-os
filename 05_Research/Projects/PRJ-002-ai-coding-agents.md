@@ -3,7 +3,7 @@ id: PRJ-002
 type: project
 title: AI Coding Agent 价值链与商业化
 created_at: 2026-07-29
-updated_at: 2026-07-30
+updated_at: '2026-08-09'
 schema_version: 1
 project_ids: [PRJ-002]
 status: active
@@ -13,7 +13,7 @@ charter_path: 05_Research/AI-Coding-Agents/Research_Charter.md
 queue_path: 05_Research/AI-Coding-Agents/Research_Queue.md
 current_report_id: RPT-20260730-ai-coding-agent-value-chain-v0-1
 review_cadence: Weekly + Monthly
-next_review_date: 2026-08-05
+next_review_date: '2026-08-12'
 tags: [APP-CODING]
 ---
 
