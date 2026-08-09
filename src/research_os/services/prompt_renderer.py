@@ -52,12 +52,17 @@ Produce a markdown analysis body with exactly these sections, in order:
 ## Mode-specific output
 ## Limitations
 
+Then add the mode's REQUIRED OUTPUT SECTIONS as `## <section>` headings, one
+per line, in the given order, each with substantive content:
+{required_output_sections}
+
 Rules:
 - Facts used may cite ONLY the frozen inputs above, by permanent id.
 - Separate Facts (what the inputs state) from Inferences (what follows) from
   Judgments (your assessment). Never blend them.
 - Contradicting evidence and Alternative explanations must be non-empty; if the
   inputs contain no contrary signal, say so explicitly.
+- Every required output section listed above MUST be present and non-empty.
 - Do not reach any prohibited conclusion.
 - Do not leave placeholder text.
 """
@@ -96,6 +101,7 @@ def _placeholder_value(
         "mode_id": meta["id"],
         "purpose": meta["purpose"] or "(not specified)",
         "required_questions": _fmt_list(meta["required_questions"]),
+        "required_output_sections": _fmt_list(meta["required_output_sections"]),
         "assumption_policy": meta["assumption_policy"] or "(not specified)",
         "evidence_policy": meta["evidence_policy"] or "(not specified)",
         "counterevidence_policy": meta["counterevidence_policy"] or "(not specified)",

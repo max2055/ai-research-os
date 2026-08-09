@@ -34,7 +34,14 @@ PROVIDER_CATALOG: list[ProviderPreset] = [
         base_url="https://api.deepseek.com",
         api_format="openai_chat",
         api_key_url="https://platform.deepseek.com/api_keys",
-        default_params={"max_tokens": 4096, "temperature": 0.3},
+        # 8192 output headroom; reasoning_effort=low bounds the reasoning
+        # budget so deepseek-v4 reasoning models emit CONTENT (they otherwise
+        # spend the whole budget on reasoning_content and return empty).
+        default_params={
+            "max_tokens": 8192,
+            "temperature": 0.3,
+            "reasoning_effort": "low",
+        },
         recommended_models=["deepseek-chat", "deepseek-reasoner"],
         default_model="deepseek-chat",
         timeout=120.0,
