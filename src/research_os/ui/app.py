@@ -2065,7 +2065,7 @@ def _decision_page(repo: DashboardRepository) -> str:
 <div class="metric"><strong>{esc(len(snapshot['resolution_history']))}</strong><span>Resolution</span></div>
 </section>
 <section class="panel"><h3>Open Forecast</h3>{table(["ID", "问题", "Horizon", "Resolution date"], open_rows)}</section>
-<section class="panel"><h3>Due / Overdue</h3>{table(["Forecast", "Resolution date", "状态"], due_rows) if due_rows else "<p class='muted'>当前没有到期 Forecast。</p>"}</section>
+<section class="panel"><h3>到期提醒 · Due / Overdue</h3>{table(["Forecast", "Resolution date", "状态"], due_rows) if due_rows else "<p class='muted'>当前没有到期 Forecast。</p>"}</section>
 <section class="panel"><h3>校准样本</h3><p><strong>{esc(calibration_label)}</strong></p>
 <p>reviewed Resolution n={esc(calibration['n_resolutions'])}；Brier/coverage/timeliness 仅在真实样本存在时解释。</p></section>
 <section class="panel"><h3>估值新鲜度</h3>{table(["Valuation", "公司", "年龄(天)", "阈值(天)", "状态"], valuation_rows)}</section>
