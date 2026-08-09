@@ -12,21 +12,24 @@ from typing import Any
 
 from research_os.domain.models import ResearchObject
 from research_os.domain.policies import is_iso_date
-from research_os.services.actions import action_rows
+from research_os.services.actions import action_rows_from_objects
 from research_os.services.analysis_compare import compare_runs
 from research_os.services.analysis_evaluator import evaluate_run
-from research_os.services.brief import daily_brief
+from research_os.services.brief import daily_brief_from_objects
 from research_os.services.calibration import calibration_report
 from research_os.services.candidate_db import candidate_db_path
-from research_os.services.discovery import due_channels
-from research_os.services.forecast_due import forecast_status_report
+from research_os.services.discovery import due_channels_from_objects
+from research_os.services.forecast_due import forecast_status_from_objects
 from research_os.services.impact_path import (
     dedup_paths,
     detect_contradictions,
     expand_impact_paths,
     path_confidence,
 )
-from research_os.services.metrics import pipeline_metrics, universe_coverage
+from research_os.services.metrics import (
+    pipeline_metrics_from_objects,
+    universe_coverage_from_objects,
+)
 from research_os.services.mode_metrics import mode_metrics
 from research_os.services.recommendation import recommendation_freshness
 from research_os.services.validation import validate_repository
@@ -195,10 +198,12 @@ def industry_home_snapshot(
         )
     db_path = db_path or candidate_db_path(root)
 
-    brief = daily_brief(root, as_of, db_path=db_path)
-    report = forecast_status_report(root, as_of=as_of)
-    actions = action_rows(root, status="open", overdue_as_of=as_of) + action_rows(
-        root, status="in_progress", overdue_as_of=as_of
+    brief = daily_brief_from_objects(objects, as_of, db_path=db_path)
+    report = forecast_status_from_objects(objects, as_of=as_of)
+    actions = action_rows_from_objects(
+        objects, status="open", overdue_as_of=as_of
+    ) + action_rows_from_objects(
+        objects, status="in_progress", overdue_as_of=as_of
     )
 
     stale = set(brief["stale"])
@@ -215,7 +220,7 @@ def industry_home_snapshot(
         and obj.metadata.get("review_status") == "reviewed"
     ]
 
-    pm = pipeline_metrics(root, as_of, db_path=db_path)
+    pm = pipeline_metrics_from_objects(root, objects, as_of, db_path=db_path)
     discovery = pm.get("discovery", {})
     freshness = {
         "failure_rate": discovery.get("failure_rate"),
@@ -247,8 +252,10 @@ def industry_home_snapshot(
     }
 
 
-def _coverage_index(root: Path) -> dict[str, dict[str, Any]]:
-    coverage = universe_coverage(root)
+def _coverage_index(
+    objects: list[ResearchObject],
+) -> dict[str, dict[str, Any]]:
+    coverage = universe_coverage_from_objects(objects)
     return {
         str(row["company_id"]): row for row in coverage.get("companies", [])
     }
@@ -312,7 +319,10 @@ def company_snapshot(root: Path, company_id: str) -> dict[str, Any]:
         if obj.object_type == "source_channel"
     }
     linked_channels = sorted(_company_channel_ids(company, channel_by_id))
-    due = due_channels(root, db_path=candidate_db_path(root))
+    due = due_channels_from_objects(
+        objects,
+        db_path=candidate_db_path(root),
+    )
     degraded = {item["channel_id"] for item in due if item["last_run"]}
     never_run = {item["channel_id"] for item in due if not item["last_run"]}
     channels = [
@@ -384,7 +394,7 @@ def company_snapshot(root: Path, company_id: str) -> dict[str, Any]:
             or obj.object_id in _str_list(company.metadata.get("key_metric_ids"))
         )
     ]
-    coverage = _coverage_index(root).get(company_id, {})
+    coverage = _coverage_index(objects).get(company_id, {})
 
     return {
         "company_id": company_id,
@@ -500,7 +510,7 @@ def sector_snapshot(root: Path, sector_id: str) -> dict[str, Any]:
         )
     ]
 
-    coverage = _coverage_index(root)
+    coverage = _coverage_index(objects)
     member_flags = [
         {"company_id": company_id, **coverage.get(company_id, {})}
         for company_id in sorted(members)
@@ -810,7 +820,7 @@ def decision_desk_snapshot(
     if not is_iso_date(as_of):
         raise ValueError("as_of must be YYYY-MM-DD")
     objects = _validated_objects(root, "Decision Desk")
-    report = forecast_status_report(root, as_of=as_of)
+    report = forecast_status_from_objects(objects, as_of=as_of)
     forecasts = sorted(
         (obj for obj in objects if obj.object_type == "forecast"),
         key=lambda obj: obj.object_id,

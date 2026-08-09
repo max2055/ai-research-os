@@ -25,6 +25,7 @@ from research_os.adapters.discovery import (
     SECDiscoveryAdapter,
     SourceCandidate,
 )
+from research_os.domain.models import ResearchObject
 from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
 from research_os.services.candidate_queue import (
@@ -384,7 +385,20 @@ def due_channels(
     schedule is never due (surfaced via ``discover check`` instead).
     """
     objects, _ = validate_repository(root)
-    db_path = db_path or candidate_db.candidate_db_path(root)
+    return due_channels_from_objects(
+        objects,
+        as_of=as_of,
+        db_path=db_path or candidate_db.candidate_db_path(root),
+    )
+
+
+def due_channels_from_objects(
+    objects: list[ResearchObject],
+    *,
+    as_of: str | None = None,
+    db_path: Path,
+) -> list[dict[str, Any]]:
+    """Pure-metadata schedule query over preloaded repository objects."""
     last_runs: dict[str, str] = {}
     if db_path.exists():
         connection = sqlite3.connect(db_path)

@@ -1326,7 +1326,7 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
 <section class="panel"><h3>Source assets</h3>{table(["Source", "状态", "消息"], asset_rows) if asset_rows else "<p class='muted'>资产完整性通过。</p>"}</section>
 <section class="panel"><h3>Candidate DB</h3>{_kv_table([["状态", badge(db['status'], warning=db['status'] != 'ok')], ["Integrity", esc(db['integrity'])], ["Schema", f"{esc(db['schema_version'])} / {esc(db['expected_schema_version'])}"], ["Size", esc(db['size_bytes'])], ["Modified", esc(db['modified_at'] or '—')]])}</section>
 <section class="panel"><h3>Channels / License</h3>{table(["Channel", "Enabled", "Review", "License", "Robots checked"], channel_rows_)}</section>
-<section class="panel"><h3>失败运行</h3>{table(["ID", "Type", "状态", "消息"], failed_rows)}</section>
+<section class="panel"><h3>失败任务与失败运行</h3>{table(["ID", "Type", "状态", "消息"], failed_rows)}</section>
 <section class="grid">
 <div class="panel"><h3>备份</h3>{_kv_table([["状态", badge(backup['status'], warning=backup['status'] != 'fresh')], ["Age hours", esc(backup['age_hours'] if backup['age_hours'] is not None else '—')], ["Manifest", esc(backup['manifest'] or '—')]])}</div>
 <div class="panel"><h3>磁盘与时区</h3>{_kv_table([["Free bytes", esc(disk['free_bytes'])], ["Disk status", badge(disk['status'], warning=disk['status'] != 'ok')], ["Timezone", esc(snapshot['host']['timezone'])]])}</div>

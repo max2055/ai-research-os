@@ -93,6 +93,17 @@ def forecast_status_report(root: Path, *, as_of: str) -> dict[str, Any]:
         raise ValueError(
             "repository validation must pass before forecast status queries"
         )
+    return forecast_status_from_objects(objects, as_of=as_of)
+
+
+def forecast_status_from_objects(
+    objects: list[ResearchObject],
+    *,
+    as_of: str,
+) -> dict[str, Any]:
+    """Pure Forecast status report over an already validated snapshot."""
+    if not is_iso_date(as_of):
+        raise ValueError("as_of must be YYYY-MM-DD")
     forecasts = [obj for obj in objects if obj.object_type == "forecast"]
     open_ = [obj for obj in _open_forecasts(forecasts)]
     resolved = [

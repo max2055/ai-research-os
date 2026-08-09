@@ -10,6 +10,7 @@ from pathlib import Path
 
 from research_os.domain.models import ResearchObject
 from research_os.repositories.transaction import FileTransaction
+from research_os.services.backup import create_candidate_snapshot
 from research_os.services.brief import (
     daily_brief,
     render_daily_brief,
@@ -43,6 +44,7 @@ JOB_NAMES = frozenset(
         "expire",
         "daily-brief",
         "forecast-alerts",
+        "backup-candidate",
     }
 )
 
@@ -130,6 +132,22 @@ def _execute_job(
         return (
             f"retention sweep: {len(expired['expired'])} expired, "
             f"{len(purged['purged'])} purged"
+        )
+    if job_name == "backup-candidate":
+        destination = (
+            Path(target).expanduser()
+            if target
+            else root
+            / "09_Automation"
+            / "operational"
+            / "backups"
+            / "candidate"
+            / f"candidates-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}.db"
+        )
+        manifest = create_candidate_snapshot(root, destination)
+        return (
+            f"Candidate DB snapshot created: {destination}; "
+            f"sha256={manifest['sha256']}"
         )
     if job_name == "daily-brief":
         content = render_daily_brief(daily_brief(root, as_of))

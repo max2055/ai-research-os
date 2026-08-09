@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from research_os.services.benchmark import (
+    benchmark_dashboard,
     benchmark_repository,
     run_scale_benchmark,
 )
@@ -12,6 +13,31 @@ from test_cli import run_cli
 
 
 class ScaleBenchmarkTests(unittest.TestCase):
+    def test_real_read_model_benchmark_reports_slo_without_writes(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        result = benchmark_dashboard(root, repeats=3)
+        for operation in (
+            "home",
+            "candidate_queue",
+            "company",
+            "sector",
+            "impact_3_hop",
+            "validate",
+            "index_render",
+        ):
+            measurement = result.measurements[operation]
+            self.assertEqual(3, len(measurement.samples_seconds))
+            self.assertGreaterEqual(measurement.p95_seconds, 0)
+            self.assertGreater(measurement.threshold_seconds, 0)
+        self.assertEqual([], result.authoritative_writes)
+        self.assertGreater(result.scale["formal_objects"], 1000)
+        self.assertTrue(result.measurements["home"].passed)
+        self.assertTrue(result.measurements["company"].passed)
+
+    def test_dashboard_benchmark_rejects_too_few_repeats(self) -> None:
+        with self.assertRaisesRegex(ValueError, "at least 3"):
+            benchmark_dashboard(Path.cwd(), repeats=2)
+
     def test_small_synthetic_repository_validates_and_indexes(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             result = benchmark_repository(

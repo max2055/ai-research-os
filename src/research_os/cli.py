@@ -869,6 +869,7 @@ def parse_args() -> argparse.Namespace:
             "expire",
             "daily-brief",
             "forecast-alerts",
+            "backup-candidate",
         ),
     )
     job_run.add_argument("--project")
@@ -882,6 +883,23 @@ def parse_args() -> argparse.Namespace:
     )
     brief_daily.add_argument("--date", default=date.today().isoformat())
     brief_daily.add_argument("--apply", action="store_true")
+
+    backup = subparsers.add_parser(
+        "backup",
+        help="create and verify operational snapshots",
+    )
+    backup_commands = backup.add_subparsers(
+        dest="backup_command",
+        required=True,
+    )
+    backup_candidate = backup_commands.add_parser(
+        "candidate",
+        help="snapshot the Candidate SQLite store",
+    )
+    backup_candidate.add_argument("--destination", type=Path, required=True)
+    backup_mode = backup_candidate.add_mutually_exclusive_group()
+    backup_mode.add_argument("--dry-run", action="store_true")
+    backup_mode.add_argument("--apply", action="store_true")
 
     benchmark = subparsers.add_parser(
         "benchmark",
@@ -1697,6 +1715,28 @@ def main() -> int:
                 f"RECORD: {job_result.path.relative_to(args.root.resolve())}"
             )
             return 0 if job_result.status == "success" else 1
+        except (OSError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
+    if args.command == "backup":
+        try:
+            if args.backup_command == "candidate":
+                destination = args.destination.expanduser().resolve()
+                if not args.apply:
+                    print(f"DRY-RUN Candidate DB snapshot target={destination}")
+                    print("DRY-RUN: no files changed; rerun with --apply")
+                    return 0
+                job_result = runtime.run_job(
+                    args.root.resolve(),
+                    "backup-candidate",
+                    target=str(destination),
+                )
+                print(
+                    f"{job_result.status.upper()} {job_result.job_id}: "
+                    f"{job_result.message}\n"
+                    f"RECORD: {job_result.path.relative_to(args.root.resolve())}"
+                )
+                return 0 if job_result.status == "success" else 1
         except (OSError, TransactionError, ValueError) as exc:
             print(f"ERROR: {exc}")
             return 2

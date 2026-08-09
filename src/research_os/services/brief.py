@@ -15,12 +15,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from research_os.domain.models import ResearchObject
 from research_os.repositories.transaction import (
     FileTransaction,
     TransactionError,
 )
 from research_os.services import candidate_db
-from research_os.services.discovery import due_channels
+from research_os.services.discovery import due_channels_from_objects
 from research_os.services.validation import validate_repository
 
 BRIEFS_DIR = Path("05_Research") / "Operations" / "Briefs"
@@ -148,6 +149,22 @@ def daily_brief(
     """Collect every Daily Brief section for one date (no writes)."""
     objects, _ = validate_repository(root)
     db_path = db_path or candidate_db.candidate_db_path(root)
+    return daily_brief_from_objects(
+        objects,
+        date_str,
+        db_path=db_path,
+        as_of=as_of,
+    )
+
+
+def daily_brief_from_objects(
+    objects: list[ResearchObject],
+    date_str: str,
+    *,
+    db_path: Path,
+    as_of: str | None = None,
+) -> dict[str, Any]:
+    """Compose a Daily Brief from one validated repository snapshot."""
     channels = _channels_by_id(objects)
     tier_by_entity = _tier_by_entity(objects)
 
@@ -212,7 +229,11 @@ def daily_brief(
 
     failed_runs = _failed_runs(db_path, date_str)
     end_of_day = f"{date_str}T23:59:59Z"
-    due = due_channels(root, as_of=as_of or end_of_day, db_path=db_path)
+    due = due_channels_from_objects(
+        objects,
+        as_of=as_of or end_of_day,
+        db_path=db_path,
+    )
     stale = sorted(
         item["channel_id"] for item in due if item["last_run"]
     )

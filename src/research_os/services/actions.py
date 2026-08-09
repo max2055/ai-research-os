@@ -33,6 +33,28 @@ def action_rows(
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
         raise ValueError("repository validation must pass before Action operations")
+    return action_rows_from_objects(
+        objects,
+        project_id=project_id,
+        owner=owner,
+        status=status,
+        overdue_as_of=overdue_as_of,
+    )
+
+
+def action_rows_from_objects(
+    objects: list[ResearchObject],
+    *,
+    project_id: str | None = None,
+    owner: str | None = None,
+    status: str | None = None,
+    overdue_as_of: str | None = None,
+) -> list[ResearchObject]:
+    """Pure Action query for callers that already validated the repository."""
+    if status is not None and status not in ACTION_STATUSES:
+        raise ValueError(f"unknown action status {status}")
+    if overdue_as_of is not None and not is_iso_date(overdue_as_of):
+        raise ValueError("overdue date must be YYYY-MM-DD")
     if project_id:
         objects = objects_for_project(objects, project_id)
     return sorted(

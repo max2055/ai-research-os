@@ -10,9 +10,10 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from research_os.domain.models import ResearchObject
 from research_os.domain.policies import REVIEW_STATUSES, is_iso_date
 from research_os.services import candidate_db
-from research_os.services.discovery import due_channels
+from research_os.services.discovery import due_channels_from_objects
 from research_os.services.drafts import write_new_file
 from research_os.services.indexing import (
     index_drift,
@@ -211,10 +212,26 @@ def pipeline_metrics(
     entity coverage, triage yield (promoted/dismissed) and stale channels.
     Token/LLM cost is not yet tracked (reported as None).
     """
+    objects, _ = validate_repository(root)
+    return pipeline_metrics_from_objects(
+        root,
+        objects,
+        as_of=as_of,
+        db_path=db_path,
+    )
+
+
+def pipeline_metrics_from_objects(
+    root: Path,
+    objects: list[ResearchObject],
+    as_of: str | None = None,
+    *,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Compute pipeline metrics from one validated repository snapshot."""
     as_of = as_of or date.today().isoformat()
     if not is_iso_date(as_of):
         raise ValueError("as_of must be YYYY-MM-DD")
-    objects, _ = validate_repository(root)
     db_path = db_path or candidate_db.candidate_db_path(root)
 
     discovered_total = 0
@@ -365,7 +382,11 @@ def pipeline_metrics(
         round(statistics.median(conversion_hours), 1) if conversion_hours else None
     )
 
-    due = due_channels(root, as_of=f"{as_of}T23:59:59Z", db_path=db_path)
+    due = due_channels_from_objects(
+        objects,
+        as_of=f"{as_of}T23:59:59Z",
+        db_path=db_path,
+    )
     stale_ids = sorted(item["channel_id"] for item in due if item["last_run"])
     never_run = sorted(item["channel_id"] for item in due if not item["last_run"])
 
@@ -694,6 +715,13 @@ def universe_coverage(root: Path) -> dict[str, Any]:
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
         raise ValueError("repository validation must pass before coverage metrics")
+    return universe_coverage_from_objects(objects)
+
+
+def universe_coverage_from_objects(
+    objects: list[ResearchObject],
+) -> dict[str, Any]:
+    """Compute Universe coverage from one validated repository snapshot."""
     companies = [obj for obj in objects if obj.object_type == "company"]
     company_ids = {obj.object_id for obj in companies}
 
