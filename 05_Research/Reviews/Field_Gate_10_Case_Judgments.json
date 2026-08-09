@@ -15,6 +15,7 @@
     {
       "run_id": "ANL-20260809-002",
       "case": "case-1-dram-share",
+      "mode": "value-chain",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
@@ -25,12 +26,12 @@
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证实质"
+      "mean": 0.988
     },
     {
       "run_id": "ANL-20260809-003",
       "case": "case-1-dram-share",
+      "mode": "supply-demand",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
@@ -41,12 +42,12 @@
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证实质"
+      "mean": 0.988
     },
     {
       "run_id": "ANL-20260809-004",
       "case": "case-1-dram-share",
+      "mode": "scenario",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
@@ -57,12 +58,12 @@
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证实质"
+      "mean": 0.988
     },
     {
       "run_id": "ANL-20260809-016",
       "case": "case-1-dram-share",
+      "mode": "red-team",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
@@ -73,12 +74,28 @@
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证实质"
+      "mean": 0.988
+    },
+    {
+      "run_id": "ANL-20260809-034",
+      "case": "case-1-dram-share",
+      "mode": "open-discovery",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 0.9,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.988
     },
     {
       "run_id": "ANL-20260809-006",
       "case": "case-2-ai-demand",
+      "mode": "value-chain",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
@@ -89,12 +106,12 @@
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证实质"
+      "mean": 0.988
     },
     {
       "run_id": "ANL-20260809-014",
       "case": "case-2-ai-demand",
+      "mode": "supply-demand",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
@@ -105,28 +122,28 @@
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证实质"
-    },
-    {
-      "run_id": "ANL-20260809-015",
-      "case": "case-2-ai-demand",
-      "scores": {
-        "citation": 1.0,
-        "no_outside_facts": 1.0,
-        "question_coverage": 1.0,
-        "counterevidence": 1.0,
-        "explicit_assumptions": 1.0,
-        "explainable_divergence": 0.9,
-        "saves_time": 1.0,
-        "no_overreach": 1.0
-      },
-      "mean": 0.988,
-      "notes": "反证实质"
+      "mean": 0.988
     },
     {
       "run_id": "ANL-20260809-017",
       "case": "case-2-ai-demand",
+      "mode": "scenario",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 0.9,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 0.9,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.975
+    },
+    {
+      "run_id": "ANL-20260809-015",
+      "case": "case-2-ai-demand",
+      "mode": "red-team",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
@@ -137,44 +154,76 @@
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证实质"
+      "mean": 0.988
     },
     {
       "run_id": "ANL-20260809-010",
       "case": "case-3-lead-times",
+      "mode": "value-chain",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
         "question_coverage": 1.0,
         "counterevidence": 0.9,
         "explicit_assumptions": 1.0,
-        "explainable_divergence": 1.0,
+        "explainable_divergence": 0.9,
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证为诚实缺失（单事件内无反信号）"
+      "mean": 0.975
     },
     {
       "run_id": "ANL-20260809-018",
       "case": "case-3-lead-times",
+      "mode": "supply-demand",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 0.9,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.988
+    },
+    {
+      "run_id": "ANL-20260809-019",
+      "case": "case-3-lead-times",
+      "mode": "scenario",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
         "question_coverage": 1.0,
         "counterevidence": 0.9,
         "explicit_assumptions": 1.0,
-        "explainable_divergence": 1.0,
+        "explainable_divergence": 0.9,
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 0.988,
-      "notes": "反证为诚实缺失（单事件内无反信号）"
+      "mean": 0.975
     },
     {
-      "run_id": "ANL-20260809-019",
+      "run_id": "ANL-20260809-035",
       "case": "case-3-lead-times",
+      "mode": "open-discovery",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 0.9,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.988
+    },
+    {
+      "run_id": "ANL-20260809-037",
+      "case": "case-4-nvidia-fy27",
+      "mode": "company-fundamental",
       "scores": {
         "citation": 1.0,
         "no_outside_facts": 1.0,
@@ -185,25 +234,342 @@
         "saves_time": 1.0,
         "no_overreach": 1.0
       },
-      "mean": 1.0,
-      "notes": "反证实质"
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-020",
+      "case": "case-4-nvidia-fy27",
+      "mode": "red-team",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-038",
+      "case": "case-5-skhynix-2q26",
+      "mode": "company-fundamental",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-021",
+      "case": "case-5-skhynix-2q26",
+      "mode": "red-team",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-039",
+      "case": "case-5-skhynix-2q26",
+      "mode": "open-discovery",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-022",
+      "case": "case-6-tsmc-2q26",
+      "mode": "value-chain",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-023",
+      "case": "case-6-tsmc-2q26",
+      "mode": "company-fundamental",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-024",
+      "case": "case-6-tsmc-2q26",
+      "mode": "red-team",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-025",
+      "case": "case-7-samsung-hbm4",
+      "mode": "red-team",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-036",
+      "case": "case-7-samsung-hbm4",
+      "mode": "open-discovery",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 0.9,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.988
+    },
+    {
+      "run_id": "ANL-20260809-026",
+      "case": "case-8-asml-euv",
+      "mode": "value-chain",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-040",
+      "case": "case-8-asml-euv",
+      "mode": "technology-curve",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 0.9,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.988
+    },
+    {
+      "run_id": "ANL-20260809-027",
+      "case": "case-8-asml-euv",
+      "mode": "scenario",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 0.9,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.988
+    },
+    {
+      "run_id": "ANL-20260809-028",
+      "case": "case-8-asml-euv",
+      "mode": "red-team",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-029",
+      "case": "case-9-oracle",
+      "mode": "value-chain",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 0.9,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.988
+    },
+    {
+      "run_id": "ANL-20260809-030",
+      "case": "case-9-oracle",
+      "mode": "competitive-dynamics",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-031",
+      "case": "case-9-oracle",
+      "mode": "red-team",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-032",
+      "case": "case-10-sap",
+      "mode": "value-chain",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 1.0,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 1.0
+    },
+    {
+      "run_id": "ANL-20260809-033",
+      "case": "case-10-sap",
+      "mode": "competitive-dynamics",
+      "scores": {
+        "citation": 1.0,
+        "no_outside_facts": 1.0,
+        "question_coverage": 1.0,
+        "counterevidence": 0.9,
+        "explicit_assumptions": 1.0,
+        "explainable_divergence": 1.0,
+        "saves_time": 1.0,
+        "no_overreach": 1.0
+      },
+      "mean": 0.988
     }
   ],
   "reviewer": "max",
   "confirmed_at": "2026-08-09",
   "gate_verdict": {
     "pass": true,
-    "runs": 11,
-    "overall_mean": 0.989,
+    "runs": 32,
+    "overall_mean": 0.992,
+    "deterministic_gate": "32/32 PASS overall 1.0",
     "thresholds": {
       "citation_resolvable_100pct": true,
       "no_outside_facts": true,
       "question_coverage_ge_90pct": true,
       "counterevidence_omission_lt_10pct": true,
       "human_incremental_value_ge_70pct": true,
-      "open_discovery_judgeable": "n/a-batch1",
+      "open_discovery_judgeable_ge_half": true,
       "no_majority_voting": true
     },
-    "open_gap": "case-3-lead-times red-team: 6 attempts blocked by D-004 (persistent SRC-20260805-040 citation outside frozen inputs); recorded as documented gap, remediation pending max decision"
+    "gaps": {
+      "count": 13,
+      "scenario": [
+        "case-4",
+        "case-5",
+        "case-6",
+        "case-7",
+        "case-9",
+        "case-10"
+      ],
+      "value-chain": [
+        "case-4",
+        "case-5",
+        "case-7"
+      ],
+      "red-team": [
+        "case-3",
+        "case-10"
+      ],
+      "technology-curve": [
+        "case-7"
+      ],
+      "open-discovery": [
+        "case-9"
+      ],
+      "root_causes": [
+        "scenario mode (6 sections) fragile with deepseek-v4-flash",
+        "event-level persistent outside-citation: case-7->SRC-20260806-052, case-9/10->THS-004, case-3 red-team->SRC-20260805-040 (D-004 blocks)"
+      ]
+    }
   }
 }

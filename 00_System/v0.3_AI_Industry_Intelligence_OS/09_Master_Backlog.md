@@ -183,6 +183,17 @@ max 在 /llm 配好 Key（deepseek-v4-flash）后，D-019 10-case 真实比较 G
 - 474 tests 全绿（+3 field_gate），validate 0 error，ruff/mypy clean。
 - **下一步：max 用评估包做 §11 八维人工评分（含 case-3 red-team 缺口的专项判断）→ 确认后再跑剩余 7 case（33 run，含 5 open-discovery）。**
 
+## D-019 完成（10-case 全量，2026-08-09）
+
+max 确认第一批 §11 评分 PASS（`f49e592`）后，跑完剩余 7 case + 5 open-discovery。
+
+- **运行量**：累计 46 组合，**32 个真实 run 落盘**（ANL-20260809-002..040，覆盖全部 8 模式），14 组合失败（4-7 次尝试后确认顽固）。
+- **确定性 Gate：32/32 PASS、整体 1.0**（citation 100% / 无外事实 / sections / questions / counterevidence / placeholders 全满分）。
+- **§11 人工判断（2026-08-09 max 确认，整体 0.992）**：32 run 八维评分定稿于 `Field_Gate_10_Case_Judgments.json`（confirmed/reviewer=max）；仅两处诚实扣分——honest-absence 反证 8 run × 0.9（单事件无反向信号，已明确说明"缺失≠确认"）、冲突 case 分歧可解释 13 run × 0.9（case-1/2/3 跨模式信号冲突，可解释需调和）。§11 阈值全达标（引用 100% / 无外事实 / 覆盖 ≥90% / 反证遗漏 <10% / 有增量价值 100% / **open-discovery 4 run 假设全部可判定**：HBM 价值稀释、非显性瓶颈 ABF、竞争性宣示、HBM 迭代 18-24→12 个月 / 非多数投票）。
+- **13 个记录缺口（max 接受为发现，不烧 API 重试）**：scenario ×6（case-4/5/6/7/9/10）、value-chain ×3（case-4/5/7）、red-team ×2（case-3/10）、technology-curve ×1（case-7）、open-discovery ×1（case-9）。**根因两类**：①**scenario 模式脆弱**（6 分区含 Downside/Base/Upside，deepseek-v4-flash 输出不稳定，6/10 case 失败）；②**事件级顽固外部引用**（case-7 Samsung→SRC-20260806-052、case-9/10 Oracle/SAP→THS-004、case-3 red-team→SRC-20260805-040，D-004 契约持续拦截——模型对特定事件从训练记忆引入真实对象）。
+- **D-019 判定：PASS**（确定性 32/32 + 人工 0.992 + OD 门达标 + 缺口记录）。评估包 `05_Research/Reviews/Field_Gate_10_Case_Packet.md`（完整 10-case + 已确认人工评分 + 缺口文档）。
+- **Phase 4 结论**：多模式真实比较可行，但**scenario 模式需 prompt 强化/分区精简，外部引用需更强约束**（D-020 acceptance 项目）；model 输出语言已修（中文）。**WP-430 剩 D-020（acceptance/recovery：replay/hash/rebuild 通过验证）。**
+
 WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 - **D-014 CLI**：`modes list/show/check` + `analyze run/show/compare/replay/propose-thesis`。`modes check` 用 `require_runnable` 逐模式门禁；`analyze run` 走 D-009 全事务（dry-run 默认/`--apply`）；`analyze replay` 复用冻结输入以当前模型重放（创建新 ID，不覆盖）；错误退出码 2。
 - **D-015 Dashboard**：`/analysis` 工作区（概览 + modes/runs 列表 + mode/run detail + `?runs=` compare），只读 GET，渲染输入引用/版本/冻结哈希/共享事实与冲突信号；导航加「分析」。
