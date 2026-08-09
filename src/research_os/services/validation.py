@@ -526,6 +526,30 @@ def validate_refs(
         expect_ref(obj, "subject_id", None, by_id, findings)
         expect_ref(obj, "target_id", None, by_id, findings)
         expect_refs(obj, "evidence_ids", "event", by_id, findings)
+    elif obj.object_type == "forecast":
+        expect_refs(obj, "evidence_ids", None, by_id, findings)
+        expect_refs(obj, "analysis_run_ids", "analysis_run", by_id, findings)
+    elif obj.object_type == "forecast_resolution":
+        expect_ref(obj, "forecast_id", "forecast", by_id, findings)
+        expect_refs(obj, "source_ids", "source", by_id, findings)
+    elif obj.object_type == "valuation_snapshot":
+        expect_ref(obj, "company_id", "company", by_id, findings)
+        if obj.metadata.get("security_id"):
+            expect_ref(obj, "security_id", "security", by_id, findings)
+        expect_refs(obj, "source_ids", "source", by_id, findings)
+        expect_refs(obj, "event_ids", "event", by_id, findings)
+    elif obj.object_type == "recommendation":
+        expect_ref(obj, "company_id", "company", by_id, findings)
+        if obj.metadata.get("security_id"):
+            expect_ref(obj, "security_id", "security", by_id, findings)
+        if obj.metadata.get("valuation_snapshot_id"):
+            expect_ref(
+                obj, "valuation_snapshot_id", "valuation_snapshot", by_id, findings
+            )
+        expect_refs(obj, "forecast_ids", "forecast", by_id, findings)
+        expect_refs(obj, "thesis_ids", "thesis", by_id, findings)
+        expect_refs(obj, "evidence_ids", None, by_id, findings)
+        expect_refs(obj, "analysis_run_ids", "analysis_run", by_id, findings)
 
 
 def validate_reviewed_assertion_evidence(

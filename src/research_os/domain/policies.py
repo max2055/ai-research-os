@@ -30,6 +30,10 @@ ID_PATTERNS = {
     "impact_assertion": re.compile(r"^IMP-\d{8}-\d{3}$"),
     "analysis_mode": re.compile(r"^MOD-ANL-[a-z0-9]+(?:-[a-z0-9]+)*-v\d+$"),
     "analysis_run": re.compile(r"^ANL-\d{8}-\d{3}$"),
+    "forecast": re.compile(r"^FCT-\d{8}-\d{3}$"),
+    "forecast_resolution": re.compile(r"^RES-\d{8}-\d{3}$"),
+    "valuation_snapshot": re.compile(r"^VAL-\d{8}-\d{3}$"),
+    "recommendation": re.compile(r"^REC-\d{8}-\d{3}$"),
 }
 
 # Ontology assertion predicates (Phase 0-1 §5). Relation direction is explicit;

@@ -61,10 +61,15 @@ def next_object_id(
         "ontology_assertion",
         "impact_assertion",
         "analysis_run",
+        "forecast",
+        "forecast_resolution",
+        "valuation_snapshot",
+        "recommendation",
     }:
         raise ValueError(
             "next_object_id supports source, event, ontology_assertion, "
-            "impact_assertion and analysis_run"
+            "impact_assertion, analysis_run, forecast, forecast_resolution, "
+            "valuation_snapshot and recommendation"
         )
     if not is_iso_date(object_date):
         raise ValueError("object_date must be YYYY-MM-DD")
@@ -74,6 +79,10 @@ def next_object_id(
         "ontology_assertion": "REL",
         "impact_assertion": "IMP",
         "analysis_run": "ANL",
+        "forecast": "FCT",
+        "forecast_resolution": "RES",
+        "valuation_snapshot": "VAL",
+        "recommendation": "REC",
     }[object_type]
     suffixes: list[int] = []
     for obj in objects:

@@ -10,12 +10,15 @@ from research_os.schemas.analysis_run import AnalysisRunSchema
 from research_os.schemas.common import ManagedObjectSchema
 from research_os.schemas.company import CompanySchema
 from research_os.schemas.event import EventSchema
+from research_os.schemas.forecast import ForecastSchema
+from research_os.schemas.forecast_resolution import ForecastResolutionSchema
 from research_os.schemas.impact_assertion import ImpactAssertionSchema
 from research_os.schemas.job import JobSchema
 from research_os.schemas.metric import MetricSchema
 from research_os.schemas.ontology_assertion import OntologyAssertionSchema
 from research_os.schemas.product import ProductSchema
 from research_os.schemas.project import ProjectSchema
+from research_os.schemas.recommendation import RecommendationSchema
 from research_os.schemas.report import ReportSchema
 from research_os.schemas.review import ReviewSchema
 from research_os.schemas.sector import SectorSchema
@@ -24,6 +27,7 @@ from research_os.schemas.source import SourceSchema
 from research_os.schemas.source_channel import SourceChannelSchema
 from research_os.schemas.technology import TechnologySchema
 from research_os.schemas.thesis import ThesisSchema
+from research_os.schemas.valuation_snapshot import ValuationSnapshotSchema
 
 type SchemaType = type[ManagedObjectSchema]
 
@@ -52,6 +56,10 @@ SCHEMAS: dict[str, SchemaType] = {
     "impact_assertion": ImpactAssertionSchema,
     "analysis_mode": AnalysisModeSchema,
     "analysis_run": AnalysisRunSchema,
+    "forecast": ForecastSchema,
+    "forecast_resolution": ForecastResolutionSchema,
+    "valuation_snapshot": ValuationSnapshotSchema,
+    "recommendation": RecommendationSchema,
 }
 
 
