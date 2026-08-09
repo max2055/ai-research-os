@@ -2,7 +2,7 @@
 
 Proposal ID：RCP-v03-010
 
-状态：proposed（待 max 批准）
+状态：approved（2026-08-09，reviewer：max）
 
 创建日期：2026-08-09
 
@@ -51,12 +51,17 @@ Proposal ID：RCP-v03-010
 5. 规模化触发条件（§4）：PostgreSQL/图/向量仅按实测瓶颈触发，不主动迁移
 6. 备份/安全/许可/成本 Gate（§6–8）：RTO/RPO、secrets 治理、license audit、model/API cost 预算入 Health
 
+- Decision：批准（accept RCP-v03-010 as drafted，6 项人审点全部采纳默认）
+- Reviewer：max
+- Date：2026-08-09
+- Reason：与 Phase 6 §1-§2、§6-§8、§10-§11 草案一致；"Dashboard 只读+loopback、Web mutation 另行批准、发布被 WP-530 自然到期阻塞"防止 UI 绕过 CLI 审计链路并保持唯一真时间依赖诚实。
+
 ## Implementation record
 
-- Changed files：本文件（proposed → approved 待 max 拍板）；生效后由 WP-600（F-001~003）落地 IA/read model/Industry Home
+- Changed files：本文件（proposed → approved）；生效后由 WP-600（F-001~003）落地 IA/read model/Industry Home
 - Test result：not run（治理边界批准，无代码变更）
 - Validation result：`research-os validate` 0 errors / 0 warnings（无对象变更）
-- Effective date：待批准（批准即生效；WP-600 起实施）
+- Effective date：2026-08-09（批准即生效；WP-600 起实施）
 
 ## 参考
 

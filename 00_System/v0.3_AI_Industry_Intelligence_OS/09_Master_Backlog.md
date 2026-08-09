@@ -1,6 +1,6 @@
 # v0.3 Master Backlog 与实施波次
 
-状态：`wave5-completed`（Wave 0-4 已完成；Wave 5 工程完成（WP-530 future-date dependent）；Wave 6 proposed）
+状态：`wave5-completed`（Wave 0-4 已完成；Wave 5 工程完成（WP-530 future-date dependent）；Wave 6 ready）
 规则：本文件是执行索引；任务细节以各 Phase 文件为准。Agent 不得只读本表就开工。
 
 ## 1. 状态枚举
@@ -254,7 +254,7 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-620 | F-021～022 | 30-day Pilot/resolutions | future-date dependent |
 | WP-630 | F-023～025 | release check/human decision/tag | WP-620 | proposed |
 
-Wave 6 开工前置：RCP-v03-010（Dashboard 写边界 + 产品 IA v2 + 发布 Gate）获批；F-001 页面/查询/边界批准同步完成。
+Wave 6 开工前置已满足：RCP-v03-010 已获批（2026-08-09，`6e5aa8e` 修订 + approval）；F-001 页面/查询/边界按 RCP 批准时点同步完成。WP-600 起可开工。
 
 ## 10. 建议首批派发顺序
 
@@ -506,3 +506,14 @@ C-018 APPROVED（2026-08-08，max 拍板）：14 个 in-scope 事件五维全部
 - Consequences: Phase 4 解除 RCP 阻塞；WP-400（D-001~004）转 ready。
 - Reviewer: max
 - Revisit trigger/date: WP-400 实施遇架构问题；任一模式契约字段实施遇阻时提修改 RCP。
+
+#### 批准 RCP-v03-010（2026-08-09）
+
+- Decision ID: RCP-v03-010-approval
+- Date: 2026-08-09
+- Decision: 批准 RCP-v03-010（proposed → approved）。Phase 6（统一产品与发布）治理生效：Dashboard 保持只读+loopback、权威写入走 CLI+Markdown+dry-run/`--apply`、Web mutation（浏览器写权威对象）必须另行批准（现有 3 个 `/llm` 本地配置端点追认为唯一例外）；Product IA v2 作为基线（F-001 spec 走常规 WP 验收）；30-day Pilot 范围固定（Core 按 D4 上限 54）；v0.3 Release Gate 机器可验证 + 人工 packet，**显式记录发布被 WP-530 自然到期阻塞（最早 2026-10-31），工程/产品完成与发布两条时间线分离**；PostgreSQL/图/向量仅按实测瓶颈触发；备份/安全/许可/cost 预算入 Health。
+- Reason: 6 项人审点经 max 逐项确认采纳默认；与 Phase 6 §1-§2、§6-§8、§10-§11 一致；防 UI 绕过 CLI 审计链路、保持唯一真时间依赖诚实。
+- Effective date: 2026-08-09（WP-600 起落地）。
+- Consequences: Phase 6 解除 RCP 阻塞；Wave 6（WP-600 起）转 ready。
+- Reviewer: max
+- Revisit trigger/date: WP-600 实施遇架构问题；发布 Gate 需调整时间依赖时提修改 RCP。
