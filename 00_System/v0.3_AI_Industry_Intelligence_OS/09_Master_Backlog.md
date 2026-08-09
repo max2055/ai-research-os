@@ -230,7 +230,7 @@ WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
-| WP-500 | E-001～006 | RCP + Forecast/Resolution/Valuation/REC Schema | ready（RCP-v03-008/009 已批准）|
+| WP-500 | E-001～006 | RCP + Forecast/Resolution/Valuation/REC Schema | completed |
 | WP-501 | E-007～010 | forecast lifecycle/resolution | proposed |
 | WP-510 | E-011～013 | valuation/scenario/recommendation workflow | proposed |
 | WP-511 | E-014～015 | supersession/calibration | proposed |
