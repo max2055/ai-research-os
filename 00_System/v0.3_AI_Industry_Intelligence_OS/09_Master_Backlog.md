@@ -235,7 +235,7 @@ WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 | WP-510 | E-011～013 | valuation/scenario/recommendation workflow | completed |
 | WP-511 | E-014～015 | supersession/calibration | completed |
 | WP-512 | E-016～018 | CLI/UI/alerts | completed |
-| WP-520 | E-019～021 | license + 10 forecast + 3 company Pilot | proposed |
+| WP-520 | E-019～021 | license + 10 forecast + 3 company Pilot | completed |
 | WP-530 | E-022～023 | natural resolution + acceptance | future-date dependent |
 
 WP-530 不能用回填或合成 outcome 提前完成。
