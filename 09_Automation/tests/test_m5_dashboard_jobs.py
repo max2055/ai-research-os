@@ -4,7 +4,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,6 +19,7 @@ from research_os.services.indexing import (
     render_project_indexes,
 )
 from research_os.services.jobs import job_rows, run_job
+from research_os.services.read_model import industry_home_snapshot
 from research_os.services.validation import validate_repository
 from research_os.ui.app import create_app, run_ui
 from test_cli import run_cli
@@ -720,3 +721,354 @@ class AnalysisEvalMetricsDashboardTests(unittest.TestCase):
             self.assertEqual(200, metrics.status_code)
             self.assertIn("模式指标", metrics.text)
             self.assertIn("证据遗漏", metrics.text)
+
+
+def _seed_home_candidates(root: Path) -> None:
+    today = date.today().isoformat()
+    channel_dir = root / "02_Knowledge" / "Channels"
+    channel_dir.mkdir(parents=True, exist_ok=True)
+    (channel_dir / "CHN-test.md").write_text(CHANNEL_MD, encoding="utf-8")
+    db_path = candidate_db.candidate_db_path(root)
+    candidate_db.apply_migrations(db_path)
+    candidate_db.insert_candidates(
+        db_path,
+        [
+            {
+                "candidate_id": "CAND-new-001",
+                "published_at_proposal": today,
+                "title": "HBM supply shortage risk",
+                "canonical_url": "https://example.com/1",
+                "publisher": "Example",
+            },
+            {
+                "candidate_id": "CAND-new-002",
+                "published_at_proposal": today,
+                "title": "New capacity ramp",
+                "canonical_url": "https://example.com/2",
+                "publisher": "Example",
+            },
+            {
+                "candidate_id": "CAND-low-001",
+                "published_at_proposal": today,
+                "title": "Low priority note",
+                "canonical_url": "https://example.com/3",
+                "publisher": "Example",
+            },
+        ],
+        "CHN-test",
+        f"{today}T10:00:00Z",
+    )
+    connection = sqlite3.connect(db_path)
+    try:
+        for candidate_id, score in (
+            ("CAND-new-001", 0.8),
+            ("CAND-new-002", 0.6),
+            ("CAND-low-001", 0.2),
+        ):
+            connection.execute(
+                "UPDATE candidates SET priority_score = ? "
+                "WHERE candidate_id = ?",
+                (score, candidate_id),
+            )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def _write_home_sector(root: Path) -> None:
+    path = root / "02_Knowledge" / "Sectors" / "SEG-test.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        """---
+id: SEG-test
+type: sector
+title: "Test Sector"
+schema_version: 2
+created_at: 2026-08-06
+updated_at: 2026-08-06
+project_ids: []
+status: active
+review_status: reviewed
+tags: []
+core_company_ids: [COM-test]
+tracked_company_ids: []
+---
+# Sector
+
+## Definition
+
+Test.
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_home_core_company(root: Path) -> None:
+    path = root / "02_Knowledge" / "Companies" / "COM-core-test.md"
+    path.write_text(
+        """---
+id: COM-core-test
+type: company
+title: Core Test Company
+schema_version: 1
+created_at: 2026-08-06
+updated_at: 2026-08-06
+project_ids: [PRJ-001]
+status: active
+review_status: reviewed
+coverage_tier: core
+source_channel_ids: [CHN-test]
+aliases: []
+related_entities: []
+evidence_ids: []
+source_ids: []
+tags: []
+---
+
+# Company
+
+## Company role in the value chain
+## Business model
+## Competitive advantages
+## Risks
+## Related Thesis
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_home_forecast(root: Path) -> str:
+    today = date.today()
+    forecast_id = f"FCT-{today:%Y%m%d}-001"
+    resolution_date = (today - timedelta(days=1)).isoformat()
+    forecast_as_of = (today - timedelta(days=30)).isoformat()
+    path = root / "05_Research" / "Forecasts" / f"{forecast_id}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"""---
+id: {forecast_id}
+type: forecast
+title: "Will X ramp?"
+schema_version: 2
+created_at: {today.isoformat()}
+updated_at: {today.isoformat()}
+project_ids: [PRJ-001]
+status: open
+review_status: reviewed
+tags: []
+scope_ids: []
+question: "Will X ramp by end of year?"
+outcome_type: binary
+outcome_definition: "X disclosed in the quarterly report."
+base_rate: unknown
+forecast_as_of: "{forecast_as_of}"
+horizon: quarter
+resolution_date: {resolution_date}
+resolution_source_requirements: []
+evidence_ids: []
+analysis_run_ids: []
+assumptions: []
+alternative_outcomes: []
+falsification_conditions: []
+---
+# Forecast
+
+## Question
+
+Will X ramp?
+""",
+        encoding="utf-8",
+    )
+    return forecast_id
+
+
+def _write_home_action(root: Path) -> str:
+    today = date.today()
+    action_id = f"ACT-{today:%Y%m%d}-001"
+    due_date = (today - timedelta(days=1)).isoformat()
+    path = root / "05_Research" / "Reviews" / "Actions" / f"{action_id}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"""---
+id: {action_id}
+type: action
+title: "Follow up on X"
+created_at: {today.isoformat()}
+updated_at: {today.isoformat()}
+schema_version: 1
+project_ids: [PRJ-001]
+status: open
+owner: max
+due_date: {due_date}
+success_evidence: "evidence"
+tags: []
+---
+# {action_id}
+
+## Action
+
+Follow up on X.
+
+## Success evidence
+
+Evidence.
+
+## History
+
+- {today.isoformat()}：test.
+""",
+        encoding="utf-8",
+    )
+    return action_id
+
+
+class TestIndustryHomeSnapshot(unittest.TestCase):
+    """F-002: industry_home_snapshot composer (WP-600)."""
+
+    def test_snapshot_covers_all_section_3_items(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            snapshot = industry_home_snapshot(root)
+            for key in (
+                "as_of",
+                "generated_at",
+                "top_candidates",
+                "high_priority_candidates",
+                "events_today",
+                "sources_today",
+                "impacts_today",
+                "conflicts",
+                "stale_core_companies",
+                "stale_channels",
+                "never_run_channels",
+                "due_forecasts",
+                "overdue_forecasts",
+                "due_actions",
+                "sector_heatmap",
+                "freshness",
+                "failed_runs",
+            ):
+                self.assertIn(key, snapshot)
+            self.assertEqual(2, len(snapshot["high_priority_candidates"]))
+            self.assertEqual(
+                "CAND-new-001", snapshot["top_candidates"][0]["candidate_id"]
+            )
+            self.assertEqual(1, len(snapshot["conflicts"]))
+            self.assertIn("failure_rate", snapshot["freshness"])
+
+    def test_snapshot_without_candidate_db(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            snapshot = industry_home_snapshot(root)
+            self.assertEqual([], snapshot["high_priority_candidates"])
+            self.assertEqual([], snapshot["conflicts"])
+            self.assertEqual([], snapshot["due_actions"])
+            self.assertEqual([], snapshot["sector_heatmap"])
+
+    def test_snapshot_raises_on_validation_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            broken = root / "02_Knowledge" / "Companies" / "COM-broken.md"
+            broken.parent.mkdir(parents=True, exist_ok=True)
+            broken.write_text(
+                "---\nid: COM-broken\ntype: company\n---\n# Company\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                industry_home_snapshot(root)
+
+    def test_sector_heatmap_is_raw_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _write_home_sector(root)
+            snapshot = industry_home_snapshot(root)
+            self.assertEqual(1, len(snapshot["sector_heatmap"]))
+            sector = snapshot["sector_heatmap"][0]
+            self.assertEqual("SEG-test", sector["sector_id"])
+            for key in (
+                "entity_count",
+                "event_count_recent",
+                "impact_count_reviewed",
+                "fresh_channels",
+                "stale_channels",
+            ):
+                self.assertIsInstance(sector[key], int)
+            self.assertNotIn("sentiment", sector)
+            self.assertNotIn("score", sector)
+
+    def test_stale_core_company_rollup(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            _write_home_core_company(root)
+            snapshot = industry_home_snapshot(root)
+            ids = [row["object_id"] for row in snapshot["stale_core_companies"]]
+            self.assertIn("COM-core-test", ids)
+
+    def test_due_forecasts_and_actions_wired(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            forecast_id = _write_home_forecast(root)
+            action_id = _write_home_action(root)
+            snapshot = industry_home_snapshot(root)
+            self.assertEqual(1, len(snapshot["due_forecasts"]))
+            self.assertEqual(1, len(snapshot["overdue_forecasts"]))
+            self.assertEqual(forecast_id, snapshot["due_forecasts"][0]["id"])
+            self.assertEqual(1, len(snapshot["due_actions"]))
+            self.assertEqual(action_id, snapshot["due_actions"][0]["id"])
+
+
+class IndustryHomeTests(unittest.TestCase):
+    """F-003: /home Industry Home UI (WP-600)."""
+
+    def test_industry_home_renders(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            client = TestClient(create_app(root))
+            page = client.get("/home")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("产业首页", page.text)
+            self.assertIn("今日高优先级候选", page.text)
+            self.assertIn("板块热度", page.text)
+            self.assertIn("数据新鲜度", page.text)
+            self.assertIn("运行失败", page.text)
+            self.assertIn("CAND-new-001", page.text)
+
+    def test_industry_home_links_to_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            _write_home_sector(root)
+            forecast_id = _write_home_forecast(root)
+            action_id = _write_home_action(root)
+            client = TestClient(create_app(root))
+            page = client.get("/home")
+            self.assertEqual(200, page.status_code)
+            self.assertIn("/pipeline/queue/CAND-new-001", page.text)
+            self.assertIn(f"/decision/forecast/{forecast_id}", page.text)
+            self.assertIn(f"/actions/{action_id}", page.text)
+            self.assertIn("/sectors/SEG-test", page.text)
+
+    def test_industry_home_is_get_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            client = TestClient(create_app(root))
+            paths = {route.path for route in client.app.routes}
+            self.assertIn("/home", paths)
+            for route in client.app.routes:
+                if route.path == "/home":
+                    methods = set(route.methods) - {"HEAD", "OPTIONS"}
+                    self.assertEqual({"GET"}, methods)
+            write_routes = sorted(
+                {
+                    route.path
+                    for route in client.app.routes
+                    if (set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"})
+                    - {"GET"}
+                }
+            )
+            self.assertEqual(
+                ["/llm/config", "/llm/models", "/llm/test"], write_routes
+            )

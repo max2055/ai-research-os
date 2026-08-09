@@ -48,6 +48,7 @@ from research_os.services.mode_metrics import mode_metrics
 from research_os.services.ontology import render_impact
 from research_os.services.pilot import pilot_status
 from research_os.services.projects import objects_for_project
+from research_os.services.read_model import industry_home_snapshot
 from research_os.services.review_cadence import current_next_review_date
 from research_os.services.validation import validate_repository
 
@@ -175,6 +176,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
       <span>本地 · 只读 · Markdown 驱动</span>
     </div>
     <nav aria-label="Primary">
+      <a href="/home{project_query}">产业首页</a>
       <a href="/{project_query}">概览</a>
       <a href="/reviews{project_query}">评审队列</a>
       <a href="/metrics{project_query}">指标</a>
@@ -350,6 +352,203 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
 </section>"""
     )
     return shell(str(project.metadata.get("title")), content, project_id=selected)
+
+
+def _heat_cell(value: int, color: str = "58, 110, 165") -> str:
+    if value <= 0:
+        return '<span class="muted">0</span>'
+    alpha = min(0.9, 0.15 + 0.12 * value)
+    return (
+        f'<span style="background: rgba({color}, {alpha:.2f}); '
+        f'padding: 2px 8px; border-radius: 4px">{value}</span>'
+    )
+
+
+def _priority_text(score: Any) -> str:
+    return f"{score:.3f}" if score is not None else "—"
+
+
+def _industry_home(repo: DashboardRepository) -> str:
+    snapshot = industry_home_snapshot(repo.root, as_of=date.today().isoformat())
+    as_of = snapshot["as_of"]
+    due_forecasts = len(snapshot["due_forecasts"])
+    due_actions = len(snapshot["due_actions"])
+    failed_runs = len(snapshot["failed_runs"])
+    stale_count = len(snapshot["stale_channels"]) + len(snapshot["never_run_channels"])
+    high_priority = snapshot["high_priority_candidates"]
+    today_updates = len(snapshot["events_today"]) + len(snapshot["impacts_today"])
+
+    hero = f"""
+<section class="hero">
+  <div>
+    <div class="eyebrow">产业首页</div>
+    <h2>AI 产业情报总览</h2>
+    <p class="muted">as-of {esc(as_of)} · 产业级聚合（跨板块，无项目过滤）</p>
+  </div>
+  <div>
+    <div class="eyebrow">今日待办</div>
+    <h2>{due_forecasts + due_actions + failed_runs + stale_count}</h2>
+    <p class="muted">{due_forecasts} 到期预测 · {due_actions} 到期行动 · {failed_runs} 抓取失败 · {stale_count} stale 通道</p>
+  </div>
+</section>
+<section class="metrics">
+  <div class="metric"><strong>{len(high_priority)}</strong><span>高优先级候选</span></div>
+  <div class="metric"><strong>{today_updates}</strong><span>今日 reviewed 事件/影响</span></div>
+  <div class="metric"><strong>{due_forecasts}</strong><span>到期预测</span></div>
+  <div class="metric"><strong>{due_actions}</strong><span>到期行动</span></div>
+  <div class="metric"><strong>{stale_count}</strong><span>stale 通道</span></div>
+  <div class="metric"><strong>{failed_runs}</strong><span>抓取失败</span></div>
+</section>"""
+
+    candidate_rows = [
+        [
+            f'<a href="/pipeline/queue/{esc(c["candidate_id"])}">{esc(c["candidate_id"])}</a>',
+            esc(c["title"]),
+            esc(c.get("entity_id") or "—"),
+            esc(c.get("channel_id") or "—"),
+            _priority_text(c.get("priority_score")),
+        ]
+        for c in high_priority
+    ]
+
+    updates = [
+        {"id": item["object_id"], "title": item["title"], "kind": "事件"}
+        for item in snapshot["events_today"]
+    ] + [
+        {"id": item["object_id"], "title": item["title"], "kind": "影响"}
+        for item in snapshot["impacts_today"]
+    ]
+    update_rows = [
+        [
+            f'<a href="/{("events/" if u["kind"] == "事件" else "impact/") + esc(u["id"])}">{esc(u["id"])}</a>',
+            esc(u["title"]),
+            badge(u["kind"]),
+        ]
+        for u in updates
+    ]
+
+    conflict_rows = [
+        [
+            f'<a href="/pipeline/queue/{esc(c["candidate_id"])}">{esc(c["candidate_id"])}</a>',
+            esc(c["title"]),
+        ]
+        for c in snapshot["conflicts"]
+    ]
+
+    stale_company_rows = [
+        [
+            f'<a href="/companies/{esc(c["object_id"])}">{esc(c["object_id"])}</a>',
+            esc(c["title"]),
+        ]
+        for c in snapshot["stale_core_companies"]
+    ]
+    stale_channels_text = ", ".join(snapshot["stale_channels"]) or "—"
+    never_run_text = ", ".join(snapshot["never_run_channels"]) or "—"
+
+    due_rows = (
+        [
+            [
+                f'<a href="/decision/forecast/{esc(f["id"])}">{esc(f["id"])}</a>',
+                esc(f["title"]),
+                esc(f["resolution_date"]),
+                badge("到期"),
+            ]
+            for f in snapshot["due_forecasts"]
+        ]
+        + [
+            [
+                f'<a href="/decision/forecast/{esc(f["id"])}">{esc(f["id"])}</a>',
+                esc(f["title"]),
+                esc(f["resolution_date"]),
+                badge("逾期", danger=True),
+            ]
+            for f in snapshot["overdue_forecasts"]
+        ]
+        + [
+            [
+                f'<a href="/actions/{esc(a["id"])}">{esc(a["id"])}</a>',
+                esc(a["title"]),
+                esc(a["due_date"]),
+                badge(a["status"]),
+            ]
+            for a in snapshot["due_actions"]
+        ]
+    )
+
+    heatmap_rows = [
+        [
+            f'<a href="/sectors/{esc(s["sector_id"])}">{esc(s["title"])}</a>',
+            _heat_cell(s["entity_count"]),
+            _heat_cell(s["event_count_recent"]),
+            _heat_cell(s["impact_count_reviewed"]),
+            _heat_cell(s["fresh_channels"], "46, 160, 67"),
+            _heat_cell(s["stale_channels"], "214, 87, 70"),
+        ]
+        for s in snapshot["sector_heatmap"]
+    ]
+
+    freshness = snapshot["freshness"]
+
+    def fmt(value: Any, suffix: str = "") -> str:
+        return f"{value}{suffix}" if value is not None else "—"
+
+    freshness_panel = f"""
+<section class="metrics">
+  <div class="metric"><strong>{fmt(freshness.get("failure_rate"))}</strong><span>抓取失败率</span></div>
+  <div class="metric"><strong>{fmt(freshness.get("median_latency_seconds"), "s")}</strong><span>中位延迟</span></div>
+  <div class="metric"><strong>{fmt(freshness.get("http_errors"))}</strong><span>HTTP 错误</span></div>
+  <div class="metric"><strong>{fmt(freshness.get("parse_errors"))}</strong><span>解析错误</span></div>
+  <div class="metric"><strong>{fmt(freshness.get("retries"))}</strong><span>重试</span></div>
+</section>"""
+
+    failed_rows = [
+        [
+            esc(row["run_id"]),
+            esc(row["channel_id"]),
+            esc(row["started_at"]),
+            esc(row["candidate_count"]),
+        ]
+        for row in snapshot["failed_runs"]
+    ]
+
+    content = (
+        hero
+        + f"""
+<section class="panel"><h3>今日高优先级候选</h3>
+{table(["候选", "标题", "实体", "通道", "优先级"], candidate_rows)}
+</section>
+<section class="panel"><h3>reviewed 事件 / 影响更新</h3>
+{table(["对象", "标题", "类型"], update_rows)}
+</section>
+<section class="panel"><h3>反面与冲突信号</h3>
+{table(["候选", "标题"], conflict_rows)}
+</section>
+<section class="grid">
+  <div class="panel">
+    <h3>stale Core 公司</h3>
+    {table(["公司", "标题"], stale_company_rows)}
+  </div>
+  <div class="panel">
+    <h3>stale / never-run 通道</h3>
+    <p><strong>stale：</strong>{esc(stale_channels_text)}</p>
+    <p><strong>never-run：</strong>{esc(never_run_text)}</p>
+  </div>
+</section>
+<section class="panel"><h3>到期 Forecast / Action</h3>
+{table(["对象", "标题", "日期", "状态"], due_rows)}
+</section>
+<section class="panel full"><h3>板块热度（原始计数，非情绪分）</h3>
+{table(["板块", "实体数", "近30天事件", "reviewed 影响", "新鲜通道", "stale 通道"], heatmap_rows)}
+</section>
+<section class="panel"><h3>数据新鲜度</h3>
+{freshness_panel}
+</section>
+<section class="panel"><h3>运行失败</h3>
+{table(["运行", "通道", "开始", "候选数"], failed_rows)}
+</section>"""
+    )
+    return shell("产业首页", content)
+
 
 
 def _review_rows(
@@ -1826,6 +2025,13 @@ def create_app(root: Path) -> FastAPI:
             return HTMLResponse(_project_overview(repo, project))
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/home", response_class=HTMLResponse)
+    def industry_home() -> HTMLResponse:
+        try:
+            return HTMLResponse(_industry_home(repo))
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.get("/reviews", response_class=HTMLResponse)
     def reviews(

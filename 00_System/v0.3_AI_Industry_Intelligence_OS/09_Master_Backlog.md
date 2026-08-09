@@ -244,7 +244,7 @@ WP-530 不能用回填或合成 outcome 提前完成。
 
 | WP | 包含任务 | 主要交付 | 状态 |
 |---|---|---|---|
-| WP-600 | F-001～003 | IA/read model/Industry Home | proposed |
+| WP-600 | F-001～003 | IA/read model/Industry Home | completed |
 | WP-601 | F-004～006 | Sector/Company/Candidate UI | proposed |
 | WP-602 | F-007～009 | Impact/Analysis/Decision UI | proposed |
 | WP-603 | F-010～011 | Operations/Health | proposed |
@@ -255,6 +255,13 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-630 | F-023～025 | release check/human decision/tag | WP-620 | proposed |
 
 Wave 6 开工前置已满足：RCP-v03-010 已获批（2026-08-09，`6e5aa8e` 修订 + approval）；F-001 页面/查询/边界按 RCP 批准时点同步完成。WP-600 起可开工。
+
+WP-600 close-out（2026-08-09）：F-001~003 落地，Wave 6 第一个 WP。
+- **F-001**：`00_System/Dashboard_Design_v2.md`（Product IA v2——IA 树、页面→查询/边界表、read model 约定、GET-only 不变量、loopback、WP-600 范围；镜像 v1 先例 `Dashboard_and_Jobs_Design.md`）。
+- **F-002**：`services/read_model.py` `industry_home_snapshot(root, *, as_of, db_path)`——组合 `daily_brief` + `forecast_status_report` + `action_rows` + `pipeline_metrics`，新增 `impacts_today`/`stale_core_companies`（core 公司→stale 通道 rollup）/`due_actions`/`sector_heatmap`（原始计数非情绪分）/`freshness`；校验 error 即拒。
+- **F-003**：`/home` GET 路由（`_industry_home` 渲染，产业级无 project 过滤）+ nav「产业首页」；保留 `/` 为项目概览（方案 B）。只读不变量维持（非 GET 路由仍恰为 3 个 `/llm`）。
+- 测试：`test_m5_dashboard_jobs.py` +8（TestIndustryHomeSnapshot 5 + IndustryHomeTests 3）。**578 tests 全绿（+8）、validate 0 error、ruff/mypy clean、index drift 0**。真实仓库 /home 冒烟 200（22 COM/9 SEG 引用，FCT-0 正确因均未到期）。
+- **Known limitation**：`industry_home_snapshot` 多次调 `validate_repository`（每日历 4+ 次），诚实无缓存；超 §5 SLO 时由 WP-610 F-012 优化（传预载 objects，不改 `daily_brief` 公共签名）。stale_core_companies 依赖 `source_channel_ids`/channel `entity_ids`（当前多为空，面板常空——诚实）。
 
 ## 10. 建议首批派发顺序
 
