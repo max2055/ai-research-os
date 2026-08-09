@@ -183,3 +183,4 @@
 | REV-20260808-005 | 2026-08-08 | approve | MOD-ANL-value-chain-v1, MOD-ANL-supply-demand-v1, MOD-ANL-red-team-v1 | max |  |
 | REV-20260808-006 | 2026-08-08 | reject | ANL-20260808-001 | max |  |
 | REV-20260808-007 | 2026-08-08 | approve | MOD-ANL-technology-curve-v1, MOD-ANL-company-fundamental-v1, MOD-ANL-competitive-dynamics-v1, MOD-ANL-expectations-valuation-v1, MOD-ANL-scenario-v1, MOD-ANL-open-discovery-v1 | max |  |
+| REV-20260809-001 | 2026-08-09 | approve | MOD-ANL-scenario-v2 | max |  |

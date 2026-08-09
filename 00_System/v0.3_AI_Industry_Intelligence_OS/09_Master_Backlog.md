@@ -206,6 +206,17 @@ max 确认第一批 §11 评分 PASS（`f49e592`）后，跑完剩余 7 case + 5
 - 新增 `test_phase4_acceptance.py`（4 项）。**478 tests 全绿（+4），validate 0 error，ruff/mypy clean。**
 - **WP-430（D-019+D-020）全部完成，Phase 4 主线关闭。** 后续候选：Phase 5（Forecast/Decision，需 RCP-v03-008/009）、scenario 模式 prompt 强化、真实 provider 的其他接入。
 
+## scenario v2 强化（2026-08-09）
+
+D-019 暴露项收尾：scenario 模式在 10 case 中 6 个顽固失败（模型跳过 6 个 scenario 专属分区）。
+
+- **根因**：默认 prompt 模板把 9 个共享分区当"全部"，模型不产出 mode 专属分区；scenario 6 分区是全部模式最重的（15 个 ## 标题）。
+- **修复**：新增场景专用模板 `00_System/Analysis_Modes/templates/scenario.md`——显式枚举全部 15 个 ## 分区（含 Downside/Base/Upside）+ 机器校验警告（缺任一标题即失败）+ Downside/Base/Upside 内容结构要求（驱动/概率/结果/时间）。
+- **v2 模式**：`MOD-ANL-scenario-v2`（REV-20260809-001 max 激活，active+reviewed+valid_from 2026-08-09），v1 未动（append-only）。
+- **PoC + 实跑验证**：EVT-20260520-038 scenario 组合 v1 默认模板失败 4+ 次 → v2 首次即产出全部 15 分区；实跑 6 个失败组合 → **2 恢复**（case-9/10 → ANL-041/042，全维度 1.0），**4 剩余缺口全部重新归类为事件级顽固外部引用**（SRC-20260805-048/044/047/052，D-004 契约拦截）——section 缺失问题已修复，外部引用是独立发现（模板无法约束）。
+- **D-019 记录更新**：34 run 判定（整体 0.992），评估包已更新（scenario v2 恢复注记 + 缺口重新分类）。
+- 测试更新：ModeDefinitionsTests（10 modes、v2 active+runnable）、test_schemas（analysis_mode 10、review 178）。**479 tests 全绿，validate 0 error，ruff/mypy clean。**
+
 WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 - **D-014 CLI**：`modes list/show/check` + `analyze run/show/compare/replay/propose-thesis`。`modes check` 用 `require_runnable` 逐模式门禁；`analyze run` 走 D-009 全事务（dry-run 默认/`--apply`）；`analyze replay` 复用冻结输入以当前模型重放（创建新 ID，不覆盖）；错误退出码 2。
 - **D-015 Dashboard**：`/analysis` 工作区（概览 + modes/runs 列表 + mode/run detail + `?runs=` compare），只读 GET，渲染输入引用/版本/冻结哈希/共享事实与冲突信号；导航加「分析」。

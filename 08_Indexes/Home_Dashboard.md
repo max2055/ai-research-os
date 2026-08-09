@@ -47,6 +47,8 @@
 | [[ANL-20260809-038]] | analysis_run | 2026-08-09 |
 | [[ANL-20260809-039]] | analysis_run | 2026-08-09 |
 | [[ANL-20260809-040]] | analysis_run | 2026-08-09 |
+| [[ANL-20260809-041]] | analysis_run | 2026-08-09 |
+| [[ANL-20260809-042]] | analysis_run | 2026-08-09 |
 | [[IMP-20260807-001]] | impact_assertion | 2026-08-07 |
 | [[IMP-20260807-002]] | impact_assertion | 2026-08-07 |
 | [[IMP-20260807-003]] | impact_assertion | 2026-08-07 |

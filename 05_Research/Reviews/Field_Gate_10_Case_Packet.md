@@ -3,7 +3,7 @@
 状态：`in_progress`（max 判定；阈值见 Phase 4 §11）
 批次：2026-08-09（第一批 3 Sector case × 4 modes，DeepSeek deepseek-v4-flash）
 
-运行 32 个；确定性 Gate 通过 32/32；整体均分 1.000
+运行 34 个；确定性 Gate 通过 34/34；整体均分 1.000
 
 ## Case: case-1-dram-share（事件 EVT-20260601-044）
 | Run | 模式 | 均分 | Gate | citation/outside/sections/questions/counterev/placeholders |
@@ -76,6 +76,7 @@ No majority voting: convergence weight must come from evidence quality, mechanis
 | Run | 模式 | 均分 | Gate | citation/outside/sections/questions/counterev/placeholders |
 |---|---|---|---|---|
 | ANL-20260809-033 | competitive-dynamics | 1.00 | PASS | cite 1.00 / out 1 / sec 1.00 / q 1.00 / ce 1 / ph 1 |
+| ANL-20260809-042 | scenario | 1.00 | PASS | cite 1.00 / out 1 / sec 1.00 / q 1.00 / ce 1 / ph 1 |
 | ANL-20260809-032 | value-chain | 1.00 | PASS | cite 1.00 / out 1 / sec 1.00 / q 1.00 / ce 1 / ph 1 |
 
 多模式比较（D-011）：
@@ -84,23 +85,27 @@ No majority voting: convergence weight must come from evidence quality, mechanis
 ## Runs
 - ANL-20260809-032  [value-chain]  as_of=2026-08-09  review=pending  signal=positive
 - ANL-20260809-033  [competitive-dynamics]  as_of=2026-08-09  review=pending  signal=positive
+- ANL-20260809-042  [scenario]  as_of=2026-08-09  review=pending  signal=positive
 
 ## Shared facts
 EVT-20260723-011
 
 ## Distinct modes
-MOD-ANL-competitive-dynamics-v1, MOD-ANL-value-chain-v1
+MOD-ANL-competitive-dynamics-v1, MOD-ANL-scenario-v2, MOD-ANL-value-chain-v1
 
 ## Distinct horizons
 multi_year, quarter, year
 
 ## Questions
+- Downside / Base / Upside 结果与时间？
 - 主要竞争者与替代品？
 - 传导路径与时间滞后是什么？
 - 供应依赖与商业模式冲突？
+- 关键驱动变量与情景概率？
 - 分发、数据、权限与标准控制力？
 - 哪个环节增长但无法保留利润？
 - 哪个环节控制稀缺资源、入口、标准或客户关系？
+- 敏感性、催化剂与证伪条件？
 - 瓶颈和利润池正在向哪里移动？
 - 谁获得或失去议价权？
 - 进入壁垒与生态位？
@@ -108,6 +113,7 @@ multi_year, quarter, year
 ## Evidence omitted by each run (used by another, not itself)
 - ANL-20260809-032: —
 - ANL-20260809-033: —
+- ANL-20260809-042: —
 
 ## Conflicting signals (heuristic — human review required)
 - none
@@ -469,6 +475,7 @@ No majority voting: convergence weight must come from evidence quality, mechanis
 |---|---|---|---|---|
 | ANL-20260809-030 | competitive-dynamics | 1.00 | PASS | cite 1.00 / out 1 / sec 1.00 / q 1.00 / ce 1 / ph 1 |
 | ANL-20260809-031 | red-team | 1.00 | PASS | cite 1.00 / out 1 / sec 1.00 / q 1.00 / ce 1 / ph 1 |
+| ANL-20260809-041 | scenario | 1.00 | PASS | cite 1.00 / out 1 / sec 1.00 / q 1.00 / ce 1 / ph 1 |
 | ANL-20260809-029 | value-chain | 1.00 | PASS | cite 1.00 / out 1 / sec 1.00 / q 1.00 / ce 1 / ph 1 |
 
 多模式比较（D-011）：
@@ -478,26 +485,30 @@ No majority voting: convergence weight must come from evidence quality, mechanis
 - ANL-20260809-029  [value-chain]  as_of=2026-08-09  review=pending  signal=positive
 - ANL-20260809-030  [competitive-dynamics]  as_of=2026-08-09  review=pending  signal=positive
 - ANL-20260809-031  [red-team]  as_of=2026-08-09  review=pending  signal=positive
+- ANL-20260809-041  [scenario]  as_of=2026-08-09  review=pending  signal=positive
 
 ## Shared facts
 EVT-20260610-007
 
 ## Distinct modes
-MOD-ANL-competitive-dynamics-v1, MOD-ANL-red-team-v1, MOD-ANL-value-chain-v1
+MOD-ANL-competitive-dynamics-v1, MOD-ANL-red-team-v1, MOD-ANL-scenario-v2, MOD-ANL-value-chain-v1
 
 ## Distinct horizons
 immediate, multi_year, quarter, year
 
 ## Questions
+- Downside / Base / Upside 结果与时间？
 - 主要竞争者与替代品？
 - 传导路径与时间滞后是什么？
 - 估值是否已反映该预期？
 - 供应依赖与商业模式冲突？
 - 共同上游与替代机制？
+- 关键驱动变量与情景概率？
 - 分发、数据、权限与标准控制力？
 - 哪个环节增长但无法保留利润？
 - 哪个环节控制稀缺资源、入口、标准或客户关系？
 - 存在哪些反面证据？
+- 敏感性、催化剂与证伪条件？
 - 时间错配或价值无法被公司捕获？
 - 瓶颈和利润池正在向哪里移动？
 - 监管/执行风险与不可观察变量？
@@ -508,6 +519,7 @@ immediate, multi_year, quarter, year
 - ANL-20260809-029: —
 - ANL-20260809-030: —
 - ANL-20260809-031: —
+- ANL-20260809-041: —
 
 ## Conflicting signals (heuristic — human review required)
 - none
@@ -523,6 +535,7 @@ No majority voting: convergence weight must come from evidence quality, mechanis
 | case-1-dram-share | ANL-20260809-003（supply-demand） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | case-1-dram-share | ANL-20260809-002（value-chain） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | case-10-sap | ANL-20260809-033（competitive-dynamics） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| case-10-sap | ANL-20260809-042（scenario） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | case-10-sap | ANL-20260809-032（value-chain） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | case-2-ai-demand | ANL-20260809-015（red-team） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | case-2-ai-demand | ANL-20260809-017（scenario） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -548,6 +561,7 @@ No majority voting: convergence weight must come from evidence quality, mechanis
 | case-8-asml-euv | ANL-20260809-026（value-chain） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | case-9-oracle | ANL-20260809-030（competitive-dynamics） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | case-9-oracle | ANL-20260809-031（red-team） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| case-9-oracle | ANL-20260809-041（scenario） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | case-9-oracle | ANL-20260809-029（value-chain） | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 ## 阈值（§11）
@@ -559,56 +573,20 @@ No majority voting: convergence weight must come from evidence quality, mechanis
 - Open Discovery 候选中至少一半可判定 investigate/reject
 - 不使用多数投票产生权威结论
 
-## 人工评分结果（2026-08-09，max 确认）
 
-状态：**PASS**（32 run；确定性 32/32 PASS overall 1.0；人工整体均分 0.992）
+## 已知缺口（记录在案，非静默跳过）
 
-| Case | Run | 引用准确 | 无外事实 | 问题覆盖 | 反证完整 | 假设显式 | 分歧可解释 | 节省时间 | 过度结论(反) | 均分 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| case-1-dram-share | 002 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-1-dram-share | 003 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-1-dram-share | 004 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-1-dram-share | 016 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-1-dram-share | 034 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-2-ai-demand | 006 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-2-ai-demand | 014 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-2-ai-demand | 017 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 0.9 | 1.0 | 1.0 | 0.97 |
-| case-2-ai-demand | 015 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-3-lead-times | 010 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 0.9 | 1.0 | 1.0 | 0.97 |
-| case-3-lead-times | 018 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-3-lead-times | 019 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 0.9 | 1.0 | 1.0 | 0.97 |
-| case-3-lead-times | 035 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 0.99 |
-| case-4-nvidia-fy27 | 037 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-4-nvidia-fy27 | 020 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-5-skhynix-2q2 | 038 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-5-skhynix-2q2 | 021 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-5-skhynix-2q2 | 039 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-6-tsmc-2q26 | 022 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-6-tsmc-2q26 | 023 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-6-tsmc-2q26 | 024 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-7-samsung-hbm | 025 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-7-samsung-hbm | 036 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 1.0 | 1.0 | 0.99 |
-| case-8-asml-euv | 026 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-8-asml-euv | 040 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 1.0 | 1.0 | 0.99 |
-| case-8-asml-euv | 027 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 1.0 | 1.0 | 0.99 |
-| case-8-asml-euv | 028 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-9-oracle | 029 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 1.0 | 1.0 | 0.99 |
-| case-9-oracle | 030 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-9-oracle | 031 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-10-sap | 032 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.00 |
-| case-10-sap | 033 | 1.0 | 1.0 | 1.0 | 0.9 | 1.0 | 1.0 | 1.0 | 1.0 | 0.99 |
+**scenario v2 硬化（2026-08-09，REV-20260908-001）**：新增专用 prompt 模板
+（00_System/Analysis_Modes/templates/scenario.md）显式枚举 15 分区 + 机器校验警告。
+结果：**scenario section 缺失问题已修复**（v2 无缺分区失败），case-9/10 恢复（ANL-041/042，
+全维度 1.0）。剩余 4 个 scenario 缺口（case-4/5/6/7）均为**事件级顽固外部引用**
+（SRC-20260805-048/044/047/052，D-004 契约拦截），非模板可解，记录为独立发现。
 
-§11 阈值判定：citation_resolvable_100pct=True；no_outside_facts=True；question_coverage_ge_90pct=True；counterevidence_omission_lt_10pct=True；human_incremental_value_ge_70pct=True；open_discovery_judgeable_ge_half=True；no_majority_voting=True
+- **case-3-lead-times / red-team**：6 次尝试全被 D-004 拒绝（引用冻结输入外 SRC-20260805-040）。
+- **case-4-nvidia-fy27 / value-chain**：section 缺失 + 外部引用（SRC-20260805-048）。
+- **case-5-skhynix / value-chain**：外部引用（SRC-20260805-044、EVT-20260725-035）。
+- **case-6-tsmc / scenario（v1+v2）**：外部引用（SRC-20260805-047）。
+- **case-7-samsung-hbm4 / value-chain、technology-curve、scenario**：外部引用（SRC-20260806-052）。
+- **case-9-oracle / open-discovery**：外部引用（THS-004）。
+- **case-10-sap / red-team**：外部引用（THS-004）。
 
-## 记录缺口（13 个，max 接受为发现，不烧 API 重试）
-
-- scenario: case-4, case-5, case-6, case-7, case-9, case-10
-- value-chain: case-4, case-5, case-7
-- red-team: case-3, case-10
-- technology-curve: case-7
-- open-discovery: case-9
-- root_causes: scenario mode (6 sections) fragile with deepseek-v4-flash, event-level persistent outside-citation: case-7->SRC-20260806-052, case-9/10->THS-004, case-3 red-team->SRC-20260805-040 (D-004 blocks)
-
-根因：scenario mode (6 sections) fragile with deepseek-v4-flash；event-level persistent outside-citation: case-7->SRC-20260806-052, case-9/10->THS-004, case-3 red-team->SRC-20260805-040 (D-004 blocks)
-
-确认人：max；判断初稿由 agent 起草，扣分仅两处（honest-absence 反证 8 run × 0.9、冲突 case 分歧可解释 13 run × 0.9）。

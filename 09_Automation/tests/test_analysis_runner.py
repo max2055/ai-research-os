@@ -777,7 +777,7 @@ class ModeDefinitionsTests(unittest.TestCase):
     all activated (value-chain/supply-demand/red-team via REV-20260808-005, the
     remaining 6 via REV-20260808-007) so require_runnable accepts every one."""
 
-    EXPECTED = [
+    FIRST_BATCH = [
         "MOD-ANL-value-chain-v1",
         "MOD-ANL-supply-demand-v1",
         "MOD-ANL-technology-curve-v1",
@@ -788,10 +788,14 @@ class ModeDefinitionsTests(unittest.TestCase):
         "MOD-ANL-red-team-v1",
         "MOD-ANL-open-discovery-v1",
     ]
+    # v2 (2026-08-09): scenario mode hardened with a dedicated prompt template
+    # (D-019 finding — v1 skipped its 6 scenario sections in 6/10 cases).
+    SCENARIO_V2 = "MOD-ANL-scenario-v2"
+    EXPECTED = FIRST_BATCH + [SCENARIO_V2]
 
-    # All 9 activated 2026-08-08 by max (REV-20260808-005 + REV-20260808-007):
-    # status=active + review_status=reviewed + valid_from.
-    ACTIVATED = frozenset(EXPECTED)
+    # The 9 first-batch modes activated 2026-08-08 by max (REV-20260808-005 +
+    # REV-20260808-007): status=active + review_status=reviewed + valid_from.
+    ACTIVATED = frozenset(FIRST_BATCH)
 
     def _repo_objects(self) -> list[ResearchObject]:
         from research_os.services.validation import validate_repository
@@ -800,7 +804,7 @@ class ModeDefinitionsTests(unittest.TestCase):
         assert not [f for f in findings if f.level == "error"]
         return objects
 
-    def test_nine_modes_registered(self) -> None:
+    def test_all_first_batch_modes_registered(self) -> None:
         objects = self._repo_objects()
         modes = sorted(
             obj.object_id
@@ -811,14 +815,33 @@ class ModeDefinitionsTests(unittest.TestCase):
         for mode_id in self.EXPECTED:
             self.assertIsNotNone(find_mode(objects, mode_id))
 
-    def test_all_modes_are_active_and_runnable(self) -> None:
+    def test_all_first_batch_modes_are_active_and_runnable(self) -> None:
         objects = self._repo_objects()
-        for mode_id in self.EXPECTED:
+        for mode_id in self.FIRST_BATCH:
             mode = find_mode(objects, mode_id)
             self.assertEqual("active", mode.metadata["status"])
             self.assertEqual("reviewed", mode.metadata["review_status"])
             self.assertEqual("2026-08-08", mode.metadata.get("valid_from"))
             self.assertIsNotNone(require_runnable(objects, mode_id))
+
+    def test_scenario_v2_activated_and_runnable(self) -> None:
+        # v2 (REV-20260809-001) is now active+reviewed with the hardened
+        # template; require_runnable accepts it.
+        objects = self._repo_objects()
+        v2 = find_mode(objects, self.SCENARIO_V2)
+        self.assertIsNotNone(v2)
+        self.assertEqual("active", v2.metadata["status"])
+        self.assertEqual("reviewed", v2.metadata["review_status"])
+        self.assertEqual("2026-08-09", v2.metadata.get("valid_from"))
+        self.assertEqual(
+            "00_System/Analysis_Modes/templates/scenario.md",
+            v2.metadata.get("prompt_template_path"),
+        )
+        self.assertEqual(
+            "00_System/Analysis_Modes/output_contract_schema.json",
+            v2.metadata.get("output_schema_path"),
+        )
+        self.assertIsNotNone(require_runnable(objects, self.SCENARIO_V2))
 
     def test_modes_share_output_contract(self) -> None:
         objects = self._repo_objects()

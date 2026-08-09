@@ -50,14 +50,15 @@ class SchemaTests(unittest.TestCase):
         self.assertEqual(
             {
                 "action": 12,
-                "analysis_mode": 9,  # WP-410 first batch of 9 mode definitions
+                "analysis_mode": 10,  # WP-410 first 9 + scenario-v2 (2026-08-09)
                 "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
                 "event": 50,  # EvWP: +9; Gate30 sprint: +6; Field gap: +2
                 "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
                 "product": 5,  # WP-120 Product entities
                 "project": 2,
                 "report": 2,
-                "review": 177,  # +7: C-018 BIS + mode activations + ANL-001 reject
+                # +8: C-018 BIS + mode activations + ANL-001 reject + v2 REV
+                "review": 178,
                 "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
                 "security": 10,  # Field Gate §9.3 securities
                 "source": 153,  # +2 C-018 BIS sources +42 8-K +2 github +26 arxiv
