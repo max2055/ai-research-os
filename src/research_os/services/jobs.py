@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from research_os.adapters.backup_remote import GitHubPrivateReleaseBackend
 from research_os.domain.models import ResearchObject
 from research_os.repositories.transaction import FileTransaction
 from research_os.services.backup import create_candidate_snapshot
@@ -18,6 +19,10 @@ from research_os.services.brief import (
 )
 from research_os.services.decision_alerts import decision_alerts
 from research_os.services.discovery import run_discovery
+from research_os.services.durable_backup import (
+    DurableBackupRequest,
+    create_durable_backup,
+)
 from research_os.services.indexing import (
     apply_indexes,
     render_indexes,
@@ -45,6 +50,7 @@ JOB_NAMES = frozenset(
         "daily-brief",
         "forecast-alerts",
         "backup-candidate",
+        "backup-durable",
     }
 )
 
@@ -55,6 +61,53 @@ class JobRunResult:
     status: str
     message: str
     path: Path
+
+
+def load_durable_backup_request(
+    root: Path,
+    config_path: Path,
+    *,
+    apply: bool,
+) -> DurableBackupRequest:
+    """Load the minimal ignored durable-backup configuration without echoing it."""
+    root = root.resolve()
+    expanded = config_path.expanduser()
+    resolved = (
+        expanded.resolve() if expanded.is_absolute() else (root / expanded).resolve()
+    )
+    try:
+        payload: object = json.loads(resolved.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise ValueError(
+            "durable backup configuration is unavailable or invalid"
+        ) from None
+    if not isinstance(payload, dict) or set(payload) != {
+        "repository",
+        "recipients",
+    }:
+        raise ValueError("durable backup configuration is unavailable or invalid")
+    repository = payload.get("repository")
+    recipients = payload.get("recipients")
+    if (
+        not isinstance(repository, str)
+        or not repository
+        or not isinstance(recipients, list)
+        or not recipients
+        or any(not isinstance(item, str) or not item for item in recipients)
+    ):
+        raise ValueError("durable backup configuration is unavailable or invalid")
+    try:
+        backend = GitHubPrivateReleaseBackend(repository)
+    except ValueError:
+        raise ValueError(
+            "durable backup configuration is unavailable or invalid"
+        ) from None
+    return DurableBackupRequest(
+        root=root,
+        recipients=tuple(recipients),
+        backend=backend,
+        apply=apply,
+    )
 
 
 def _next_job_id(root: Path, started_at: datetime) -> str:
@@ -98,6 +151,7 @@ def _execute_job(
     project_id: str | None,
     target: str | None,
     as_of: str,
+    durable_config: Path | None,
 ) -> str:
     objects, findings = validate_repository(root)
     errors = [finding for finding in findings if finding.level == "error"]
@@ -146,8 +200,16 @@ def _execute_job(
         )
         manifest = create_candidate_snapshot(root, destination)
         return (
-            f"Candidate DB snapshot created: {destination}; "
-            f"sha256={manifest['sha256']}"
+            f"Candidate DB snapshot created: {destination}; sha256={manifest['sha256']}"
+        )
+    if job_name == "backup-durable":
+        if durable_config is None:
+            raise ValueError("durable backup configuration is required")
+        request = load_durable_backup_request(root, durable_config, apply=True)
+        receipt = create_durable_backup(request)
+        return (
+            f"durable backup verified: backup_id={receipt.backup_id}; "
+            f"sets={len(receipt.sets)}"
         )
     if job_name == "daily-brief":
         content = render_daily_brief(daily_brief(root, as_of))
@@ -254,6 +316,7 @@ def run_job(
     target: str | None = None,
     as_of: str | None = None,
     started_at: datetime | None = None,
+    durable_config: Path | None = None,
 ) -> JobRunResult:
     root = root.resolve()
     if job_name not in JOB_NAMES:
@@ -275,6 +338,7 @@ def run_job(
             project_id=project_id,
             target=target,
             as_of=effective_as_of,
+            durable_config=durable_config,
         )
         status = "success"
     except Exception as exc:

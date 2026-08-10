@@ -24,6 +24,24 @@ from research_os.adapters.url import UrlCaptureAdapter
 from research_os.llm import llm_config
 from research_os.repositories.transaction import TransactionError
 from research_os.runtime import product as runtime
+from research_os.services.candidate_db import candidate_db_path
+from research_os.services.durable_backup import durable_receipt_path
+from research_os.services.jobs import load_durable_backup_request
+from research_os.services.redaction import redact_secrets
+
+_DEFAULT_DURABLE_BACKUP_CONFIG = Path("09_Automation/operational/backup.local.json")
+_AUTHORITATIVE_RESTORE_TOP_LEVEL = frozenset(
+    {
+        "01_Inbox",
+        "02_Knowledge",
+        "03_Theses",
+        "04_Evidence",
+        "05_Research",
+        "06_Reports",
+        "07_Templates",
+        "08_Indexes",
+    }
+)
 
 
 def _load_json_spec(path: Path) -> dict[str, object]:
@@ -34,6 +52,51 @@ def _load_json_spec(path: Path) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise ValueError("spec must be a JSON object")
     return payload
+
+
+def _root_relative_path(root: Path, value: Path) -> Path:
+    expanded = value.expanduser()
+    return expanded if expanded.is_absolute() else root.resolve() / expanded
+
+
+def _durable_restore_preflight(
+    root: Path,
+    *,
+    identity: Path,
+    destination: Path,
+) -> tuple[Path, Path]:
+    root = root.resolve()
+    identity_input = _root_relative_path(root, identity)
+    if identity_input.is_symlink() or not identity_input.is_file():
+        raise ValueError("age identity file is unavailable")
+    resolved_identity = identity_input.resolve()
+
+    destination_input = _root_relative_path(root, destination)
+    if destination_input.is_symlink():
+        raise ValueError("restore destination cannot be a symlink")
+    resolved_destination = destination_input.resolve()
+    try:
+        relative = resolved_destination.relative_to(root)
+    except ValueError:
+        relative = None
+    if relative is not None and (
+        not relative.parts or relative.parts[0] in _AUTHORITATIVE_RESTORE_TOP_LEVEL
+    ):
+        raise ValueError("restore destination cannot be an authoritative path")
+    if root.is_relative_to(resolved_destination):
+        raise ValueError("restore destination cannot contain the live repository")
+    live_assets = (root / "01_Inbox" / "_assets").resolve()
+    if resolved_destination == live_assets or resolved_destination.is_relative_to(
+        live_assets
+    ):
+        raise ValueError("restore destination cannot be an authoritative path")
+    if resolved_destination == candidate_db_path(root).resolve():
+        raise ValueError("restore destination cannot be the live Candidate DB")
+    if resolved_destination.exists() and (
+        not resolved_destination.is_dir() or any(resolved_destination.iterdir())
+    ):
+        raise ValueError("restore destination must be absent or empty")
+    return resolved_identity, resolved_destination
 
 
 def _resolved_model(root: Path, provider_flag: str, model_flag: str) -> tuple[str, str]:
@@ -891,6 +954,43 @@ def parse_args() -> argparse.Namespace:
     backup_mode = backup_candidate.add_mutually_exclusive_group()
     backup_mode.add_argument("--dry-run", action="store_true")
     backup_mode.add_argument("--apply", action="store_true")
+    backup_durable = backup_commands.add_parser(
+        "durable",
+        help="create, verify or restore encrypted durable backups",
+    )
+    durable_commands = backup_durable.add_subparsers(
+        dest="durable_command",
+        required=True,
+    )
+    durable_create = durable_commands.add_parser(
+        "create",
+        help="preflight or create both encrypted durable backup sets",
+    )
+    durable_create.add_argument("--config", type=Path, required=True)
+    durable_create.add_argument("--apply", action="store_true")
+    durable_verify = durable_commands.add_parser(
+        "verify-remote",
+        help="download and verify one durable backup without decrypting it",
+    )
+    durable_verify.add_argument("--backup-id", required=True)
+    durable_verify.add_argument(
+        "--config",
+        type=Path,
+        default=_DEFAULT_DURABLE_BACKUP_CONFIG,
+    )
+    durable_restore = durable_commands.add_parser(
+        "restore",
+        help="preflight or restore into a disposable directory",
+    )
+    durable_restore.add_argument("--backup-id", required=True)
+    durable_restore.add_argument("--identity", type=Path, required=True)
+    durable_restore.add_argument("--destination", type=Path, required=True)
+    durable_restore.add_argument(
+        "--config",
+        type=Path,
+        default=_DEFAULT_DURABLE_BACKUP_CONFIG,
+    )
+    durable_restore.add_argument("--apply", action="store_true")
 
     benchmark = subparsers.add_parser(
         "benchmark",
@@ -1768,8 +1868,91 @@ def main() -> int:
                     f"RECORD: {job_result.path.relative_to(args.root.resolve())}"
                 )
                 return 0 if job_result.status == "success" else 1
-        except (OSError, TransactionError, ValueError) as exc:
-            print(f"ERROR: {exc}")
+            if args.backup_command == "durable":
+                root = args.root.resolve()
+                if args.durable_command == "create":
+                    if not args.apply:
+                        request = load_durable_backup_request(
+                            root,
+                            args.config,
+                            apply=False,
+                        )
+                        receipt = runtime.create_durable_backup(request)
+                        print(
+                            "DRY-RUN durable backup preflight passed "
+                            f"backup_id={receipt.backup_id}"
+                        )
+                        print("DRY-RUN: no files changed; rerun with --apply")
+                        return 0
+                    job_result = runtime.run_job(
+                        root,
+                        "backup-durable",
+                        durable_config=args.config,
+                    )
+                    print(
+                        f"{job_result.status.upper()} {job_result.job_id}: "
+                        f"{job_result.message}\n"
+                        f"RECORD: {job_result.path.relative_to(root)}"
+                    )
+                    return 0 if job_result.status == "success" else 1
+
+                request = load_durable_backup_request(
+                    root,
+                    args.config,
+                    apply=False,
+                )
+                receipt = runtime.load_durable_backup_receipt(
+                    durable_receipt_path(root, args.backup_id)
+                )
+                if args.durable_command == "verify-remote":
+                    verified = runtime.verify_durable_backup_remote(
+                        receipt,
+                        backend=request.backend,
+                    )
+                    print(
+                        f"VERIFIED durable backup {verified['backup_id']}: "
+                        f"sets={verified['sets']}"
+                    )
+                    return 0
+
+                identity, destination = _durable_restore_preflight(
+                    root,
+                    identity=args.identity,
+                    destination=args.destination,
+                )
+                if not args.apply:
+                    if (
+                        receipt.status != "verified"
+                        or len(receipt.sets) != 2
+                        or {item.backup_set for item in receipt.sets}
+                        != {"candidate", "source_assets"}
+                        or receipt.remote_repository != request.backend.repository
+                        or receipt.remote_release != request.backend.release_tag
+                    ):
+                        raise ValueError(
+                            "durable receipt is not a complete verified backup"
+                        )
+                    print(
+                        "DRY-RUN durable restore preflight passed "
+                        f"backup_id={receipt.backup_id}"
+                    )
+                    print("DRY-RUN: destination unchanged; rerun with --apply")
+                    return 0
+                restored = runtime.restore_durable_backup(
+                    root,
+                    receipt,
+                    backend=request.backend,
+                    identity=identity,
+                    destination=destination,
+                )
+                print(
+                    f"RESTORED durable backup {restored.backup_id}: "
+                    f"schema={restored.candidate_schema_version}; "
+                    f"source_assets={restored.source_asset_count}"
+                )
+                return 0
+        except (OSError, RuntimeError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {redact_secrets(str(exc))}")
             return 2
     if args.command == "benchmark":
         try:
