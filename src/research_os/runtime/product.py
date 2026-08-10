@@ -64,6 +64,7 @@ from research_os.services.channels import (
     render_channel_list,
     set_channel_enabled,
 )
+from research_os.services.cost_monitoring import monthly_cost_report
 from research_os.services.decision_alerts import (
     decision_alerts,
     render_decision_alerts,
@@ -82,6 +83,13 @@ from research_os.services.drafts import (
     prepare_source_draft,
     split_values,
     write_new_file,
+)
+from research_os.services.durable_backup import (
+    create_durable_backup,
+    durable_latest_success_path,
+    load_durable_backup_receipt,
+    restore_durable_backup,
+    verify_durable_backup_remote,
 )
 from research_os.services.forecast_draft import (
     apply_forecast_draft,
@@ -263,12 +271,14 @@ __all__ = [
     "close_action",
     "compare_runs",
     "benchmark_candidate_queue",
+    "create_durable_backup",
     "brief_path",
     "daily_brief",
     "compute_valuation",
     "dedup_paths",
     "detect_contradictions",
     "due_forecasts",
+    "durable_latest_success_path",
     "expand_impact_paths",
     "extract_scenario_sections",
     "find_mode",
@@ -292,6 +302,7 @@ __all__ = [
     "index_drift",
     "job_rows",
     "load_metrics_snapshot",
+    "load_durable_backup_receipt",
     "load_spec",
     "metrics_json",
     "mode_metadata",
@@ -299,6 +310,7 @@ __all__ = [
     "mode_slug",
     "mode_version",
     "mode_versions",
+    "monthly_cost_report",
     "ontology_jsonl",
     "objects_for_project",
     "pipeline_metrics",
@@ -386,6 +398,7 @@ __all__ = [
     "release_readiness_v03",
     "render_release_readiness",
     "render_review_queue",
+    "restore_durable_backup",
     "render_scale_assessment",
     "render_status",
     "research_metrics",
@@ -398,6 +411,7 @@ __all__ = [
     "split_values",
     "validate_repository",
     "verify_source_assets",
+    "verify_durable_backup_remote",
     "write_new_file",
     "write_metrics_snapshot",
     "write_sqlite_export",

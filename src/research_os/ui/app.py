@@ -1352,6 +1352,16 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
         for key, value in snapshot["config"].items()
     ]
     backup = snapshot["backup"]
+    durable = backup["durable"]
+    alert_rows = [
+        [
+            esc(row["code"]),
+            badge(row["priority"], danger=row["priority"] == "P1"),
+            badge(row["status"], warning=True),
+            esc(row["message"]),
+        ]
+        for row in snapshot["alerts"]
+    ]
     disk = snapshot["host"]["disk"]
     model_cost = snapshot["model_cost"]
     attention = any(
@@ -1361,8 +1371,10 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
             snapshot["assets"]["status"] != "ok",
             db["status"] != "ok",
             backup["status"] != "fresh",
+            durable["status"] != "fresh",
             disk["status"] != "ok",
             bool(snapshot["failed_runs"]),
+            bool(snapshot["alerts"]),
         )
     )
     content = f"""<section class="hero"><div>
@@ -1378,11 +1390,12 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
 <section class="panel"><h3>Candidate DB</h3>{_kv_table([["状态", badge(db['status'], warning=db['status'] != 'ok')], ["Integrity", esc(db['integrity'])], ["Schema", f"{esc(db['schema_version'])} / {esc(db['expected_schema_version'])}"], ["Size", esc(db['size_bytes'])], ["Modified", esc(db['modified_at'] or '—')]])}</section>
 <section class="panel"><h3>Channels / License</h3>{table(["Channel", "Enabled", "Review", "License", "Robots checked"], channel_rows_)}</section>
 <section class="panel"><h3>失败任务与失败运行</h3>{table(["ID", "Type", "状态", "消息"], failed_rows)}</section>
+<section class="panel"><h3>P1 告警</h3>{table(["编码", "优先级", "状态", "消息"], alert_rows) if alert_rows else "<p class='muted'>无 P1 告警。</p>"}</section>
 <section class="grid">
-<div class="panel"><h3>备份</h3>{_kv_table([["状态", badge(backup['status'], warning=backup['status'] != 'fresh')], ["Age hours", esc(backup['age_hours'] if backup['age_hours'] is not None else '—')], ["Manifest", esc(backup['manifest'] or '—')]])}</div>
+<div class="panel"><h3>备份</h3>{_kv_table([["本地状态", badge(backup['status'], warning=backup['status'] != 'fresh')], ["本地 Age hours", esc(backup['age_hours'] if backup['age_hours'] is not None else '—')], ["本地 Manifest", esc(backup['manifest'] or '—')], ["Durable 状态", badge(durable['status'], warning=durable['status'] != 'fresh')], ["Durable Age hours", esc(durable['age_hours'] if durable['age_hours'] is not None else '—')], ["Durable Receipt", esc(durable['receipt'] or '—')]])}</div>
 <div class="panel"><h3>磁盘与时区</h3>{_kv_table([["Free bytes", esc(disk['free_bytes'])], ["Disk status", badge(disk['status'], warning=disk['status'] != 'ok')], ["Timezone", esc(snapshot['host']['timezone'])]])}</div>
 <div class="panel"><h3>配置存在性</h3>{table(["配置", "状态"], config_rows)}</div>
-<div class="panel"><h3>模型与成本</h3>{_kv_table([["状态", esc(model_cost['status'])], ["记录数", esc(model_cost['records'])], ["预算配置", badge('present' if model_cost['budget_configured'] else 'missing', warning=not model_cost['budget_configured'])]])}</div>
+<div class="panel"><h3>模型与成本</h3>{_kv_table([["状态", badge(model_cost['status'], warning=model_cost['status'] in {'unconfigured', 'no_data', 'warning'}, danger=model_cost['status'] in {'exceeded', 'invalid'})], ["周期", f"{esc(model_cost['period_start'])} - {esc(model_cost['period_end'])}"], ["已知成本", esc(model_cost['known_total'] if model_cost['known_total'] is not None else '—')], ["记录数", esc(model_cost['record_count'])], ["未知记录", esc(model_cost['unknown_record_count'])], ["无效记录", esc(model_cost['invalid_record_count'])], ["利用率", esc(model_cost['utilization'] if model_cost['utilization'] is not None else '—')], ["预算配置", badge('present' if model_cost['budget_configured'] else 'missing', warning=not model_cost['budget_configured'])]])}</div>
 </section>"""
     return shell("健康", content, project_id=selected)
 

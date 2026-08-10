@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 import test_research_os_core as fixtures
 from research_os.services import candidate_db
+from research_os.services.durable_backup import durable_latest_success_path
 from research_os.services.indexing import (
     apply_indexes,
     index_drift,
@@ -563,6 +564,47 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
     def root(self) -> Path:
         return Path(__file__).resolve().parents[2]
 
+    def write_durable_receipt(
+        self,
+        root: Path,
+        *,
+        status: str = "verified",
+        created_at: str = "2026-08-10T00:00:00Z",
+    ) -> Path:
+        path = durable_latest_success_path(root)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        backup_id = "BKP-20260810T000000Z-aaaaaaaaaaaa"
+        sets = []
+        for backup_set in ("candidate", "source_assets"):
+            name = f"{backup_id}-{backup_set}.tar.age"
+            sets.append(
+                {
+                    "backup_set": backup_set,
+                    "name": name,
+                    "sha256": "a" * 64,
+                    "size_bytes": 1,
+                    "remote": {
+                        "name": name,
+                        "asset_id": f"asset-{backup_set}",
+                        "size_bytes": 1,
+                    },
+                }
+            )
+        path.write_text(
+            json.dumps(
+                {
+                    "backup_id": backup_id,
+                    "created_at": created_at,
+                    "status": status,
+                    "sets": sets,
+                    "remote_repository": "owner/private-repo",
+                    "remote_release": "research-os-durable-backups-v1",
+                }
+            ),
+            encoding="utf-8",
+        )
+        return path
+
     @pytest.mark.local_integration
     def test_operations_unifies_all_due_work(self) -> None:
         snapshot = operations_snapshot(self.root, as_of="2026-08-09")
@@ -600,6 +642,126 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
         self.assertEqual("present", snapshot["config"]["OPENAI_API_KEY"])
         self.assertIn("free_bytes", snapshot["host"]["disk"])
         self.assertTrue(snapshot["host"]["timezone"])
+
+    def test_health_preserves_local_backup_fields_and_alerts_when_durable_missing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+
+            snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+            page = TestClient(create_app(root)).get("/health")
+
+        self.assertTrue({"status", "age_hours", "manifest"} <= set(snapshot["backup"]))
+        self.assertEqual("missing", snapshot["backup"]["durable"]["status"])
+        self.assertEqual(
+            [("BKP_DURABLE_MISSING", "P1")],
+            [(item["code"], item["priority"]) for item in snapshot["alerts"]],
+        )
+        self.assertIn("BKP_DURABLE_MISSING", page.text)
+        self.assertIn("Durable 状态", page.text)
+
+    def test_durable_health_uses_local_receipt_for_failed_invalid_stale_and_fresh(
+        self,
+    ) -> None:
+        cases = (
+            ("failed", "2026-08-10T00:00:00Z", "failed", "BKP_DURABLE_FAILED"),
+            ("verified", "not-a-date", "invalid", "BKP_DURABLE_INVALID"),
+            ("verified", "2026-08-08T00:00:00Z", "stale", "BKP_DURABLE_STALE"),
+            ("verified", "2026-08-10T00:00:00Z", "fresh", None),
+        )
+        for receipt_status, created_at, expected_status, expected_code in cases:
+            with (
+                self.subTest(expected_status=expected_status),
+                tempfile.TemporaryDirectory() as temp,
+            ):
+                root = prepared_root(temp)
+                self.write_durable_receipt(
+                    root,
+                    status=receipt_status,
+                    created_at=created_at,
+                )
+                with patch(
+                    "research_os.services.durable_backup.verify_durable_backup_remote",
+                    side_effect=AssertionError("Dashboard must not call remote backup"),
+                ) as remote_verify:
+                    snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+
+                self.assertEqual(
+                    expected_status,
+                    snapshot["backup"]["durable"]["status"],
+                )
+                self.assertEqual([], remote_verify.call_args_list)
+                codes = [item["code"] for item in snapshot["alerts"]]
+                if expected_code is None:
+                    self.assertEqual([], codes)
+                else:
+                    self.assertEqual([expected_code], codes)
+
+    def test_health_cost_uses_discovery_runs_and_never_exposes_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            db_path = candidate_db.candidate_db_path(root)
+            candidate_db.apply_migrations(db_path)
+            connection = sqlite3.connect(db_path)
+            try:
+                connection.execute(
+                    "INSERT INTO discovery_runs (run_id, channel_id, started_at, "
+                    "cost_estimate, status) VALUES "
+                    "('RUN-cost', 'CHN-test', '2026-08-10T00:00:00Z', "
+                    "'80', 'succeeded')"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            raw_budget = "100.000001"
+            with patch.dict(
+                os.environ,
+                {"RESEARCH_OS_MODEL_COST_BUDGET": raw_budget},
+                clear=False,
+            ):
+                snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+                page = TestClient(create_app(root)).get("/health")
+
+        cost = snapshot["model_cost"]
+        self.assertEqual("ok", cost["status"])
+        self.assertEqual("80", cost["known_total"])
+        self.assertEqual(1, cost["record_count"])
+        self.assertEqual(0, cost["unknown_record_count"])
+        self.assertNotIn("budget", {key for key in cost if key != "budget_configured"})
+        self.assertNotIn(raw_budget, repr(snapshot))
+        self.assertNotIn(raw_budget, page.text)
+        for label in ("已知成本", "未知记录", "无效记录", "利用率"):
+            self.assertIn(label, page.text)
+
+    def test_configured_cost_without_run_data_is_not_rendered_as_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            candidate_db.apply_migrations(candidate_db.candidate_db_path(root))
+            with patch.dict(
+                os.environ,
+                {"RESEARCH_OS_MODEL_COST_BUDGET": "100"},
+                clear=False,
+            ):
+                snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+
+        self.assertEqual("no_data", snapshot["model_cost"]["status"])
+        self.assertIsNone(snapshot["model_cost"]["known_total"])
+
+    def test_product_runtime_exports_cost_and_durable_backup_operations(self) -> None:
+        from research_os.runtime import product
+
+        for name in (
+            "create_durable_backup",
+            "durable_latest_success_path",
+            "load_durable_backup_receipt",
+            "monthly_cost_report",
+            "restore_durable_backup",
+            "verify_durable_backup_remote",
+        ):
+            with self.subTest(name=name):
+                self.assertIn(name, product.__all__)
+                self.assertTrue(callable(getattr(product, name)))
 
     @pytest.mark.local_integration
     def test_operations_and_health_pages_render_all_sections(self) -> None:
