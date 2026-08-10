@@ -6,8 +6,10 @@ import sqlite3
 import tempfile
 import unittest
 from datetime import UTC, date, datetime, timedelta
+from email.message import Message
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from fastapi.testclient import TestClient
 
@@ -67,6 +69,66 @@ enabled: true
 
 Test.
 """
+
+JOB_RSS_PAYLOAD = b"""<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>job-item-1</id>
+    <title>Job retry item</title>
+    <link href="https://example.com/items/job-1" />
+    <published>2026-08-10T00:00:00Z</published>
+  </entry>
+</feed>"""
+
+
+class _JobBytesResponse:
+    def __init__(self, content: bytes) -> None:
+        self.content = content
+
+    def __enter__(self) -> _JobBytesResponse:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def read(self, size: int) -> bytes:
+        return self.content[:size]
+
+
+class _JobOutcomeOpener:
+    def __init__(self, outcome: _JobBytesResponse | Exception) -> None:
+        self.outcome = outcome
+
+    def open(self, request: object, timeout: float) -> _JobBytesResponse:
+        del request, timeout
+        if isinstance(self.outcome, Exception):
+            raise self.outcome
+        return self.outcome
+
+
+def _job_http_error(status: int, secret: str) -> HTTPError:
+    headers = Message()
+    headers["Retry-After"] = "0"
+    return HTTPError(
+        f"https://example.com/feed?token={secret}",
+        status,
+        f"response body {secret}",
+        headers,
+        None,
+    )
+
+
+def _job_opener_builder(
+    outcomes: list[_JobBytesResponse | Exception],
+):
+    openers = iter(_JobOutcomeOpener(outcome) for outcome in outcomes)
+
+    def build_opener(
+        allowed_hosts: frozenset[str], *, max_bytes: int
+    ) -> _JobOutcomeOpener:
+        del allowed_hosts, max_bytes
+        return next(openers)
+
+    return build_opener
 
 
 def prepared_root(temp: str):
@@ -275,9 +337,7 @@ class DashboardTests(unittest.TestCase):
             promoted_detail = client.get("/pipeline/queue/CAND-pro-001")
             self.assertEqual(200, promoted_detail.status_code)
             self.assertIn("promote", promoted_detail.text)
-            self.assertEqual(
-                404, client.get("/pipeline/queue/CAND-nope").status_code
-            )
+            self.assertEqual(404, client.get("/pipeline/queue/CAND-nope").status_code)
 
             channels = client.get("/pipeline/channels")
             self.assertEqual(200, channels.status_code)
@@ -678,6 +738,87 @@ class SchedulerJobTests(unittest.TestCase):
             )
             self.assertEqual("failed", missing.status)
             self.assertIn("requires --target", missing.message)
+
+    def test_failed_run_message_includes_run_id_safe_class_and_attempts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            fixtures.write(
+                root / "02_Knowledge" / "Channels" / "CHN-test.md",
+                CHANNEL_MD,
+            )
+            secret = "job-transport-secret"
+            before_jobs = len(
+                list((root / "05_Research" / "Operations" / "Jobs").glob("*.md"))
+            )
+            outcomes = [_job_http_error(503, secret) for _ in range(3)]
+            with patch(
+                "research_os.adapters.discovery._build_discovery_opener",
+                side_effect=_job_opener_builder(outcomes),
+            ):
+                result = run_job(
+                    root,
+                    "discover",
+                    target="CHN-test",
+                    started_at=datetime(2026, 8, 10, 10, 0, 0, tzinfo=UTC),
+                )
+
+            self.assertEqual("failed", result.status)
+            self.assertRegex(result.message, r"RUN-[0-9a-f]{16}")
+            self.assertIn("http_503", result.message)
+            self.assertIn("3 attempts", result.message)
+            self.assertNotIn(secret, result.message)
+            self.assertNotIn("token=", result.message)
+            self.assertEqual(
+                before_jobs + 1,
+                len(list((root / "05_Research" / "Operations" / "Jobs").glob("*.md"))),
+            )
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, retries, http_errors FROM discovery_runs"
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(("failed", 2, 3), row)
+
+    def test_discover_job_with_internal_retry_writes_one_success_job(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            fixtures.write(
+                root / "02_Knowledge" / "Channels" / "CHN-test.md",
+                CHANNEL_MD,
+            )
+            jobs_dir = root / "05_Research" / "Operations" / "Jobs"
+            before_jobs = len(list(jobs_dir.glob("*.md")))
+            outcomes = [
+                _job_http_error(429, "retry-success-secret"),
+                _JobBytesResponse(JOB_RSS_PAYLOAD),
+            ]
+            with patch(
+                "research_os.adapters.discovery._build_discovery_opener",
+                side_effect=_job_opener_builder(outcomes),
+            ):
+                result = run_job(
+                    root,
+                    "discover",
+                    target="CHN-test",
+                    started_at=datetime(2026, 8, 10, 10, 0, 1, tzinfo=UTC),
+                )
+
+            self.assertEqual("success", result.status)
+            self.assertEqual(before_jobs + 1, len(list(jobs_dir.glob("*.md"))))
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                run_rows = connection.execute(
+                    "SELECT status, retries, http_errors FROM discovery_runs"
+                ).fetchall()
+                candidate_count = connection.execute(
+                    "SELECT COUNT(*) FROM candidates"
+                ).fetchone()[0]
+            finally:
+                connection.close()
+            self.assertEqual([("succeeded", 1, 1)], run_rows)
+            self.assertEqual(1, candidate_count)
 
     def test_refresh_job_and_cli_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -1283,9 +1424,7 @@ class IndustryHomeTests(unittest.TestCase):
                     - {"GET"}
                 }
             )
-            self.assertEqual(
-                ["/llm/config", "/llm/models", "/llm/test"], write_routes
-            )
+            self.assertEqual(["/llm/config", "/llm/models", "/llm/test"], write_routes)
 
 
 def _write_home_security(root: Path) -> str:

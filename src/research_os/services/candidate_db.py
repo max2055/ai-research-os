@@ -181,9 +181,7 @@ def apply_migrations(path: Path) -> int:
     """Apply pending migrations atomically; return version applied to."""
     version = current_version(path)
     if version == 0 and path.exists():
-        raise TransactionError(
-            f"candidate db exists at unversioned state: {path}"
-        )
+        raise TransactionError(f"candidate db exists at unversioned state: {path}")
     connection = _connect(path)
     try:
         if version < 1:
@@ -330,19 +328,37 @@ def finish_discovery_run(
     status: str,
     candidate_count: int | None = None,
     finished_at: str | None = None,
+    retries: int | None = None,
+    http_errors: int | None = None,
+    parse_errors: int | None = None,
 ) -> None:
     """Close a running discovery run with a terminal status (B-021 lock)."""
     if not path.exists():
         raise TransactionError(f"no candidate db to finish run: {path}")
     connection = _connect(path)
     try:
+        assignments = ["status = ?", "finished_at = ?"]
+        values: list[object] = [status, finished_at]
+        for column, value in (
+            ("candidate_count", candidate_count),
+            ("retries", retries),
+            ("http_errors", http_errors),
+            ("parse_errors", parse_errors),
+        ):
+            if value is not None:
+                assignments.append(f"{column} = ?")
+                values.append(value)
+        values.append(run_id)
         cursor = connection.execute(
-            "UPDATE discovery_runs SET status = ?, finished_at = ?, "
-            "candidate_count = ? WHERE run_id = ?",
-            (status, finished_at, candidate_count, run_id),
+            f"UPDATE discovery_runs SET {', '.join(assignments)} "
+            "WHERE run_id = ? AND status = 'running'",
+            values,
         )
         if cursor.rowcount != 1:
-            raise TransactionError(f"unknown discovery run {run_id}")
+            connection.rollback()
+            raise TransactionError(
+                f"unknown or already finalized discovery run {run_id}"
+            )
         connection.commit()
     except sqlite3.Error as exc:
         connection.rollback()

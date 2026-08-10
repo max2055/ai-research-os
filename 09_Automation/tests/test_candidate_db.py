@@ -12,6 +12,8 @@ from research_os.services.candidate_db import (
     apply_migrations,
     candidate_db_health,
     current_version,
+    finish_discovery_run,
+    record_discovery_run,
     rollback_migrations,
 )
 
@@ -90,8 +92,7 @@ class CandidateDbTests(unittest.TestCase):
                 )
                 connection.commit()
                 row = connection.execute(
-                    "SELECT title, status FROM candidates "
-                    "WHERE candidate_id = ?",
+                    "SELECT title, status FROM candidates WHERE candidate_id = ?",
                     ("01ARZ3NDEKTSV4RRFFQ69G5FAV",),
                 ).fetchone()
                 self.assertEqual("Test candidate", row[0])
@@ -131,6 +132,78 @@ class CandidateDbTests(unittest.TestCase):
                 self.assertEqual("dismiss", row[0])
             finally:
                 connection.close()
+
+    def test_finish_discovery_run_updates_terminal_fields_once(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "candidates.db"
+            record_discovery_run(
+                path,
+                "RUN-terminal",
+                "CHN-test",
+                "2026-08-10T00:00:00Z",
+                status="running",
+            )
+
+            finish_discovery_run(
+                path,
+                "RUN-terminal",
+                status="failed",
+                candidate_count=2,
+                finished_at="2026-08-10T00:00:03Z",
+                retries=2,
+                http_errors=3,
+                parse_errors=1,
+            )
+
+            connection = sqlite_connect(path)
+            try:
+                row = connection.execute(
+                    "SELECT status, candidate_count, finished_at, retries, "
+                    "http_errors, parse_errors FROM discovery_runs "
+                    "WHERE run_id = 'RUN-terminal'"
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(("failed", 2, "2026-08-10T00:00:03Z", 2, 3, 1), row)
+            with self.assertRaises(TransactionError):
+                finish_discovery_run(
+                    path,
+                    "RUN-terminal",
+                    status="succeeded",
+                    finished_at="2026-08-10T00:00:04Z",
+                )
+
+    def test_finish_discovery_run_preserves_omitted_optional_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "candidates.db"
+            record_discovery_run(
+                path,
+                "RUN-compatible",
+                "CHN-test",
+                "2026-08-10T00:00:00Z",
+                status="running",
+                candidate_count=4,
+                retries=2,
+                http_errors=3,
+                parse_errors=1,
+            )
+
+            finish_discovery_run(
+                path,
+                "RUN-compatible",
+                status="failed",
+                finished_at="2026-08-10T00:00:03Z",
+            )
+
+            connection = sqlite_connect(path)
+            try:
+                row = connection.execute(
+                    "SELECT candidate_count, retries, http_errors, parse_errors "
+                    "FROM discovery_runs WHERE run_id = 'RUN-compatible'"
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual((4, 2, 3, 1), row)
 
 
 def sqlite_connect(path: Path):

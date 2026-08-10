@@ -196,24 +196,31 @@ class PipelineMetricsTests(unittest.TestCase):
             connection.execute(
                 "INSERT INTO candidate_actions (action_id, candidate_id, "
                 "action, reason, actor, acted_at) VALUES (?, ?, ?, ?, ?, ?)",
-                ("CA-prom", "CND-0000", "promote", "promoted from candidate",
-                 "max", f"{DATE}T02:00:00Z"),
+                (
+                    "CA-prom",
+                    "CND-0000",
+                    "promote",
+                    "promoted from candidate",
+                    "max",
+                    f"{DATE}T02:00:00Z",
+                ),
             )
             connection.execute(
                 "INSERT INTO candidate_actions (action_id, candidate_id, "
                 "action, reason, actor, acted_at) VALUES (?, ?, ?, ?, ?, ?)",
-                ("CA-dis", "CND-0001", "dismiss", "noise",
-                 "max", f"{DATE}T01:00:00Z"),
+                ("CA-dis", "CND-0001", "dismiss", "noise", "max", f"{DATE}T01:00:00Z"),
             )
             connection.execute(
                 "INSERT INTO discovery_runs (run_id, channel_id, started_at, "
-                "finished_at, candidate_count, http_errors, status) "
-                "VALUES ('RUN-ok', 'CHN-test', ?, ?, 3, 0, 'succeeded')",
+                "finished_at, candidate_count, http_errors, parse_errors, "
+                "retries, status) "
+                "VALUES ('RUN-ok', 'CHN-test', ?, ?, 3, 1, 0, 1, 'succeeded')",
                 (f"{DATE}T00:00:00Z", f"{DATE}T00:10:00Z"),
             )
             connection.execute(
                 "INSERT INTO discovery_runs (run_id, channel_id, started_at, "
-                "status) VALUES ('RUN-bad', 'CHN-test', ?, 'failed')",
+                "parse_errors, status) "
+                "VALUES ('RUN-bad', 'CHN-test', ?, 1, 'failed')",
                 (f"{DATE}T03:00:00Z",),
             )
             connection.commit()
@@ -231,6 +238,9 @@ class PipelineMetricsTests(unittest.TestCase):
             self.assertEqual(2, metrics["discovery"]["runs"])
             self.assertEqual(0.5, metrics["discovery"]["failure_rate"])
             self.assertEqual(600, metrics["discovery"]["median_latency_seconds"])
+            self.assertEqual(1, metrics["discovery"]["http_errors"])
+            self.assertEqual(1, metrics["discovery"]["parse_errors"])
+            self.assertEqual(1, metrics["discovery"]["retries"])
             self.assertEqual(1, metrics["triage"]["promoted"])
             self.assertEqual(1, metrics["triage"]["dismissed"])
             self.assertEqual(2, metrics["triage"]["total"])
@@ -272,8 +282,14 @@ class PipelineMetricsTests(unittest.TestCase):
                 connection.execute(
                     "INSERT INTO candidate_actions (action_id, candidate_id, "
                     "action, reason, actor, acted_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    ("CA-dis", "CND-0000", "dismiss", "noise", "max",
-                     f"{DATE}T01:00:00Z"),
+                    (
+                        "CA-dis",
+                        "CND-0000",
+                        "dismiss",
+                        "noise",
+                        "max",
+                        f"{DATE}T01:00:00Z",
+                    ),
                 )
                 connection.commit()
             finally:

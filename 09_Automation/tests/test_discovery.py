@@ -7,8 +7,11 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from email.message import Message
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
+from xml.etree import ElementTree
 
 from research_os.adapters.discovery import (
     ArxivDiscoveryAdapter,
@@ -18,6 +21,7 @@ from research_os.adapters.discovery import (
     SECDiscoveryAdapter,
     SourceCandidate,
 )
+from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
 from research_os.services.discovery import (
     _acquire_channel_lock,
@@ -68,6 +72,52 @@ enabled: {enabled}
 
 Test.
 """
+
+RSS_PAYLOAD = b"""<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>item-1</id>
+    <title>Retried item</title>
+    <link href="https://example.com/items/1" />
+    <published>2026-08-10T00:00:00Z</published>
+  </entry>
+</feed>"""
+
+
+class _BytesResponse:
+    def __init__(self, content: bytes) -> None:
+        self.content = content
+
+    def __enter__(self) -> _BytesResponse:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def read(self, size: int) -> bytes:
+        return self.content[:size]
+
+
+class _OutcomeOpener:
+    def __init__(self, outcome: _BytesResponse | Exception) -> None:
+        self.outcome = outcome
+
+    def open(self, request: object, timeout: float) -> _BytesResponse:
+        del request, timeout
+        if isinstance(self.outcome, Exception):
+            raise self.outcome
+        return self.outcome
+
+
+def _http_error(status: int, secret: str = "not-sensitive") -> HTTPError:
+    headers = Message()
+    headers["Retry-After"] = "0"
+    return HTTPError(
+        f"https://example.com/feed?token={secret}",
+        status,
+        f"response body {secret}",
+        headers,
+        None,
+    )
 
 
 class DiscoveryServiceTests(unittest.TestCase):
@@ -150,6 +200,237 @@ class DiscoveryServiceTests(unittest.TestCase):
                 ]
 
         return _Fake()
+
+    def _run_rss_with_outcomes(
+        self,
+        root: Path,
+        outcomes: list[_BytesResponse | Exception],
+        *,
+        apply: bool = True,
+    ) -> dict[str, object]:
+        openers = iter(_OutcomeOpener(outcome) for outcome in outcomes)
+
+        def build_opener(
+            allowed_hosts: frozenset[str], *, max_bytes: int
+        ) -> _OutcomeOpener:
+            del allowed_hosts, max_bytes
+            return next(openers)
+
+        with patch(
+            "research_os.adapters.discovery._build_discovery_opener",
+            side_effect=build_opener,
+        ):
+            return run_discovery(root, "CHN-test", apply=apply)
+
+    def test_retry_success_inserts_candidate_once_and_records_one_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+
+            result = self._run_rss_with_outcomes(
+                root,
+                [_http_error(503), _BytesResponse(RSS_PAYLOAD)],
+            )
+
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                candidate_rows = connection.execute(
+                    "SELECT candidate_id FROM candidates"
+                ).fetchall()
+                run_rows = connection.execute(
+                    "SELECT run_id, status FROM discovery_runs"
+                ).fetchall()
+            finally:
+                connection.close()
+            self.assertEqual(1, result["inserted"])
+            self.assertEqual(1, len(candidate_rows))
+            self.assertEqual(1, len(run_rows))
+            self.assertEqual((result["run_id"], "succeeded"), run_rows[0])
+
+    def test_successful_run_persists_retry_and_http_error_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+
+            result = self._run_rss_with_outcomes(
+                root,
+                [_http_error(429), _BytesResponse(RSS_PAYLOAD)],
+            )
+
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, retries, http_errors, parse_errors "
+                    "FROM discovery_runs WHERE run_id = ?",
+                    (result["run_id"],),
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(("succeeded", 1, 1, 0), row)
+
+    def test_post_fetch_insert_failure_finalizes_run_failed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            original = TransactionError("candidate insert failed")
+            real_finish = candidate_db.finish_discovery_run
+            with (
+                patch(
+                    "research_os.services.discovery._build_adapter",
+                    return_value=self._fake_adapter(
+                        ["https://fresh.example.com/insert-failure"]
+                    ),
+                ),
+                patch(
+                    "research_os.services.discovery.candidate_db.insert_candidates",
+                    side_effect=original,
+                ),
+                patch(
+                    "research_os.services.discovery.candidate_db.finish_discovery_run",
+                    wraps=real_finish,
+                ) as finish,
+                self.assertRaises(ValueError) as caught,
+            ):
+                run_discovery(root, "CHN-test", apply=True)
+
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, finished_at, parse_errors FROM discovery_runs"
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual("failed", row[0])
+            self.assertIsNotNone(row[1])
+            self.assertEqual(0, row[2])
+            self.assertIs(original, caught.exception.__cause__)
+            finish.assert_called_once()
+
+    def test_parse_failure_finalizes_run_and_increments_parse_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+
+            with self.assertRaises(ValueError) as caught:
+                self._run_rss_with_outcomes(
+                    root,
+                    [_BytesResponse(b"<feed><entry>")],
+                )
+
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, retries, http_errors, parse_errors "
+                    "FROM discovery_runs"
+                ).fetchone()
+                running = connection.execute(
+                    "SELECT COUNT(*) FROM discovery_runs WHERE status = 'running'"
+                ).fetchone()[0]
+            finally:
+                connection.close()
+            self.assertEqual(("failed", 0, 0, 1), row)
+            self.assertEqual(0, running)
+            self.assertIsInstance(caught.exception.__cause__, ElementTree.ParseError)
+
+    def test_adapter_programming_failure_is_not_counted_as_parse_error(self) -> None:
+        class _BuggyAdapter:
+            def discover(self) -> tuple[SourceCandidate, ...]:
+                raise RuntimeError("programming failure token=do-not-expose")
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            with (
+                patch(
+                    "research_os.services.discovery._build_adapter",
+                    return_value=_BuggyAdapter(),
+                ),
+                self.assertRaises(ValueError) as caught,
+            ):
+                run_discovery(root, "CHN-test", apply=True)
+
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, parse_errors FROM discovery_runs"
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(("failed", 0), row)
+            self.assertIsInstance(caught.exception.__cause__, RuntimeError)
+            self.assertNotIn("do-not-expose", str(caught.exception))
+
+    def test_response_format_failure_increments_parse_errors(self) -> None:
+        adapter = GitHubReleaseDiscoveryAdapter(
+            "example/repository",
+            fetcher=lambda url, **kwargs: "{}",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            with (
+                patch(
+                    "research_os.services.discovery._build_adapter",
+                    return_value=adapter,
+                ),
+                self.assertRaises(ValueError),
+            ):
+                run_discovery(root, "CHN-test", apply=True)
+
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, parse_errors FROM discovery_runs"
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(("failed", 1), row)
+
+    def test_finalization_failure_is_not_retried_and_keeps_original_cause(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            original = TransactionError("candidate insert failed")
+            with (
+                patch(
+                    "research_os.services.discovery._build_adapter",
+                    return_value=self._fake_adapter(
+                        ["https://fresh.example.com/finalize-failure"]
+                    ),
+                ),
+                patch(
+                    "research_os.services.discovery.candidate_db.insert_candidates",
+                    side_effect=original,
+                ),
+                patch(
+                    "research_os.services.discovery.candidate_db.finish_discovery_run",
+                    side_effect=TransactionError("terminal update failed"),
+                ) as finish,
+                self.assertRaises(ValueError) as caught,
+            ):
+                run_discovery(root, "CHN-test", apply=True)
+
+            finish.assert_called_once()
+            self.assertIs(original, caught.exception.__cause__)
+
+    def test_successful_dry_run_writes_no_db_candidate_or_job(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            jobs_dir = root / "05_Research" / "Operations" / "Jobs"
+            before_jobs = sorted(jobs_dir.glob("*.md"))
+
+            result = self._run_rss_with_outcomes(
+                root,
+                [_BytesResponse(RSS_PAYLOAD)],
+                apply=False,
+            )
+
+            self.assertEqual(1, result["candidate_count"])
+            self.assertFalse(candidate_db.candidate_db_path(root).exists())
+            self.assertEqual(before_jobs, sorted(jobs_dir.glob("*.md")))
 
     def test_inbound_skip_excludes_existing_source_url(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

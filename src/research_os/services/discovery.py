@@ -8,22 +8,29 @@ Candidate operational store.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import sqlite3
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
+from xml.etree import ElementTree
 
 from research_os.adapters.discovery import (
     ArxivDiscoveryAdapter,
     CompositeDiscoveryAdapter,
     DiscoveryAdapter,
+    DiscoveryTransportError,
+    FetchTelemetry,
     GitHubReleaseDiscoveryAdapter,
     RSSDiscoveryAdapter,
     SECDiscoveryAdapter,
     SourceCandidate,
+    TextFetcher,
+    fetch_text,
 )
 from research_os.domain.models import ResearchObject
 from research_os.repositories.transaction import TransactionError
@@ -60,7 +67,36 @@ def _content_fingerprint(candidate: SourceCandidate) -> str:
     return digest.hexdigest()
 
 
-def _build_adapter(channel: dict[str, Any]) -> DiscoveryAdapter:
+class DiscoveryRunError(ValueError):
+    """Safe run-scoped error suitable for Job and CLI output."""
+
+    def __init__(self, run_id: str, failure_class: str, attempts: int) -> None:
+        self.run_id = run_id
+        self.failure_class = failure_class
+        self.attempts = attempts
+        super().__init__(
+            f"discovery run {run_id} failed: {failure_class} after {attempts} attempts"
+        )
+
+
+def _telemetry_fetcher(
+    allowed_hosts: frozenset[str],
+    telemetry: FetchTelemetry | None,
+) -> TextFetcher | None:
+    if telemetry is None:
+        return None
+    return partial(
+        fetch_text,
+        allowed_hosts=allowed_hosts,
+        telemetry=telemetry,
+    )
+
+
+def _build_adapter(
+    channel: dict[str, Any],
+    *,
+    telemetry: FetchTelemetry | None = None,
+) -> DiscoveryAdapter:
     channel_type = channel["channel_type"]
     locator = channel["locator"]
     allowed_hosts = frozenset(channel.get("allow_hosts", []) or [])
@@ -71,11 +107,16 @@ def _build_adapter(channel: dict[str, Any]) -> DiscoveryAdapter:
             allowed_hosts=allowed_hosts,
             publisher=channel.get("publisher", ""),
             limit=limit,
+            fetcher=_telemetry_fetcher(allowed_hosts, telemetry),
         )
     if channel_type == "github_release":
         repos = _github_repos_from_locator(locator)
         github_adapters = [
-            GitHubReleaseDiscoveryAdapter(repo, limit=limit)
+            GitHubReleaseDiscoveryAdapter(
+                repo,
+                limit=limit,
+                fetcher=_telemetry_fetcher(frozenset({"api.github.com"}), telemetry),
+            )
             for repo in repos
         ]
         if len(github_adapters) == 1:
@@ -85,15 +126,16 @@ def _build_adapter(channel: dict[str, Any]) -> DiscoveryAdapter:
         return ArxivDiscoveryAdapter(
             channel.get("query") or "",
             limit=limit,
+            fetcher=_telemetry_fetcher(
+                frozenset({"arxiv.org", "export.arxiv.org"}), telemetry
+            ),
         )
     if channel_type == "sec":
         # locator carries the CIK allowlist; one adapter per CIK.
         ciks = _ciks_from_locator(locator)
         if not ciks:
             raise ValueError("SEC channel requires a CIK in locator or entity_ids")
-        forms = frozenset(
-            (channel.get("query") or "10-Q,10-K,8-K,20-F").split(",")
-        )
+        forms = frozenset((channel.get("query") or "10-Q,10-K,8-K,20-F").split(","))
         user_agent = (
             channel.get("user_agent")
             or "AI-Research-OS/0.3 max wu_chenlong@hotmail.com"
@@ -104,6 +146,9 @@ def _build_adapter(channel: dict[str, Any]) -> DiscoveryAdapter:
                 forms=forms,
                 user_agent=user_agent,
                 limit=limit,
+                fetcher=_telemetry_fetcher(
+                    frozenset({"data.sec.gov", "www.sec.gov"}), telemetry
+                ),
             )
             for cik in ciks
         ]
@@ -132,9 +177,7 @@ def _ciks_from_locator(locator: str) -> list[str]:
 def preflight_channel(channel: dict[str, Any]) -> None:
     """B-007 preflight: reviewed/enabled/license/limit checks."""
     if channel.get("review_status") != "reviewed":
-        raise ValueError(
-            f"channel {channel['id']} not reviewed (RCP-v03-005 RP-4)"
-        )
+        raise ValueError(f"channel {channel['id']} not reviewed (RCP-v03-005 RP-4)")
     if not channel.get("enabled"):
         raise ValueError(f"channel {channel['id']} not enabled")
     if channel.get("license_status") == "restricted":
@@ -164,8 +207,8 @@ def _acquire_channel_lock(
     try:
         connection.execute("BEGIN")
         stale_before = (
-            _parse_iso(started_at) - LOCK_STALE
-        ).isoformat().replace("+00:00", "Z")
+            (_parse_iso(started_at) - LOCK_STALE).isoformat().replace("+00:00", "Z")
+        )
         connection.execute(
             "UPDATE discovery_runs SET status = 'failed', "
             "finished_at = started_at "
@@ -228,6 +271,67 @@ def _sourced_urls(objects: list[Any], db_path: Path) -> set[str]:
     return urls
 
 
+def _is_parse_failure(adapter: DiscoveryAdapter, exc: Exception) -> bool:
+    if isinstance(exc, (ElementTree.ParseError, json.JSONDecodeError)):
+        return True
+    if isinstance(adapter, GitHubReleaseDiscoveryAdapter):
+        return (
+            isinstance(exc, ValueError)
+            and str(exc) == "GitHub releases response must be a list"
+        )
+    if isinstance(adapter, SECDiscoveryAdapter):
+        detail = str(exc)
+        return (
+            isinstance(exc, AttributeError)
+            and re.fullmatch(r"'[^']+' object has no attribute 'get'", detail)
+            is not None
+        ) or (
+            isinstance(exc, TypeError)
+            and re.fullmatch(r"'[^']+' object is not iterable", detail) is not None
+        )
+    if isinstance(adapter, CompositeDiscoveryAdapter):
+        return any(_is_parse_failure(child, exc) for child in adapter.adapters)
+    return False
+
+
+def _safe_failure_details(
+    exc: Exception,
+    *,
+    telemetry: FetchTelemetry,
+    parse_errors: int,
+) -> tuple[str, int]:
+    if isinstance(exc, DiscoveryTransportError):
+        failure_class = exc.failure_class
+        if not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", failure_class):
+            failure_class = "transport"
+        return failure_class, max(0, exc.attempts)
+    if parse_errors:
+        return "response_format", telemetry.attempts
+    return type(exc).__name__, telemetry.attempts
+
+
+def _raise_run_failure(
+    run_id: str,
+    failure: Exception,
+    *,
+    telemetry: FetchTelemetry,
+    parse_errors: int,
+    finalization_failure: Exception | None = None,
+) -> NoReturn:
+    failure_class, attempts = _safe_failure_details(
+        failure,
+        telemetry=telemetry,
+        parse_errors=parse_errors,
+    )
+    error = DiscoveryRunError(run_id, failure_class, attempts)
+    if finalization_failure is not None:
+        error.add_note(
+            "discovery terminal update also failed: "
+            f"{type(finalization_failure).__name__}"
+        )
+    raise error from failure
+
+
 def run_discovery(
     root: Path,
     channel_id: str,
@@ -239,9 +343,7 @@ def run_discovery(
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
         raise ValueError("repository validation must pass before discovery")
-    channel = next(
-        (obj for obj in objects if obj.object_id == channel_id), None
-    )
+    channel = next((obj for obj in objects if obj.object_id == channel_id), None)
     if channel is None or channel.object_type != "source_channel":
         raise ValueError(f"unknown source_channel {channel_id}")
     meta = dict(channel.metadata)
@@ -251,96 +353,148 @@ def run_discovery(
     db_path = db_path or candidate_db.candidate_db_path(root)
     started_at = _utc_now()
     run_id = f"RUN-{uuid.uuid4().hex[:16]}"
-    if apply:
-        candidate_db.apply_migrations(db_path)
-        _acquire_channel_lock(db_path, channel_id, started_at)
-        candidate_db.record_discovery_run(
-            db_path,
-            run_id,
-            channel_id,
-            started_at,
-            status="running",
-            software_version="0.3",
-        )
-    try:
-        adapter = _build_adapter(meta)
-        discovered = adapter.discover()
-    except Exception as exc:  # bounded failure -> close the run as failed
-        if apply:
-            candidate_db.finish_discovery_run(
-                db_path,
-                run_id,
-                status="failed",
-                finished_at=_utc_now(),
-            )
-        raise ValueError(f"discovery failed for {channel_id}: {exc}") from exc
-
+    telemetry = FetchTelemetry()
     if not apply:
-        sourced_urls = _sourced_urls(objects, db_path)
-        return {
-            "run_id": run_id,
-            "channel_id": channel_id,
-            "candidate_count": len(discovered),
-            "skipped": sum(
-                1 for c in discovered if redact_secrets(c.url) in sourced_urls
-            ),
-            "candidates": [
-                {
-                    "title": candidate.title,
-                    "url": candidate.url,
-                    "published_at_proposal": candidate.published_at,
-                    "publisher": candidate.publisher,
-                    "already_sourced": (
-                        redact_secrets(candidate.url) in sourced_urls
-                    ),
-                }
-                for candidate in discovered
-            ],
-        }
+        parse_errors = 0
+        try:
+            adapter = _build_adapter(meta, telemetry=telemetry)
+            try:
+                discovered = adapter.discover()
+            except Exception as exc:
+                parse_errors = int(_is_parse_failure(adapter, exc))
+                raise
+            sourced_urls = _sourced_urls(objects, db_path)
+            return {
+                "run_id": run_id,
+                "channel_id": channel_id,
+                "candidate_count": len(discovered),
+                "skipped": sum(
+                    1 for c in discovered if redact_secrets(c.url) in sourced_urls
+                ),
+                "attempts": telemetry.attempts,
+                "retries": telemetry.retries,
+                "http_errors": telemetry.http_errors,
+                "parse_errors": parse_errors,
+                "candidates": [
+                    {
+                        "title": candidate.title,
+                        "url": candidate.url,
+                        "published_at_proposal": candidate.published_at,
+                        "publisher": candidate.publisher,
+                        "already_sourced": (
+                            redact_secrets(candidate.url) in sourced_urls
+                        ),
+                    }
+                    for candidate in discovered
+                ],
+            }
+        except Exception as exc:
+            _raise_run_failure(
+                run_id,
+                exc,
+                telemetry=telemetry,
+                parse_errors=parse_errors,
+            )
 
-    sourced_urls = _sourced_urls(objects, db_path)
-    candidates = _candidate_records(discovered)
-    candidates = [
-        c
-        for c in candidates
-        if str(c.get("canonical_url") or "") not in sourced_urls
-    ]
-    skipped = len(discovered) - len(candidates)
-    if candidates:
-        # B-014 dedup: extend existing clusters across runs, never drop records.
-        existing = candidate_db.existing_candidates(root)
-        existing_index: dict[str, str] = {}
-        for prior in existing:
-            key = prior.get("title") or ""
-            cluster = prior.get("duplicate_cluster_id")
-            if key and cluster:
-                existing_index[normalize_title(str(key))] = str(cluster)
-        candidates = assign_clusters(candidates, existing=existing_index)
-        inserted = candidate_db.insert_candidates(
-            db_path,
-            candidates,
-            channel_id,
-            started_at,
-        )
-        # B-018: score the new candidates so the review queue can sort.
-        enrich_candidates(root, db_path, apply=True)
-    else:
-        inserted = 0
-    candidate_db.finish_discovery_run(
+    candidate_db.apply_migrations(db_path)
+    _acquire_channel_lock(db_path, channel_id, started_at)
+    candidate_db.record_discovery_run(
         db_path,
         run_id,
-        status="succeeded",
-        candidate_count=len(candidates),
-        finished_at=_utc_now(),
+        channel_id,
+        started_at,
+        status="running",
+        software_version="0.3",
     )
-    return {
-        "run_id": run_id,
-        "channel_id": channel_id,
-        "candidate_count": len(candidates),
-        "inserted": inserted,
-        "skipped": skipped,
-        "db_path": str(db_path),
-    }
+
+    failure: Exception | None = None
+    parse_errors = 0
+    candidate_count = 0
+    result: dict[str, Any] | None = None
+    try:
+        adapter = _build_adapter(meta, telemetry=telemetry)
+        try:
+            discovered = adapter.discover()
+        except Exception as exc:
+            parse_errors = int(_is_parse_failure(adapter, exc))
+            raise
+
+        sourced_urls = _sourced_urls(objects, db_path)
+        candidates = [
+            candidate
+            for candidate in _candidate_records(discovered)
+            if str(candidate.get("canonical_url") or "") not in sourced_urls
+        ]
+        candidate_count = len(candidates)
+        skipped = len(discovered) - candidate_count
+        if candidates:
+            # B-014 dedup: extend existing clusters across runs, never drop records.
+            existing = candidate_db.existing_candidates(root)
+            existing_index: dict[str, str] = {}
+            for prior in existing:
+                key = prior.get("title") or ""
+                cluster = prior.get("duplicate_cluster_id")
+                if key and cluster:
+                    existing_index[normalize_title(str(key))] = str(cluster)
+            candidates = assign_clusters(candidates, existing=existing_index)
+            inserted = candidate_db.insert_candidates(
+                db_path,
+                candidates,
+                channel_id,
+                started_at,
+            )
+            # B-018: score the new candidates so the review queue can sort.
+            enrich_candidates(root, db_path, apply=True)
+        else:
+            inserted = 0
+        result = {
+            "run_id": run_id,
+            "channel_id": channel_id,
+            "candidate_count": candidate_count,
+            "inserted": inserted,
+            "skipped": skipped,
+            "attempts": telemetry.attempts,
+            "retries": telemetry.retries,
+            "http_errors": telemetry.http_errors,
+            "parse_errors": parse_errors,
+            "db_path": str(db_path),
+        }
+    except Exception as exc:
+        failure = exc
+
+    finalization_failure: Exception | None = None
+    try:
+        candidate_db.finish_discovery_run(
+            db_path,
+            run_id,
+            status="failed" if failure is not None else "succeeded",
+            candidate_count=candidate_count,
+            finished_at=_utc_now(),
+            retries=telemetry.retries,
+            http_errors=telemetry.http_errors,
+            parse_errors=parse_errors,
+        )
+    except Exception as exc:
+        finalization_failure = exc
+
+    if failure is not None:
+        _raise_run_failure(
+            run_id,
+            failure,
+            telemetry=telemetry,
+            parse_errors=parse_errors,
+            finalization_failure=finalization_failure,
+        )
+    if finalization_failure is not None:
+        _raise_run_failure(
+            run_id,
+            finalization_failure,
+            telemetry=telemetry,
+            parse_errors=0,
+        )
+    if result is None:
+        raise AssertionError("successful discovery run produced no result")
+    return result
 
 
 def render_discovery_result(result: dict[str, Any]) -> str:
@@ -349,6 +503,10 @@ def render_discovery_result(result: dict[str, Any]) -> str:
         "",
         f"Channel: {result.get('channel_id', '')}",
         f"Candidates: {result.get('candidate_count', 0)}",
+        f"Fetch attempts: {result.get('attempts', 0)}",
+        f"Retries: {result.get('retries', 0)}",
+        f"HTTP errors: {result.get('http_errors', 0)}",
+        f"Parse errors: {result.get('parse_errors', 0)}",
     ]
     if result.get("skipped"):
         lines.append(f"Skipped (already sourced): {result['skipped']}")
@@ -360,11 +518,7 @@ def render_discovery_result(result: dict[str, Any]) -> str:
         lines.append("| Title | URL | Published | Publisher | Status |")
         lines.append("|---|---|---|---|---|")
         for candidate in result.get("candidates", []):
-            status = (
-                "already sourced"
-                if candidate.get("already_sourced")
-                else "new"
-            )
+            status = "already sourced" if candidate.get("already_sourced") else "new"
             lines.append(
                 f"| {candidate['title']} | {candidate['url']} | "
                 f"{candidate.get('published_at_proposal') or ''} | "
