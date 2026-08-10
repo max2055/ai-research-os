@@ -13,6 +13,7 @@ import re
 import sqlite3
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
@@ -289,23 +290,61 @@ def _is_parse_failure(adapter: DiscoveryAdapter, exc: Exception) -> bool:
             isinstance(exc, TypeError)
             and re.fullmatch(r"'[^']+' object is not iterable", detail) is not None
         )
-    if isinstance(adapter, CompositeDiscoveryAdapter):
-        return any(_is_parse_failure(child, exc) for child in adapter.adapters)
     return False
+
+
+@dataclass
+class _DiscoveryParseTelemetry:
+    failures: list[Exception] = field(default_factory=list)
+
+    @property
+    def errors(self) -> int:
+        return len(self.failures)
+
+    def records(self, exc: Exception) -> bool:
+        return any(failure is exc for failure in self.failures)
+
+
+def _discover_with_parse_telemetry(
+    adapter: DiscoveryAdapter,
+    telemetry: _DiscoveryParseTelemetry,
+) -> tuple[SourceCandidate, ...]:
+    if not isinstance(adapter, CompositeDiscoveryAdapter):
+        try:
+            return adapter.discover()
+        except Exception as exc:
+            if _is_parse_failure(adapter, exc):
+                telemetry.failures.append(exc)
+            raise
+
+    # Preserve CompositeDiscoveryAdapter ordering, failure, nesting, and limit
+    # semantics while observing exceptions that its public method must swallow.
+    results: list[SourceCandidate] = []
+    failures: list[Exception] = []
+    for child in adapter.adapters:
+        try:
+            results.extend(_discover_with_parse_telemetry(child, telemetry))
+        except Exception as exc:
+            failures.append(exc)
+        if len(results) >= adapter.limit:
+            break
+    if not results and failures:
+        raise failures[0]
+    return tuple(results[: adapter.limit])
 
 
 def _safe_failure_details(
     exc: Exception,
     *,
     telemetry: FetchTelemetry,
-    parse_errors: int,
+    parse_telemetry: _DiscoveryParseTelemetry,
 ) -> tuple[str, int]:
     if isinstance(exc, DiscoveryTransportError):
         failure_class = exc.failure_class
         if not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", failure_class):
             failure_class = "transport"
         return failure_class, max(0, exc.attempts)
-    if parse_errors:
+    if parse_telemetry.records(exc):
         return "response_format", telemetry.attempts
     return type(exc).__name__, telemetry.attempts
 
@@ -315,13 +354,13 @@ def _raise_run_failure(
     failure: Exception,
     *,
     telemetry: FetchTelemetry,
-    parse_errors: int,
+    parse_telemetry: _DiscoveryParseTelemetry,
     finalization_failure: Exception | None = None,
 ) -> NoReturn:
     failure_class, attempts = _safe_failure_details(
         failure,
         telemetry=telemetry,
-        parse_errors=parse_errors,
+        parse_telemetry=parse_telemetry,
     )
     error = DiscoveryRunError(run_id, failure_class, attempts)
     if finalization_failure is not None:
@@ -354,15 +393,11 @@ def run_discovery(
     started_at = _utc_now()
     run_id = f"RUN-{uuid.uuid4().hex[:16]}"
     telemetry = FetchTelemetry()
+    parse_telemetry = _DiscoveryParseTelemetry()
     if not apply:
-        parse_errors = 0
         try:
             adapter = _build_adapter(meta, telemetry=telemetry)
-            try:
-                discovered = adapter.discover()
-            except Exception as exc:
-                parse_errors = int(_is_parse_failure(adapter, exc))
-                raise
+            discovered = _discover_with_parse_telemetry(adapter, parse_telemetry)
             sourced_urls = _sourced_urls(objects, db_path)
             return {
                 "run_id": run_id,
@@ -374,7 +409,7 @@ def run_discovery(
                 "attempts": telemetry.attempts,
                 "retries": telemetry.retries,
                 "http_errors": telemetry.http_errors,
-                "parse_errors": parse_errors,
+                "parse_errors": parse_telemetry.errors,
                 "candidates": [
                     {
                         "title": candidate.title,
@@ -393,7 +428,7 @@ def run_discovery(
                 run_id,
                 exc,
                 telemetry=telemetry,
-                parse_errors=parse_errors,
+                parse_telemetry=parse_telemetry,
             )
 
     candidate_db.apply_migrations(db_path)
@@ -408,16 +443,11 @@ def run_discovery(
     )
 
     failure: Exception | None = None
-    parse_errors = 0
     candidate_count = 0
     result: dict[str, Any] | None = None
     try:
         adapter = _build_adapter(meta, telemetry=telemetry)
-        try:
-            discovered = adapter.discover()
-        except Exception as exc:
-            parse_errors = int(_is_parse_failure(adapter, exc))
-            raise
+        discovered = _discover_with_parse_telemetry(adapter, parse_telemetry)
 
         sourced_urls = _sourced_urls(objects, db_path)
         candidates = [
@@ -456,7 +486,7 @@ def run_discovery(
             "attempts": telemetry.attempts,
             "retries": telemetry.retries,
             "http_errors": telemetry.http_errors,
-            "parse_errors": parse_errors,
+            "parse_errors": parse_telemetry.errors,
             "db_path": str(db_path),
         }
     except Exception as exc:
@@ -472,7 +502,7 @@ def run_discovery(
             finished_at=_utc_now(),
             retries=telemetry.retries,
             http_errors=telemetry.http_errors,
-            parse_errors=parse_errors,
+            parse_errors=parse_telemetry.errors,
         )
     except Exception as exc:
         finalization_failure = exc
@@ -482,7 +512,7 @@ def run_discovery(
             run_id,
             failure,
             telemetry=telemetry,
-            parse_errors=parse_errors,
+            parse_telemetry=parse_telemetry,
             finalization_failure=finalization_failure,
         )
     if finalization_failure is not None:
@@ -490,7 +520,7 @@ def run_discovery(
             run_id,
             finalization_failure,
             telemetry=telemetry,
-            parse_errors=0,
+            parse_telemetry=parse_telemetry,
         )
     if result is None:
         raise AssertionError("successful discovery run produced no result")

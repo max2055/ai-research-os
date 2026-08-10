@@ -201,6 +201,15 @@ class DiscoveryServiceTests(unittest.TestCase):
 
         return _Fake()
 
+    @staticmethod
+    def _parse_failure_adapter() -> RSSDiscoveryAdapter:
+        return RSSDiscoveryAdapter(
+            "https://example.com/feed",
+            allowed_hosts=frozenset({"example.com"}),
+            publisher="Test",
+            fetcher=lambda url, **kwargs: "<feed><entry>",
+        )
+
     def _run_rss_with_outcomes(
         self,
         root: Path,
@@ -385,6 +394,188 @@ class DiscoveryServiceTests(unittest.TestCase):
             finally:
                 connection.close()
             self.assertEqual(("failed", 1), row)
+
+    def test_composite_parse_failure_and_success_writes_one_success_job(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            jobs_dir = root / "05_Research" / "Operations" / "Jobs"
+            before_jobs = len(list(jobs_dir.glob("*.md")))
+            composite = CompositeDiscoveryAdapter(
+                [
+                    self._parse_failure_adapter(),
+                    self._fake_adapter(["https://example.com/composite-good"]),
+                ],
+                limit=5,
+            )
+
+            with patch(
+                "research_os.services.discovery._build_adapter",
+                return_value=composite,
+            ):
+                job = run_job(root, "discover", target="CHN-test")
+
+            self.assertEqual("success", job.status)
+            self.assertEqual(before_jobs + 1, len(list(jobs_dir.glob("*.md"))))
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                run_rows = connection.execute(
+                    "SELECT status, candidate_count, parse_errors FROM discovery_runs"
+                ).fetchall()
+                candidate_rows = connection.execute(
+                    "SELECT canonical_url FROM candidates"
+                ).fetchall()
+            finally:
+                connection.close()
+            self.assertEqual([("succeeded", 1, 1)], run_rows)
+            self.assertEqual([("https://example.com/composite-good",)], candidate_rows)
+
+    def test_composite_all_parse_failures_persist_each_error_once(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            composite = CompositeDiscoveryAdapter(
+                [self._parse_failure_adapter(), self._parse_failure_adapter()],
+                limit=5,
+            )
+
+            with (
+                patch(
+                    "research_os.services.discovery._build_adapter",
+                    return_value=composite,
+                ),
+                self.assertRaises(ValueError) as caught,
+            ):
+                run_discovery(root, "CHN-test", apply=True)
+
+            self.assertIn("response_format", str(caught.exception))
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, parse_errors FROM discovery_runs"
+                ).fetchone()
+                running = connection.execute(
+                    "SELECT COUNT(*) FROM discovery_runs WHERE status = 'running'"
+                ).fetchone()[0]
+            finally:
+                connection.close()
+            self.assertEqual(("failed", 2), row)
+            self.assertEqual(0, running)
+
+    def test_composite_first_programming_failure_keeps_safe_failure_class(
+        self,
+    ) -> None:
+        original = RuntimeError("programming failure token=do-not-expose")
+
+        class _BuggyAdapter:
+            def discover(self) -> tuple[SourceCandidate, ...]:
+                raise original
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            composite = CompositeDiscoveryAdapter(
+                [_BuggyAdapter(), self._parse_failure_adapter()],
+                limit=5,
+            )
+
+            with (
+                patch(
+                    "research_os.services.discovery._build_adapter",
+                    return_value=composite,
+                ),
+                self.assertRaises(ValueError) as caught,
+            ):
+                run_discovery(root, "CHN-test", apply=True)
+
+            self.assertIn("RuntimeError", str(caught.exception))
+            self.assertNotIn("response_format", str(caught.exception))
+            self.assertNotIn("do-not-expose", str(caught.exception))
+            self.assertIs(original, caught.exception.__cause__)
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, parse_errors FROM discovery_runs"
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(("failed", 1), row)
+
+    def test_composite_dry_run_reports_child_parse_error_without_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            composite = CompositeDiscoveryAdapter(
+                [
+                    self._parse_failure_adapter(),
+                    self._fake_adapter(["https://example.com/dry-good"]),
+                ],
+                limit=5,
+            )
+
+            with patch(
+                "research_os.services.discovery._build_adapter",
+                return_value=composite,
+            ):
+                result = run_discovery(root, "CHN-test", apply=False)
+
+            self.assertEqual(1, result["candidate_count"])
+            self.assertEqual(1, result["parse_errors"])
+            self.assertFalse(candidate_db.candidate_db_path(root).exists())
+
+    def test_nested_composite_counts_each_child_parse_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            nested = CompositeDiscoveryAdapter(
+                [self._parse_failure_adapter(), self._parse_failure_adapter()],
+                limit=5,
+            )
+            composite = CompositeDiscoveryAdapter(
+                [nested, self._fake_adapter(["https://example.com/nested-good"])],
+                limit=5,
+            )
+
+            with patch(
+                "research_os.services.discovery._build_adapter",
+                return_value=composite,
+            ):
+                result = run_discovery(root, "CHN-test", apply=True)
+
+            self.assertEqual(1, result["candidate_count"])
+            self.assertEqual(2, result["parse_errors"])
+
+    def test_composite_limit_skips_late_parse_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            late_failure = self._parse_failure_adapter()
+            with patch.object(
+                late_failure,
+                "discover",
+                wraps=late_failure.discover,
+            ) as discover:
+                composite = CompositeDiscoveryAdapter(
+                    [
+                        self._fake_adapter(
+                            [
+                                "https://example.com/limit-first",
+                                "https://example.com/limit-second",
+                            ]
+                        ),
+                        late_failure,
+                    ],
+                    limit=1,
+                )
+                with patch(
+                    "research_os.services.discovery._build_adapter",
+                    return_value=composite,
+                ):
+                    result = run_discovery(root, "CHN-test", apply=False)
+
+            self.assertEqual(1, result["candidate_count"])
+            self.assertEqual(0, result["parse_errors"])
+            discover.assert_not_called()
 
     def test_finalization_failure_is_not_retried_and_keeps_original_cause(
         self,
