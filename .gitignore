@@ -21,6 +21,7 @@ htmlcov/
 01_Inbox/_assets/
 
 # Disposable derived stores (Rebuildable; never the authoritative source)
+09_Automation/operational/
 *.db
 *.sqlite
 *.sqlite3
