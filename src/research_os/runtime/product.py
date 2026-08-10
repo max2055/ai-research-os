@@ -184,7 +184,10 @@ from research_os.services.recommendation_lifecycle import (
     supersede_valuation,
 )
 from research_os.services.release import (
+    ReleaseEvaluationError,
     release_readiness,
+    release_readiness_for,
+    release_readiness_v03,
     render_release_readiness,
 )
 from research_os.services.review_cadence import (
@@ -372,7 +375,10 @@ __all__ = [
     "render_project_indexes",
     "render_project_list",
     "render_project_status",
+    "ReleaseEvaluationError",
     "release_readiness",
+    "release_readiness_for",
+    "release_readiness_v03",
     "render_release_readiness",
     "render_review_queue",
     "render_scale_assessment",

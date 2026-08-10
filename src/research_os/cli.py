@@ -929,9 +929,25 @@ def parse_args() -> argparse.Namespace:
     )
     release_check = release_commands.add_parser(
         "check",
-        help="show v0.2 release readiness and explicit blockers",
+        help="show versioned release readiness and explicit blockers",
     )
     release_check.add_argument("--project", default="PRJ-002")
+    release_check.add_argument(
+        "--version",
+        choices=("0.2", "0.3"),
+        default="0.2",
+        help="release contract version (default: 0.2)",
+    )
+    release_check.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="output format (default: text)",
+    )
+    release_check.add_argument(
+        "--as-of",
+        help="evaluate dated evidence as of YYYY-MM-DD",
+    )
     return parser.parse_args()
 
 
@@ -1783,14 +1799,41 @@ def main() -> int:
             return 2
     if args.command == "release":
         try:
-            readiness = runtime.release_readiness(
+            readiness = runtime.release_readiness_for(
                 args.root.resolve(),
+                version=args.version,
                 project_id=args.project,
+                as_of=args.as_of,
             )
-            print(runtime.render_release_readiness(readiness), end="")
+            if args.format == "json":
+                print(
+                    json.dumps(
+                        readiness.as_dict(),
+                        allow_nan=False,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    )
+                )
+            else:
+                print(runtime.render_release_readiness(readiness), end="")
             return 0 if readiness.ready else 1
         except (OSError, ValueError) as exc:
-            print(f"ERROR: {exc}")
+            if args.format == "json":
+                print(
+                    json.dumps(
+                        {
+                            "error": {
+                                "code": "release_evaluation_error",
+                                "message": str(exc),
+                            }
+                        },
+                        allow_nan=False,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    )
+                )
+            else:
+                print(f"ERROR: {exc}")
             return 2
     if args.command == "scale":
         print(runtime.render_scale_assessment(args.root.resolve()), end="")
