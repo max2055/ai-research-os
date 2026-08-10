@@ -432,13 +432,15 @@ def run_discovery(
             )
 
     candidate_db.apply_migrations(db_path)
-    _acquire_channel_lock(db_path, channel_id, started_at)
-    candidate_db.record_discovery_run(
+    stale_before = (
+        (_parse_iso(started_at) - LOCK_STALE).isoformat().replace("+00:00", "Z")
+    )
+    candidate_db.start_discovery_run(
         db_path,
         run_id,
         channel_id,
         started_at,
-        status="running",
+        stale_before=stale_before,
         software_version="0.3",
     )
 

@@ -256,6 +256,58 @@ class DiscoveryServiceTests(unittest.TestCase):
             self.assertEqual(1, len(run_rows))
             self.assertEqual((result["run_id"], "succeeded"), run_rows[0])
 
+    def test_apply_starts_one_run_through_atomic_candidate_db_api(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._make_channel(root, "CHN-test")
+            db_path = candidate_db.candidate_db_path(root)
+            started_at = "2026-08-10T00:00:00Z"
+            finished_at = "2026-08-10T00:00:01Z"
+            with (
+                patch(
+                    "research_os.services.discovery._build_adapter",
+                    return_value=self._fake_adapter(
+                        ["https://fresh.example.com/atomic-start"]
+                    ),
+                ),
+                patch(
+                    "research_os.services.discovery._utc_now",
+                    side_effect=[started_at, finished_at],
+                ),
+                patch(
+                    "research_os.services.discovery.candidate_db.start_discovery_run",
+                    wraps=candidate_db.start_discovery_run,
+                ) as start_run,
+                patch(
+                    "research_os.services.discovery._acquire_channel_lock",
+                    side_effect=AssertionError("legacy lock called"),
+                ) as legacy_lock,
+                patch(
+                    "research_os.services.discovery.candidate_db.record_discovery_run",
+                    side_effect=AssertionError("legacy run insert called"),
+                ) as legacy_insert,
+            ):
+                result = run_discovery(root, "CHN-test", apply=True)
+
+            start_run.assert_called_once_with(
+                db_path,
+                result["run_id"],
+                "CHN-test",
+                started_at,
+                stale_before="2026-08-09T23:30:00Z",
+                software_version="0.3",
+            )
+            legacy_lock.assert_not_called()
+            legacy_insert.assert_not_called()
+            connection = sqlite3.connect(db_path)
+            try:
+                rows = connection.execute(
+                    "SELECT run_id, status FROM discovery_runs"
+                ).fetchall()
+            finally:
+                connection.close()
+            self.assertEqual([(result["run_id"], "succeeded")], rows)
+
     def test_successful_run_persists_retry_and_http_error_counts(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = self._make_root(temp)

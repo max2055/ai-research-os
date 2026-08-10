@@ -321,6 +321,52 @@ def record_discovery_run(
         connection.close()
 
 
+def start_discovery_run(
+    path: Path,
+    run_id: str,
+    channel_id: str,
+    started_at: str,
+    *,
+    stale_before: str,
+    software_version: str = "",
+) -> None:
+    """Atomically reclaim stale runs and start one channel discovery run."""
+    if current_version(path) == 0:
+        apply_migrations(path)
+    connection = _connect(path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute(
+            "UPDATE discovery_runs SET status = 'failed', "
+            "finished_at = started_at "
+            "WHERE status = 'running' AND started_at < ?",
+            (stale_before,),
+        )
+        live_run = connection.execute(
+            "SELECT run_id FROM discovery_runs "
+            "WHERE channel_id = ? AND status = 'running'",
+            (channel_id,),
+        ).fetchone()
+        if live_run is not None:
+            connection.rollback()
+            raise ValueError(
+                f"channel {channel_id} already has a running discovery run"
+            )
+        connection.execute(
+            "INSERT INTO discovery_runs (run_id, channel_id, started_at, "
+            "candidate_count, http_errors, parse_errors, retries, "
+            "software_version, status) "
+            "VALUES (?, ?, ?, 0, 0, 0, 0, ?, 'running')",
+            (run_id, channel_id, started_at, software_version),
+        )
+        connection.commit()
+    except sqlite3.Error as exc:
+        connection.rollback()
+        raise TransactionError(f"discovery run start failed: {exc}") from exc
+    finally:
+        connection.close()
+
+
 def finish_discovery_run(
     path: Path,
     run_id: str,
