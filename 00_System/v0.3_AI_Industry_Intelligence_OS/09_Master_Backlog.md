@@ -284,7 +284,7 @@ WP-603 close-out（2026-08-09）：F-010~011 落地，Operations/Health 由统�
 - **测试**：`test_candidate_db.py`、`test_channels.py`、`test_schedule.py`、`test_m5_dashboard_jobs.py` 全绿；相关 ruff/mypy clean。当前 backup 缺失与 cost budget 未配置会诚实显示注意状态，由 WP-611/F-016 接续。
 
 WP-610 close-out（2026-08-10）：F-012~014 完成实测性能与安全门禁。
-- **F-012/F-013**：`v0.3_Performance_Benchmark.md` 记录 1034 正式对象/1490 Candidate 的真实 read-model profile。cProfile 定位 request 内重复 validation（Home 8 次、Company 3 次），改为一次校验后传不可变 objects，不加 persistent cache；Home p95 7.6751s→1.0059s，Company 2.9061s→0.9628s，所有实测 SLO 通过且 authoritative writes=0。1501 对象 synthetic baseline 1.4161s、0 errors；10k Candidate SLO 未实测，保留 limitation。
+- **F-012/F-013**：`v0.3_Performance_Benchmark.md` 记录 1034 正式对象/1490 Candidate 的真实 read-model profile。cProfile 定位 request 内重复 validation（Home 8 次、Company 3 次），改为一次校验后传不可变 objects，不加 persistent cache；Home p95 7.6751s→1.0059s，Company 2.9061s→0.9628s，所有实测 SLO 通过且 authoritative writes=0。1501 对象 synthetic baseline 1.4161s、0 errors。`6bf5ca7` 新增稳定 Candidate Queue pagination 与 disposable schema-v2 10,000-row benchmark；7 个样本为 1.017968/1.013581/1.007352/1.023611/1.015772/1.034069/1.017175s，nearest-rank p95 1.034069s <2s，formal manifest 与真实 Candidate DB hash/metadata 前后不变。性能 Gate 通过，因此不新增 index/schema/migration；local-only、single-user、100k 与 distributed limitation 保留。
 - **F-014**：`test_m6_security.py` 覆盖 HTML escape、path traversal/symlink、secret sentinel、输入上限、prompt injection 作为 data、mutation allowlist；非 GET route 仍仅 `/llm/config`、`/llm/models`、`/llm/test`。
 
 WP-611 close-out（2026-08-10）：F-015~018 完成许可、备份、恢复与迁移工程证据。
