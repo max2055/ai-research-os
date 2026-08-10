@@ -215,7 +215,11 @@ from research_os.services.triage import (
     render_triage_result,
     restore_candidate,
 )
-from research_os.services.validation import count_by_type, validate_repository
+from research_os.services.validation import (
+    ValidationMode,
+    count_by_type,
+    validate_repository,
+)
 from research_os.services.valuation import (
     apply_valuation_draft,
     compute_valuation,
@@ -237,6 +241,7 @@ __all__ = [
     "ModeError",
     "RunError",
     "UnknownMode",
+    "ValidationMode",
     "apply_event_draft",
     "advance_review_date",
     "current_next_review_date",

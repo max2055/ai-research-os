@@ -67,11 +67,21 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="treat warnings as validation failures",
     )
+    validate.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="skip checks that require unavailable ignored Source asset bytes",
+    )
     index = subparsers.add_parser("index", help="check or rebuild indexes")
     mode = index.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="check for index drift")
     mode.add_argument("--apply", action="store_true", help="write canonical indexes")
     index.add_argument("--project", help="scope indexes to one Project ID")
+    index.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="check indexes without requiring ignored Source asset bytes",
+    )
 
     def add_common_draft_arguments(command: argparse.ArgumentParser) -> None:
         command.add_argument("--title", required=True)
@@ -930,8 +940,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def command_validate(root: Path, strict: bool) -> int:
-    objects, findings = runtime.validate_repository(root)
+def command_validate(
+    root: Path,
+    strict: bool,
+    metadata_only: bool = False,
+) -> int:
+    validation_mode: runtime.ValidationMode = (
+        "metadata-only" if metadata_only else "strict"
+    )
+    objects, findings = runtime.validate_repository(root, mode=validation_mode)
     for finding in findings:
         print(finding.format(root.resolve()))
     counts = runtime.count_by_type(objects)
@@ -950,9 +967,16 @@ def command_index(
     root: Path,
     apply: bool,
     project_id: str | None = None,
+    metadata_only: bool = False,
 ) -> int:
+    if apply and metadata_only:
+        print("ERROR: --metadata-only is only valid with index --check")
+        return 2
     root = root.resolve()
-    objects, findings = runtime.validate_repository(root)
+    validation_mode: runtime.ValidationMode = (
+        "metadata-only" if metadata_only else "strict"
+    )
+    objects, findings = runtime.validate_repository(root, mode=validation_mode)
     errors = [finding for finding in findings if finding.level == "error"]
     if errors:
         for finding in errors:
@@ -1052,9 +1076,14 @@ def main() -> int:
     if args.command == "doctor":
         return command_doctor(args.root)
     if args.command == "validate":
-        return command_validate(args.root, args.strict)
+        return command_validate(args.root, args.strict, args.metadata_only)
     if args.command == "index":
-        return command_index(args.root, args.apply, args.project)
+        return command_index(
+            args.root,
+            args.apply,
+            args.project,
+            args.metadata_only,
+        )
     if args.command == "status":
         print(
             runtime.render_status(args.root.resolve(), args.project),
