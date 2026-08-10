@@ -800,7 +800,7 @@ class ModeDefinitionsTests(unittest.TestCase):
     def _repo_objects(self) -> list[ResearchObject]:
         from research_os.services.validation import validate_repository
 
-        objects, findings = validate_repository(ROOT)
+        objects, findings = validate_repository(ROOT, mode="metadata-only")
         assert not [f for f in findings if f.level == "error"]
         return objects
 

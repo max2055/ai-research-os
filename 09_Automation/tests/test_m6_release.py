@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 import test_research_os_core as fixtures
 from research_os.services.indexing import index_drift, render_project_indexes
 from research_os.services.release import (
@@ -109,6 +111,7 @@ class ReleaseReadinessTests(unittest.TestCase):
             raise AssertionError(f"expected one recovery row for {label}, got {count}")
         return updated
 
+    @pytest.mark.local_integration
     def test_default_v02_remains_18_gate_text_contract(self) -> None:
         root = Path(__file__).resolve().parents[2]
         legacy = release_readiness(root)
@@ -134,6 +137,7 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertTrue(check.observed)
             self.assertTrue(check.evidence_paths)
 
+    @pytest.mark.local_integration
     def test_current_v03_is_blocked_by_wp530_wp620_and_f024(self) -> None:
         root = Path(__file__).resolve().parents[2]
         readiness = release_readiness_v03(root, as_of="2026-08-10")
@@ -992,6 +996,7 @@ class ReleaseReadinessTests(unittest.TestCase):
         ):
             self.assertIn(text, record)
 
+    @pytest.mark.local_integration
     def test_v03_recovery_chain_rejects_empty_structured_fields(self) -> None:
         labels = (
             "Candidate",
@@ -1019,6 +1024,7 @@ class ReleaseReadinessTests(unittest.TestCase):
                     with self.assertRaises(ReleaseEvaluationError):
                         release_readiness_v03(root, as_of="2026-08-10")
 
+    @pytest.mark.local_integration
     def test_v03_recovery_chain_blocks_completely_forged_links(self) -> None:
         replacements = {
             "Candidate": "`CND-aaaaaaaaaaaaaaaaaaaa`, status `promoted`",

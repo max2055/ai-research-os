@@ -13,6 +13,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 try:
     from fastapi.testclient import TestClient
 
@@ -203,6 +205,7 @@ class E018DecisionAlertsTests(unittest.TestCase):
 class E017DecisionDashboardTests(unittest.TestCase):
     """E-017: /decision page renders read-only (real repo, empty Phase 5 data)."""
 
+    @pytest.mark.local_integration
     def test_decision_route_returns_200(self) -> None:
         client = TestClient(create_app(ROOT))
         response = client.get("/decision")

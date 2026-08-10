@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PIP_CONSTRAINT: requirements/ci.txt
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PIP_NO_INPUT: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+
+      - name: Install locked dependencies
+        run: python -m pip install --constraint requirements/ci.txt --editable ".[ui,dev]"
+
+      - name: Validate tracked repository metadata
+        run: |
+          research-os validate --metadata-only
+          research-os index --check --metadata-only
+          research-os index --check --project PRJ-001 --metadata-only
+          research-os index --check --project PRJ-002 --metadata-only
+
+      - name: Run asset-independent tests
+        run: python -m pytest -m "not local_integration"
+
+      - name: Smoke test ten loopback Dashboard routes
+        run: >-
+          python -m pytest
+          09_Automation/tests/test_ci_workflows.py::CiDashboardSmokeTests::test_fixture_dashboard_routes_return_200
+          -q
+
+      - name: Check lint, formatting, and types
+        run: |
+          ruff check .
+          ruff format --check .
+          mypy src/research_os
+
+      - name: Assert expected v0.3 blockers
+        shell: bash
+        run: |
+          set +e
+          research-os release check --version 0.3 --format json > "$RUNNER_TEMP/release-v03.json"
+          release_status=$?
+          set -e
+          test "$release_status" -eq 1
+          RELEASE_JSON="$RUNNER_TEMP/release-v03.json" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path(os.environ["RELEASE_JSON"]).read_text())
+          if payload.get("ready") is not False:
+              raise SystemExit("v0.3 release check must remain blocked")
+          checks = {item["key"]: item for item in payload["checks"]}
+          expected = {
+              "decision.natural_resolutions": "WP-530",
+              "ingestion.pilot_completion": "WP-620",
+              "human.release_approval": "F-024",
+          }
+          for key, label in expected.items():
+              check = checks.get(key)
+              if check is None or check.get("passed") is not False:
+                  raise SystemExit(f"missing independent blocker: {key}")
+              if label not in check.get("observed", ""):
+                  raise SystemExit(f"{key} does not name {label}")
+          PY

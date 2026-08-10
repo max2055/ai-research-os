@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from research_os.repositories.markdown import object_paths
 from research_os.services import benchmark as benchmark_service
 from research_os.services.benchmark import (
@@ -59,6 +61,7 @@ class ScaleBenchmarkTests(unittest.TestCase):
                 max_seconds=10.0,
             )
 
+    @pytest.mark.local_integration
     def test_real_read_model_benchmark_reports_slo_without_writes(self) -> None:
         root = Path(__file__).resolve().parents[2]
         result = benchmark_dashboard(root, repeats=3)
@@ -118,6 +121,7 @@ class ScaleBenchmarkTests(unittest.TestCase):
             self.assertIn("events: 10", result.stdout)
             self.assertIn("passed: True", result.stdout)
 
+    @pytest.mark.local_integration
     def test_candidate_queue_benchmark_uses_disposable_10k_fixture(self) -> None:
         root = Path(__file__).resolve().parents[2]
         real_db = root / "09_Automation" / "operational" / "candidates.db"
@@ -305,6 +309,7 @@ class ScaleBenchmarkTests(unittest.TestCase):
             path.mkdir()
             self.assertEqual("directory", _formal_state(root)[str(path)].kind)
 
+    @pytest.mark.local_integration
     def test_cli_candidate_benchmark_emits_json(self) -> None:
         root = Path(__file__).resolve().parents[2]
         result = run_cli(

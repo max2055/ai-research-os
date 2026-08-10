@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
 
+import pytest
 from fastapi.testclient import TestClient
 
 import test_research_os_core as fixtures
@@ -437,6 +438,7 @@ class DashboardTests(unittest.TestCase):
             self.assertNotIn("B-023", operations.text)
 
 
+@pytest.mark.local_integration
 class ResearchWorkspaceSnapshotTests(unittest.TestCase):
     @property
     def root(self) -> Path:
@@ -561,6 +563,7 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
     def root(self) -> Path:
         return Path(__file__).resolve().parents[2]
 
+    @pytest.mark.local_integration
     def test_operations_unifies_all_due_work(self) -> None:
         snapshot = operations_snapshot(self.root, as_of="2026-08-09")
         for key in (
@@ -598,6 +601,7 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
         self.assertIn("free_bytes", snapshot["host"]["disk"])
         self.assertTrue(snapshot["host"]["timezone"])
 
+    @pytest.mark.local_integration
     def test_operations_and_health_pages_render_all_sections(self) -> None:
         client = TestClient(create_app(self.root))
         operations = client.get("/operations")
