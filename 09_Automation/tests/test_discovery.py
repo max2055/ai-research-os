@@ -11,8 +11,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from research_os.adapters.discovery import (
+    ArxivDiscoveryAdapter,
     CompositeDiscoveryAdapter,
     GitHubReleaseDiscoveryAdapter,
+    RSSDiscoveryAdapter,
     SECDiscoveryAdapter,
     SourceCandidate,
 )
@@ -288,9 +290,11 @@ class DiscoveryServiceTests(unittest.TestCase):
             self._running_run(root, now)
             with self.assertRaises(ValueError):
                 _acquire_channel_lock(db_path, "CHN-test", now)
-            row = sqlite3.connect(db_path).execute(
-                "SELECT status FROM discovery_runs WHERE run_id = 'RUN-lock'"
-            ).fetchone()
+            row = (
+                sqlite3.connect(db_path)
+                .execute("SELECT status FROM discovery_runs WHERE run_id = 'RUN-lock'")
+                .fetchone()
+            )
             self.assertEqual("running", row[0])
 
     def test_lock_reclaims_stale_running_run(self) -> None:
@@ -300,9 +304,11 @@ class DiscoveryServiceTests(unittest.TestCase):
             now = "2026-08-06T12:00:00Z"
             self._running_run(root, "2026-08-06T11:00:00Z")  # 1h old
             _acquire_channel_lock(db_path, "CHN-test", now)  # no raise
-            row = sqlite3.connect(db_path).execute(
-                "SELECT status FROM discovery_runs WHERE run_id = 'RUN-lock'"
-            ).fetchone()
+            row = (
+                sqlite3.connect(db_path)
+                .execute("SELECT status FROM discovery_runs WHERE run_id = 'RUN-lock'")
+                .fetchone()
+            )
             self.assertEqual("failed", row[0])
 
     def test_due_channels_respects_schedule_and_last_run(self) -> None:
@@ -356,8 +362,7 @@ def _raising_fetcher(url: str, **kwargs: object) -> str:
 class MultiTargetDiscoveryTests(unittest.TestCase):
     def test_multi_repo_locator_parses_all_repos(self) -> None:
         locator = (
-            "https://github.com/a/b; https://github.com/c/d; "
-            "https://github.com/a/b"
+            "https://github.com/a/b; https://github.com/c/d; https://github.com/a/b"
         )
         self.assertEqual(["a/b", "c/d"], _github_repos_from_locator(locator))
 
@@ -427,6 +432,68 @@ class MultiTargetDiscoveryTests(unittest.TestCase):
             }
         )
         self.assertIsInstance(sec, SECDiscoveryAdapter)
+
+
+class AdapterTransportAllowlistTests(unittest.TestCase):
+    def test_each_adapter_passes_its_explicit_transport_hosts(self) -> None:
+        calls: list[tuple[str, frozenset[str]]] = []
+
+        def fetcher(
+            url: str,
+            *,
+            headers: dict[str, str],
+            allowed_hosts: frozenset[str],
+            max_bytes: int,
+        ) -> str:
+            del headers, max_bytes
+            calls.append((url, allowed_hosts))
+            if "api.github.com" in url:
+                return "[]"
+            if "data.sec.gov" in url:
+                return '{"filings": {"recent": {}}}'
+            return "<feed/>"
+
+        rss_hosts = frozenset({"feeds.example", "articles.example"})
+        adapters = (
+            RSSDiscoveryAdapter(
+                "https://feeds.example/rss",
+                allowed_hosts=rss_hosts,
+                publisher="Example",
+                fetcher=fetcher,
+            ),
+            GitHubReleaseDiscoveryAdapter("org/repo", fetcher=fetcher),
+            ArxivDiscoveryAdapter("all:agent", fetcher=fetcher),
+            SECDiscoveryAdapter(
+                "1",
+                forms=frozenset({"10-K"}),
+                user_agent="Researcher contact@example.com",
+                fetcher=fetcher,
+            ),
+        )
+
+        for adapter in adapters:
+            adapter.discover()
+
+        self.assertEqual(
+            [
+                ("https://feeds.example/rss", rss_hosts),
+                (
+                    "https://api.github.com/repos/org/repo/releases?per_page=20",
+                    frozenset({"api.github.com"}),
+                ),
+                (
+                    "https://export.arxiv.org/api/query?search_query=all%3Aagent&"
+                    "start=0&max_results=20&sortBy=submittedDate&"
+                    "sortOrder=descending",
+                    frozenset({"arxiv.org", "export.arxiv.org"}),
+                ),
+                (
+                    "https://data.sec.gov/submissions/CIK0000000001.json",
+                    frozenset({"data.sec.gov", "www.sec.gov"}),
+                ),
+            ],
+            calls,
+        )
 
 
 if __name__ == "__main__":

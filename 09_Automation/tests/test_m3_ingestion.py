@@ -152,9 +152,10 @@ class DiscoveryAdapterTests(unittest.TestCase):
             url: str,
             *,
             headers: dict[str, str],
+            allowed_hosts: frozenset[str],
             max_bytes: int,
         ) -> str:
-            del url, headers, max_bytes
+            del url, headers, allowed_hosts, max_bytes
             return payload
 
         return fetcher
