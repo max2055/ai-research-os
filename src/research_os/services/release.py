@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import re
+import sqlite3
 import subprocess
 import unicodedata
 from dataclasses import asdict, dataclass
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from research_os.domain.models import ResearchObject
+from research_os.services.candidate_db import candidate_db_path
 from research_os.services.indexing import (
     index_drift,
     render_indexes,
@@ -102,15 +106,9 @@ MODE_DIMENSIONS = frozenset(
         "no_overreach",
     }
 )
-IMPACT_EXPECTED_SAMPLE_SIZE = 14
+IMPACT_EXPECTED_SAMPLE_SIZE = 20
 MODE_EXPECTED_CASE_COUNT = 10
 MODE_EXPECTED_RUN_COUNT = 34
-IMPACT_APPROVAL_DECISIONS = frozenset(
-    {
-        "approve",
-        "approve all 14 in-scope events; evt-046 excluded",
-    }
-)
 V03_REVIEWER_DENY_TOKENS = frozenset(
     {
         "agent",
@@ -270,6 +268,8 @@ TRADING_SURFACE_TOKENS = frozenset(
         "execution",
         "order",
         "orders",
+        "position",
+        "positions",
         "sell",
         "trade",
         "trades",
@@ -326,6 +326,19 @@ class ReleaseReadiness:
             "ready": self.ready,
             "checks": [check.as_dict() for check in self.checks],
         }
+
+
+@dataclass(frozen=True)
+class _RecoveryChainEvidence:
+    candidate_id: str
+    candidate_status: str
+    channel_id: str
+    candidate_url: str
+    source_id: str
+    source_record: Path
+    raw_asset: Path
+    raw_bytes: int
+    sha256: str
 
 
 def _read(root: Path, relative: str) -> str:
@@ -747,20 +760,430 @@ def _current_human_evidence(reviewer: object, dated: object, as_of: date) -> boo
     return _v03_human_reviewer(reviewer) and _human_date_allowed(dated, as_of)
 
 
-def _literal_strings(node: ast.AST | None) -> list[str]:
-    if node is None:
-        return []
-    return [
-        value.value
-        for value in ast.walk(node)
-        if isinstance(value, ast.Constant) and isinstance(value.value, str)
-    ]
+@dataclass(frozen=True)
+class _StaticStringValue:
+    strings: frozenset[str]
+    includes_unknown: bool = False
+    may_be_scalar: bool = False
+    may_be_collection: bool = False
+
+
+_UNKNOWN_STATIC_STRING = _StaticStringValue(frozenset(), includes_unknown=True)
+_EMPTY_STATIC_STRINGS = _StaticStringValue(frozenset(), may_be_collection=True)
+_StringEnvironment = dict[str, _StaticStringValue]
+
+
+def _merge_static_string_values(
+    *values: _StaticStringValue,
+) -> _StaticStringValue:
+    return _StaticStringValue(
+        frozenset(value for item in values for value in item.strings),
+        includes_unknown=any(item.includes_unknown for item in values),
+        may_be_scalar=any(item.may_be_scalar for item in values),
+        may_be_collection=any(item.may_be_collection for item in values),
+    )
+
+
+def _merge_string_environments(
+    *environments: _StringEnvironment,
+) -> _StringEnvironment:
+    names = {name for environment in environments for name in environment}
+    return {
+        name: _merge_static_string_values(
+            *(
+                environment.get(name, _UNKNOWN_STATIC_STRING)
+                for environment in environments
+            )
+        )
+        for name in names
+    }
+
+
+def _resolve_static_strings(
+    node: ast.AST | None, environment: _StringEnvironment
+) -> _StaticStringValue:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return _StaticStringValue(frozenset({node.value}), may_be_scalar=True)
+    if isinstance(node, ast.Name):
+        return environment.get(node.id, _UNKNOWN_STATIC_STRING)
+    if isinstance(node, ast.Starred):
+        return _resolve_static_strings(node.value, environment)
+    if isinstance(node, (ast.List, ast.Set, ast.Tuple)):
+        elements = _merge_static_string_values(
+            *(_resolve_static_strings(element, environment) for element in node.elts)
+        )
+        return _StaticStringValue(
+            elements.strings,
+            includes_unknown=elements.includes_unknown,
+            may_be_collection=True,
+        )
+    if isinstance(node, ast.IfExp):
+        return _merge_static_string_values(
+            _resolve_static_strings(node.body, environment),
+            _resolve_static_strings(node.orelse, environment),
+        )
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _resolve_static_strings(node.left, environment)
+        right = _resolve_static_strings(node.right, environment)
+        scalar = left.may_be_scalar and right.may_be_scalar
+        collection = left.may_be_collection and right.may_be_collection
+        strings = {
+            left_value + right_value
+            for left_value in left.strings
+            for right_value in right.strings
+            if scalar
+        }
+        if collection:
+            strings.update(left.strings)
+            strings.update(right.strings)
+        incompatible = (left.may_be_scalar and right.may_be_collection) or (
+            left.may_be_collection and right.may_be_scalar
+        )
+        return _StaticStringValue(
+            frozenset(strings),
+            includes_unknown=(
+                left.includes_unknown or right.includes_unknown or incompatible
+            ),
+            may_be_scalar=scalar,
+            may_be_collection=collection,
+        )
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        left = _resolve_static_strings(node.left, environment)
+        right = _resolve_static_strings(node.right, environment)
+        collection = left.may_be_collection and right.may_be_collection
+        return _StaticStringValue(
+            left.strings | right.strings if collection else frozenset(),
+            includes_unknown=(
+                left.includes_unknown or right.includes_unknown or not collection
+            ),
+            may_be_collection=collection,
+        )
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id in {"frozenset", "list", "set", "tuple"}
+        and len(node.args) <= 1
+        and not node.keywords
+    ):
+        if not node.args:
+            return _EMPTY_STATIC_STRINGS
+        contents = _resolve_static_strings(node.args[0], environment)
+        return _StaticStringValue(
+            contents.strings,
+            includes_unknown=contents.includes_unknown,
+            may_be_collection=True,
+        )
+    return _UNKNOWN_STATIC_STRING
+
+
+def _static_call_strings(
+    node: ast.Call,
+    environment: _StringEnvironment,
+    keyword: str,
+) -> frozenset[str]:
+    if node.args:
+        return _resolve_static_strings(node.args[0], environment).strings
+    argument = next((item.value for item in node.keywords if item.arg == keyword), None)
+    if argument is None:
+        return frozenset()
+    return _resolve_static_strings(argument, environment).strings
 
 
 def _surface_is_trading_action(value: str) -> bool:
     normalized = unicodedata.normalize("NFKC", value).lower()
     tokens = set(re.findall(r"[a-z]+", normalized))
     return bool(tokens.intersection(TRADING_SURFACE_TOKENS))
+
+
+class _ModuleSurfaceScanner:
+    """Track only module-level static string flow at each public use site."""
+
+    def __init__(self, relative: str) -> None:
+        self.relative = relative
+        self.findings: set[str] = set()
+
+    def scan(self, tree: ast.Module) -> set[str]:
+        self._scan_statements(tree.body, {})
+        return self.findings
+
+    def _record_candidates(self, candidates: frozenset[str]) -> None:
+        for candidate in candidates:
+            if _surface_is_trading_action(candidate):
+                self.findings.add(f"{self.relative}:{candidate}")
+
+    def _record_call(self, node: ast.Call, environment: _StringEnvironment) -> None:
+        if not isinstance(node.func, ast.Attribute):
+            return
+        name = node.func.attr
+        if name == "add_parser":
+            self._record_candidates(_static_call_strings(node, environment, "name"))
+        elif name in {
+            "add_api_route",
+            "delete",
+            "get",
+            "patch",
+            "post",
+            "put",
+        }:
+            self._record_candidates(
+                frozenset(
+                    value
+                    for value in _static_call_strings(node, environment, "path")
+                    if value.startswith("/")
+                )
+            )
+        elif (
+            name in {"add", "append"}
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id in {"JOB_NAMES", "__all__"}
+            and node.args
+        ):
+            self._record_candidates(
+                _resolve_static_strings(node.args[0], environment).strings
+            )
+
+    def _record_direct_registry_use(
+        self, node: ast.stmt, environment: _StringEnvironment
+    ) -> None:
+        value: ast.AST | None = None
+        names: set[str] = set()
+        if isinstance(node, ast.Assign):
+            names = {
+                target.id for target in node.targets if isinstance(target, ast.Name)
+            }
+            value = node.value
+        elif (
+            isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+        ) or (
+            isinstance(node, ast.AugAssign)
+            and isinstance(node.target, ast.Name)
+            and isinstance(node.op, (ast.Add, ast.BitOr))
+        ):
+            names = {node.target.id}
+            value = node.value
+        if names.intersection({"JOB_NAMES", "__all__"}):
+            self._record_candidates(_resolve_static_strings(value, environment).strings)
+
+    def _scan_expression(
+        self, node: ast.AST | None, environment: _StringEnvironment
+    ) -> None:
+        if node is None:
+            return
+        for descendant in ast.walk(node):
+            if isinstance(descendant, ast.Call):
+                self._record_call(descendant, environment)
+
+    def _scan_statement_header(
+        self, statement: ast.stmt, environment: _StringEnvironment
+    ) -> None:
+        for _field, value in ast.iter_fields(statement):
+            children = value if isinstance(value, list) else [value]
+            for child in children:
+                if not isinstance(child, ast.AST) or isinstance(
+                    child, (ast.stmt, ast.ExceptHandler, ast.match_case)
+                ):
+                    continue
+                self._scan_expression(child, environment)
+
+    def _scan_nested_body(
+        self, statements: list[ast.stmt], environment: _StringEnvironment
+    ) -> None:
+        # Nested runtime scopes retain the prior literal scan, without local flow.
+        for statement in statements:
+            for descendant in ast.walk(statement):
+                if isinstance(descendant, ast.Call):
+                    self._record_call(descendant, environment)
+                elif isinstance(descendant, ast.stmt):
+                    self._record_direct_registry_use(descendant, environment)
+
+    @staticmethod
+    def _bound_names(target: ast.AST) -> set[str]:
+        if isinstance(target, ast.Name):
+            return {target.id}
+        if isinstance(target, (ast.List, ast.Tuple)):
+            return {
+                name
+                for element in target.elts
+                for name in _ModuleSurfaceScanner._bound_names(element)
+            }
+        if isinstance(target, ast.Starred):
+            return _ModuleSurfaceScanner._bound_names(target.value)
+        return set()
+
+    @staticmethod
+    def _bind_unknown(
+        environment: _StringEnvironment, target: ast.AST
+    ) -> _StringEnvironment:
+        updated = dict(environment)
+        for name in _ModuleSurfaceScanner._bound_names(target):
+            updated[name] = _UNKNOWN_STATIC_STRING
+        return updated
+
+    @staticmethod
+    def _match_bound_names(pattern: ast.pattern) -> set[str]:
+        names: set[str] = set()
+        for descendant in ast.walk(pattern):
+            if isinstance(descendant, (ast.MatchAs, ast.MatchStar)):
+                if descendant.name is not None:
+                    names.add(descendant.name)
+            elif (
+                isinstance(descendant, ast.MatchMapping) and descendant.rest is not None
+            ):
+                names.add(descendant.rest)
+        return names
+
+    def _scan_statements(
+        self, statements: list[ast.stmt], environment: _StringEnvironment
+    ) -> tuple[_StringEnvironment, list[_StringEnvironment]]:
+        current = dict(environment)
+        states = [dict(current)]
+        for statement in statements:
+            current = self._scan_statement(statement, current)
+            states.append(dict(current))
+        return current, states
+
+    def _scan_loop(
+        self,
+        body: list[ast.stmt],
+        environment: _StringEnvironment,
+        target: ast.AST | None = None,
+    ) -> _StringEnvironment:
+        head = dict(environment)
+        while True:
+            body_environment = dict(head)
+            if target is not None:
+                body_environment = self._bind_unknown(body_environment, target)
+            body_exit, _states = self._scan_statements(body, body_environment)
+            widened = _merge_string_environments(environment, body_exit)
+            if widened == head:
+                return head
+            head = widened
+
+    def _scan_try(
+        self,
+        statement: ast.Try | ast.TryStar,
+        environment: _StringEnvironment,
+    ) -> _StringEnvironment:
+        try_exit, try_states = self._scan_statements(statement.body, environment)
+        normal_exit, _states = self._scan_statements(statement.orelse, try_exit)
+        handler_input = _merge_string_environments(*try_states)
+        exits = [normal_exit]
+        for handler in statement.handlers:
+            self._scan_expression(handler.type, handler_input)
+            handler_environment = dict(handler_input)
+            if handler.name is not None:
+                handler_environment[handler.name] = _UNKNOWN_STATIC_STRING
+            handler_exit, _states = self._scan_statements(
+                handler.body, handler_environment
+            )
+            exits.append(handler_exit)
+        continuing = _merge_string_environments(*exits)
+        if not statement.finalbody:
+            return continuing
+
+        # Finally also runs on exceptions raised partway through the try body.
+        all_finally_inputs = _merge_string_environments(continuing, *try_states)
+        self._scan_statements(statement.finalbody, all_finally_inputs)
+        final_exit, _states = self._scan_statements(statement.finalbody, continuing)
+        return final_exit
+
+    def _scan_statement(
+        self, statement: ast.stmt, environment: _StringEnvironment
+    ) -> _StringEnvironment:
+        current = dict(environment)
+        self._scan_statement_header(statement, current)
+        self._record_direct_registry_use(statement, current)
+
+        if isinstance(statement, ast.Assign):
+            assigned = _resolve_static_strings(statement.value, current)
+            for target in statement.targets:
+                if isinstance(target, ast.Name):
+                    current[target.id] = assigned
+                else:
+                    current = self._bind_unknown(current, target)
+            return current
+        if isinstance(statement, ast.AnnAssign) and isinstance(
+            statement.target, ast.Name
+        ):
+            if statement.value is not None:
+                current[statement.target.id] = _resolve_static_strings(
+                    statement.value, current
+                )
+            return current
+        if isinstance(statement, ast.AugAssign) and isinstance(
+            statement.target, ast.Name
+        ):
+            if statement.target.id in {"JOB_NAMES", "__all__"} and isinstance(
+                statement.op, (ast.Add, ast.BitOr)
+            ):
+                current[statement.target.id] = _merge_static_string_values(
+                    current.get(statement.target.id, _UNKNOWN_STATIC_STRING),
+                    _resolve_static_strings(statement.value, current),
+                )
+            else:
+                current[statement.target.id] = _UNKNOWN_STATIC_STRING
+            return current
+        if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call):
+            call = statement.value
+            if (
+                isinstance(call.func, ast.Attribute)
+                and call.func.attr in {"add", "append"}
+                and isinstance(call.func.value, ast.Name)
+                and call.func.value.id in {"JOB_NAMES", "__all__"}
+                and call.args
+            ):
+                registry = call.func.value.id
+                current[registry] = _merge_static_string_values(
+                    current.get(registry, _UNKNOWN_STATIC_STRING),
+                    _resolve_static_strings(call.args[0], current),
+                )
+            return current
+        if isinstance(statement, ast.If):
+            body_exit, _states = self._scan_statements(statement.body, current)
+            else_exit, _states = self._scan_statements(statement.orelse, current)
+            return _merge_string_environments(body_exit, else_exit)
+        if isinstance(statement, (ast.Try, ast.TryStar)):
+            return self._scan_try(statement, current)
+        if isinstance(statement, (ast.For, ast.AsyncFor)):
+            loop_exit = self._scan_loop(statement.body, current, statement.target)
+            else_exit, _states = self._scan_statements(statement.orelse, loop_exit)
+            return _merge_string_environments(loop_exit, else_exit)
+        if isinstance(statement, ast.While):
+            loop_exit = self._scan_loop(statement.body, current)
+            else_exit, _states = self._scan_statements(statement.orelse, loop_exit)
+            return _merge_string_environments(loop_exit, else_exit)
+        if isinstance(statement, ast.Match):
+            exits = [current]
+            for case in statement.cases:
+                case_environment = dict(current)
+                for name in self._match_bound_names(case.pattern):
+                    case_environment[name] = _UNKNOWN_STATIC_STRING
+                self._scan_expression(case.guard, case_environment)
+                case_exit, _states = self._scan_statements(case.body, case_environment)
+                exits.append(case_exit)
+            return _merge_string_environments(*exits)
+        if isinstance(statement, (ast.With, ast.AsyncWith)):
+            body_environment = dict(current)
+            for item in statement.items:
+                if item.optional_vars is not None:
+                    body_environment = self._bind_unknown(
+                        body_environment, item.optional_vars
+                    )
+            body_exit, _states = self._scan_statements(statement.body, body_environment)
+            return _merge_string_environments(current, body_exit)
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            self._scan_nested_body(statement.body, current)
+            current[statement.name] = _UNKNOWN_STATIC_STRING
+            return current
+        if isinstance(statement, (ast.Import, ast.ImportFrom)):
+            for alias in statement.names:
+                name = alias.asname or alias.name.split(".", 1)[0]
+                current[name] = _UNKNOWN_STATIC_STRING
+            return current
+        if isinstance(statement, ast.Delete):
+            for target in statement.targets:
+                current = self._bind_unknown(current, target)
+        return current
 
 
 def _production_trading_surfaces(root: Path) -> tuple[str, ...]:
@@ -773,40 +1196,7 @@ def _production_trading_surfaces(root: Path) -> tuple[str, ...]:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=relative)
         except (OSError, SyntaxError):
             continue
-        for node in ast.walk(tree):
-            candidates: list[str] = []
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                name = node.func.attr
-                first = node.args[0] if node.args else None
-                literals = _literal_strings(first)
-                if name == "add_parser":
-                    candidates.extend(literals)
-                elif name in {
-                    "add_api_route",
-                    "delete",
-                    "get",
-                    "patch",
-                    "post",
-                    "put",
-                }:
-                    candidates.extend(
-                        value for value in literals if value.startswith("/")
-                    )
-            elif isinstance(node, ast.Assign):
-                names = {
-                    target.id for target in node.targets if isinstance(target, ast.Name)
-                }
-                if names.intersection({"JOB_NAMES", "__all__"}):
-                    candidates.extend(_literal_strings(node.value))
-            elif (
-                isinstance(node, ast.AnnAssign)
-                and isinstance(node.target, ast.Name)
-                and node.target.id in {"JOB_NAMES", "__all__"}
-            ):
-                candidates.extend(_literal_strings(node.value))
-            for candidate in candidates:
-                if _surface_is_trading_action(candidate):
-                    findings.add(f"{relative}:{candidate}")
+        findings.update(_ModuleSurfaceScanner(relative).scan(tree))
     return tuple(sorted(findings))
 
 
@@ -981,17 +1371,226 @@ def _dashboard_smoke_routes(text: str) -> frozenset[str]:
     return frozenset(re.findall(r"`(/[^`]*)`", match.group(1)))
 
 
-def _recovery_evidence_passed(text: str, as_of: date) -> bool:
+def _required_recovery_cell(values: dict[str, str], label: str) -> str:
+    value = _plain_cell(values[label])
+    if not value:
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain {label} must be a non-empty value"
+        )
+    return value
+
+
+def _recovery_relative_path(value: str, label: str) -> Path:
+    path = Path(value)
+    if (
+        path.is_absolute()
+        or not path.parts
+        or "\\" in value
+        or any(part in {".", ".."} for part in path.parts)
+    ):
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain {label} must be a safe "
+            "repository-relative path"
+        )
+    return path
+
+
+def _recovery_chain_evidence(text: str) -> _RecoveryChainEvidence | None:
+    section = _markdown_section(text, "Candidate to Source to asset sample")
+    if not section:
+        return None
+    rows = [
+        row for row in _markdown_rows(section) if row and row[0] in RECOVERY_CHAIN_ROWS
+    ]
+    labels = [row[0] for row in rows]
+    if set(labels) != RECOVERY_CHAIN_ROWS:
+        return None
+    if len(labels) != len(RECOVERY_CHAIN_ROWS):
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain rows must be unique"
+        )
+    if any(len(row) != 2 for row in rows):
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain rows must contain exactly two columns"
+        )
+    values = {row[0]: row[1] for row in rows}
+
+    candidate = _required_recovery_cell(values, "Candidate")
+    candidate_match = re.fullmatch(
+        r"(CND-[0-9a-f]{20}),\s*status\s*([a-z][a-z0-9_-]*)", candidate
+    )
+    if candidate_match is None:
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain Candidate is malformed"
+        )
+
+    channel_id = _required_recovery_cell(values, "Channel")
+    if re.fullmatch(r"CHN-[a-z0-9]+(?:-[a-z0-9]+)*", channel_id) is None:
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain Channel is malformed"
+        )
+
+    candidate_url = _required_recovery_cell(values, "Candidate URL")
+    try:
+        parsed_url = urlsplit(candidate_url)
+    except ValueError as exc:
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain Candidate URL is malformed"
+        ) from exc
+    if (
+        parsed_url.scheme not in {"http", "https"}
+        or not parsed_url.netloc
+        or any(character.isspace() for character in candidate_url)
+    ):
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain Candidate URL is malformed"
+        )
+
+    source_id = _required_recovery_cell(values, "Promoted Source")
+    if re.fullmatch(r"SRC-\d{8}-\d{3}", source_id) is None:
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain Promoted Source is malformed"
+        )
+    source_record = _recovery_relative_path(
+        _required_recovery_cell(values, "Source record"), "Source record"
+    )
+    raw_asset = _recovery_relative_path(
+        _required_recovery_cell(values, "Raw asset"), "Raw asset"
+    )
+
+    raw_bytes = _required_recovery_cell(values, "Raw bytes")
+    if re.fullmatch(r"(?:[1-9]\d*|[1-9]\d{0,2}(?:,\d{3})+)", raw_bytes) is None:
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain Raw bytes is malformed"
+        )
+    sha256 = _required_recovery_cell(values, "Expected and actual SHA-256")
+    if re.fullmatch(r"[0-9a-f]{64}", sha256) is None:
+        raise ReleaseEvaluationError(
+            f"{RECOVERY_PATH}: recovery chain SHA-256 is malformed"
+        )
+    return _RecoveryChainEvidence(
+        candidate_id=candidate_match.group(1),
+        candidate_status=candidate_match.group(2),
+        channel_id=channel_id,
+        candidate_url=candidate_url,
+        source_id=source_id,
+        source_record=source_record,
+        raw_asset=raw_asset,
+        raw_bytes=int(raw_bytes.replace(",", "")),
+        sha256=sha256,
+    )
+
+
+def _candidate_recovery_row(
+    root: Path, candidate_id: str
+) -> tuple[str, str, str, str, str] | None:
+    path = candidate_db_path(root)
+    if not path.is_file():
+        return None
+    connection: sqlite3.Connection | None = None
+    try:
+        uri = f"file:{path.resolve().as_posix()}?mode=ro"
+        connection = sqlite3.connect(uri, uri=True)
+        row = connection.execute(
+            "SELECT candidate_id, channel_id, canonical_url, status, "
+            "promoted_source_id FROM candidates WHERE candidate_id = ?",
+            (candidate_id,),
+        ).fetchone()
+    except (OSError, sqlite3.Error):
+        return None
+    finally:
+        if connection is not None:
+            connection.close()
+    if row is None:
+        return None
+    return (
+        str(row[0] or ""),
+        str(row[1] or ""),
+        str(row[2] or ""),
+        str(row[3] or ""),
+        str(row[4] or ""),
+    )
+
+
+def _path_sha256(path: Path) -> str | None:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            while chunk := handle.read(1024 * 1024):
+                digest.update(chunk)
+    except OSError:
+        return None
+    return digest.hexdigest()
+
+
+def _recovery_chain_matches_repository(
+    root: Path,
+    objects: list[ResearchObject],
+    chain: _RecoveryChainEvidence,
+) -> bool:
+    candidate = _candidate_recovery_row(root, chain.candidate_id)
+    if candidate is None:
+        return False
+    candidate_id, channel_id, candidate_url, status, source_id = candidate
+    if (
+        candidate_id != chain.candidate_id
+        or channel_id != chain.channel_id
+        or candidate_url != chain.candidate_url
+        or status != chain.candidate_status
+        or status != "promoted"
+        or source_id != chain.source_id
+    ):
+        return False
+
+    by_id = {obj.object_id: obj for obj in objects}
+    source = by_id.get(chain.source_id)
+    channel = by_id.get(chain.channel_id)
+    if (
+        source is None
+        or source.object_type != "source"
+        or channel is None
+        or channel.object_type != "source_channel"
+    ):
+        return False
+    try:
+        source_record = source.path.resolve().relative_to(root.resolve())
+    except (OSError, ValueError):
+        return False
+    if source_record != chain.source_record:
+        return False
+
+    source_url = str(
+        source.metadata.get("canonical_url") or source.metadata.get("url") or ""
+    )
+    declared_assets = source.metadata.get("asset_paths")
+    if (
+        source_url != chain.candidate_url
+        or not isinstance(declared_assets, list)
+        or chain.raw_asset.as_posix() not in {str(value) for value in declared_assets}
+        or str(source.metadata.get("content_sha256") or "") != chain.sha256
+    ):
+        return False
+
+    try:
+        asset_path = (root / chain.raw_asset).resolve()
+        if not asset_path.is_relative_to(root.resolve()) or not asset_path.is_file():
+            return False
+        actual_bytes = asset_path.stat().st_size
+    except OSError:
+        return False
+    return actual_bytes == chain.raw_bytes and _path_sha256(asset_path) == chain.sha256
+
+
+def _recovery_evidence_passed(
+    root: Path, text: str, as_of: date, objects: list[ResearchObject]
+) -> bool:
     objectives = _unique_labeled_rows(
         _markdown_section(text, "Recovery objectives"), RECOVERY_OBJECTIVES
     )
     procedures = _unique_labeled_rows(
         _markdown_section(text, "Procedure and evidence"), RECOVERY_PROCEDURES
     )
-    chain = _unique_labeled_rows(
-        _markdown_section(text, "Candidate to Source to asset sample"),
-        RECOVERY_CHAIN_ROWS,
-    )
+    chain = _recovery_chain_evidence(text)
     if objectives is None or procedures is None or chain is None:
         return False
     if any(len(row) != 3 for row in objectives.values()):
@@ -1027,22 +1626,7 @@ def _recovery_evidence_passed(text: str, as_of: date) -> bool:
     )
     commit = _plain_cell(_line_value(text, "Commit"))
     snapshot_hash = _line_value(text, "Snapshot SHA-256")
-    chain_values = {
-        label: row[1] if len(row) == 2 else "" for label, row in chain.items()
-    }
-    asset_hash = chain_values["Expected and actual SHA-256"]
-    raw_bytes = _plain_cell(chain_values["Raw bytes"]).replace(",", "")
-    chain_passed = bool(
-        re.fullmatch(
-            r"`?CND-[0-9a-f]{20}`?,\s*status\s*`?promoted`?",
-            chain_values["Candidate"],
-            re.IGNORECASE,
-        )
-        and re.fullmatch(r"`?SRC-\d{8}-\d{3}`?", chain_values["Promoted Source"])
-        and raw_bytes.isdigit()
-        and int(raw_bytes) > 0
-        and _sha256_cell(asset_hash)
-    )
+    chain_passed = _recovery_chain_matches_repository(root, objects, chain)
     return bool(
         _dated_pass_record(text, as_of)
         and re.fullmatch(r"[0-9a-f]{40}", commit)
@@ -1366,6 +1950,15 @@ def _v03_cadence_records(
     return records
 
 
+def _impact_approval_allowed(decision: str, sample_size: int) -> bool:
+    if decision == "approve":
+        return True
+    counted = re.fullmatch(
+        r"approve all (\d+) in-scope events; evt-046 excluded", decision
+    )
+    return counted is not None and int(counted.group(1)) == sample_size
+
+
 def _impact_gate_evidence(
     root: Path, as_of: date, objects: list[ResearchObject]
 ) -> tuple[bool, str, dict[str, Any] | None]:
@@ -1389,17 +1982,18 @@ def _impact_gate_evidence(
         raise ReleaseEvaluationError(
             f"{IMPACT_JUDGMENTS_PATH}: sample_size must be a positive integer"
         )
-    if (
-        sample_size != IMPACT_EXPECTED_SAMPLE_SIZE
-        or len(judgments) != sample_size
-        or metrics.get("n") != sample_size
-    ):
+    metrics_count = metrics.get("n")
+    if not isinstance(metrics_count, int) or isinstance(metrics_count, bool):
         raise ReleaseEvaluationError(
-            f"{IMPACT_JUDGMENTS_PATH}: expected exactly "
-            f"{IMPACT_EXPECTED_SAMPLE_SIZE} approved in-scope rows"
+            f"{IMPACT_JUDGMENTS_PATH}: metrics.n must be an integer"
+        )
+    if len(judgments) != sample_size or metrics_count != sample_size:
+        raise ReleaseEvaluationError(
+            f"{IMPACT_JUDGMENTS_PATH}: judgments and metrics.n must match sample_size"
         )
     by_id = {obj.object_id: obj for obj in objects}
     judgment_pass = True
+    reviewed_events = True
     for index, judgment in enumerate(judgments):
         context = f"{IMPACT_JUDGMENTS_PATH}: judgments[{index}]"
         event_id = _required_string(judgment, "event_id", context)
@@ -1408,6 +2002,9 @@ def _impact_gate_evidence(
             raise ReleaseEvaluationError(
                 f"{IMPACT_JUDGMENTS_PATH}: {event_id} is not an existing Event"
             )
+        reviewed_events = reviewed_events and (
+            event.metadata.get("review_status") == "reviewed"
+        )
         direct = _required_bool(judgment, "direct_precision", context)
         mechanism = _required_bool(judgment, "mechanism_backed", context)
         direction = _required_bool(judgment, "direction_ok", context)
@@ -1428,19 +2025,28 @@ def _impact_gate_evidence(
     approved_date = _required_string(approved, "date", IMPACT_JUDGMENTS_PATH)
     decision = _required_string(approved, "decision", IMPACT_JUDGMENTS_PATH)
     normalized_decision = decision.lower()
-    if normalized_decision not in IMPACT_APPROVAL_DECISIONS:
+    decision_allowed = _impact_approval_allowed(normalized_decision, sample_size)
+    if not decision_allowed:
         raise ReleaseEvaluationError(
             f"{IMPACT_JUDGMENTS_PATH}: approved.decision is not an allowed "
             "terminal decision"
         )
     accepted = _dated_pass_record(acceptance, as_of)
     human_approved = (
-        _current_human_evidence(reviewer, approved_date, as_of)
-        and normalized_decision in IMPACT_APPROVAL_DECISIONS
+        _current_human_evidence(reviewer, approved_date, as_of) and decision_allowed
     )
-    passed = judgment_pass and gate_flags and accepted and human_approved
+    complete_sample = sample_size == IMPACT_EXPECTED_SAMPLE_SIZE
+    passed = (
+        complete_sample
+        and reviewed_events
+        and judgment_pass
+        and gate_flags
+        and accepted
+        and human_approved
+    )
     observed = (
-        f"{sample_size}/{sample_size} structured judgments; "
+        f"{sample_size}/{IMPACT_EXPECTED_SAMPLE_SIZE} structured judgments; "
+        f"sampled Events {'reviewed' if reviewed_events else 'not all reviewed'}; "
         f"C-020 {'passed' if accepted else 'not passed'}; "
         f"human approval {'valid' if human_approved else 'invalid or future'}"
     )
@@ -2054,7 +2660,7 @@ def release_readiness_v03(
     ]
 
     recovery = _read(root, RECOVERY_PATH)
-    recovery_passed = _recovery_evidence_passed(recovery, as_of_date)
+    recovery_passed = _recovery_evidence_passed(root, recovery, as_of_date, objects)
     quality_rows = all(
         bool(
             re.search(

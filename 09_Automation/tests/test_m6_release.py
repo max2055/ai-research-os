@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -69,12 +70,44 @@ class ReleaseReadinessTests(unittest.TestCase):
                     source.read_text(encoding="utf-8"),
                 )
 
+    def seed_v03_recovery_chain_evidence(self, root: Path) -> Path:
+        source_root = Path(__file__).resolve().parents[2]
+        for relative in (
+            "00_System/v0.3_Recovery_Drill.md",
+            "01_Inbox/Articles/SRC-20260806-077-10-q-filing-2025-04-30.md",
+            "02_Knowledge/Channels/CHN-sec-microsoft.md",
+        ):
+            fixtures.write(
+                root / relative,
+                (source_root / relative).read_text(encoding="utf-8"),
+            )
+        for relative in (
+            "09_Automation/operational/candidates.db",
+            ("01_Inbox/_assets/SRC-20260806-077/20260806142517-4ff48b41c786.html"),
+        ):
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_root / relative, target)
+        return root / "00_System/v0.3_Recovery_Drill.md"
+
     @staticmethod
     def checks_by_key(root: Path) -> dict[str, ReleaseCheck]:
         return {
             check.key: check
             for check in release_readiness_v03(root, as_of="2026-08-10").checks
         }
+
+    @staticmethod
+    def replace_recovery_chain_value(text: str, label: str, value: str) -> str:
+        pattern = rf"(?m)^(\|\s*{re.escape(label)}\s*\|)\s*[^|]*(\|\s*)$"
+        updated, count = re.subn(
+            pattern,
+            lambda match: f"{match.group(1)} {value} {match.group(2)}",
+            text,
+        )
+        if count != 1:
+            raise AssertionError(f"expected one recovery row for {label}, got {count}")
+        return updated
 
     def test_default_v02_remains_18_gate_text_contract(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -107,12 +140,14 @@ class ReleaseReadinessTests(unittest.TestCase):
         blockers = {check.key: check for check in readiness.blockers}
 
         self.assertFalse(readiness.ready)
-        self.assertEqual(8, len(blockers))
+        self.assertEqual(9, len(blockers))
         self.assertIn("WP-620", blockers["ingestion.pilot_completion"].observed)
         self.assertIn("WP-530", blockers["decision.natural_resolutions"].observed)
         self.assertIn("2026-10-31", blockers["decision.natural_resolutions"].observed)
         self.assertIn("F-024", blockers["human.release_approval"].observed)
         by_key = {check.key: check for check in readiness.checks}
+        self.assertFalse(by_key["impact_analysis.impact_field_gate"].passed)
+        self.assertIn("14/20", by_key["impact_analysis.impact_field_gate"].observed)
         self.assertTrue(by_key["decision.no_automated_trading"].passed)
         self.assertFalse(by_key["engineering.quality_suite"].passed)
         self.assertTrue(by_key["engineering.performance_slo"].passed)
@@ -280,7 +315,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     ) -> None:
         source_root = Path(__file__).resolve().parents[2]
         real = self.checks_by_key(source_root)
-        self.assertTrue(real["impact_analysis.impact_field_gate"].passed)
+        self.assertFalse(real["impact_analysis.impact_field_gate"].passed)
         self.assertTrue(real["impact_analysis.mode_field_gate"].passed)
 
         with tempfile.TemporaryDirectory() as temp:
@@ -303,6 +338,8 @@ class ReleaseReadinessTests(unittest.TestCase):
                     ]
                 elif label == "wrong-count":
                     payload["metrics"]["n"] = 13
+                elif label == "float-count":
+                    payload["metrics"]["n"] = 14.0
                 elif label == "invalid-decision":
                     payload["approved"]["decision"] = "approve-but-not-terminal"
                 impact_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -316,6 +353,7 @@ class ReleaseReadinessTests(unittest.TestCase):
                 "fake-event",
                 "duplicate-event",
                 "wrong-count",
+                "float-count",
                 "invalid-decision",
             ):
                 reject_impact(label)
@@ -354,6 +392,52 @@ class ReleaseReadinessTests(unittest.TestCase):
                 "invalid-status",
             ):
                 reject_mode(label)
+
+    def test_v03_impact_gate_requires_twenty_reviewed_events(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = fixtures.RepositoryValidationTests().make_root(temp)
+            self.seed_v03_field_gate_evidence(root)
+            impact_path = (
+                root / "05_Research/Reviews/Field_Gate_20_Impact_Judgments.json"
+            )
+            payload = json.loads(impact_path.read_text(encoding="utf-8"))
+            sampled_ids = {str(row["event_id"]) for row in payload["judgments"]}
+            objects, _ = validate_repository(root)
+            extra_events = [
+                obj
+                for obj in objects
+                if obj.object_type == "event"
+                and obj.metadata.get("review_status") == "reviewed"
+                and obj.object_id not in sampled_ids
+            ][:6]
+            self.assertEqual(6, len(extra_events))
+            for event in extra_events:
+                row = json.loads(json.dumps(payload["judgments"][0]))
+                row["event_id"] = event.object_id
+                payload["judgments"].append(row)
+            payload["sample_size"] = 20
+            payload["metrics"]["n"] = 20
+            impact_path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ReleaseEvaluationError, "approved.decision"):
+                release_readiness_v03(root, as_of="2026-08-10")
+
+            payload["approved"]["decision"] = "approve"
+            impact_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            complete = self.checks_by_key(root)
+            self.assertTrue(complete["impact_analysis.impact_field_gate"].passed)
+
+            pending_path = extra_events[0].path
+            pending_text = pending_path.read_text(encoding="utf-8")
+            self.assertIn("review_status: reviewed", pending_text)
+            pending_path.write_text(
+                pending_text.replace(
+                    "review_status: reviewed", "review_status: pending", 1
+                ),
+                encoding="utf-8",
+            )
+            pending = self.checks_by_key(root)
+            self.assertFalse(pending["impact_analysis.impact_field_gate"].passed)
 
     def test_v03_engineering_gates_reject_duplicate_and_label_only_evidence(
         self,
@@ -446,18 +530,218 @@ class ReleaseReadinessTests(unittest.TestCase):
                 "def place_market_order() -> None:\n    pass\n\n"
                 '__all__ = ["place_market_order"]\n',
             )
-            fixtures.write(
-                root / "src/research_os/services/query.py",
-                "# Enforcement note: no broker execution is allowed.\n"
-                'QUERY = "SELECT * FROM candidates ORDER BY created_at"\n',
-            )
 
             by_key = self.checks_by_key(root)
             self.assertFalse(by_key["decision.no_automated_trading"].passed)
 
-            runtime_path.write_text("__all__: list[str] = []\n", encoding="utf-8")
+            runtime_path.write_text(
+                "# Enforcement note: no broker execution is allowed.\n"
+                'QUERY = "SELECT * FROM candidates ORDER BY created_at"\n'
+                "__all__: list[str] = []\n",
+                encoding="utf-8",
+            )
             without_surface = self.checks_by_key(root)
             self.assertTrue(without_surface["decision.no_automated_trading"].passed)
+
+    def test_v03_no_trading_resolves_static_names_and_registry_mutations(
+        self,
+    ) -> None:
+        cases = (
+            (
+                "src/research_os/cli.py",
+                'COMMAND = "trade"\nparser.add_parser(COMMAND)\n',
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/broker/order"\n'
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+            ),
+            (
+                "src/research_os/cli.py",
+                'COMMAND = "trade"\nparser.add_parser(name=COMMAND)\n',
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/broker/order"\n'
+                "@app.post(path=ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/broker/order"\n'
+                "def submit() -> None:\n    pass\n"
+                "app.add_api_route(path=ROUTE, endpoint=submit)\n",
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/" + "broker/order"\n'
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/safe"\n'
+                "if ENABLED:\n"
+                '    ROUTE = "/broker/order"\n'
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/safe"\n'
+                "try:\n"
+                '    ROUTE = "/broker/order"\n'
+                "except RuntimeError:\n"
+                "    pass\n"
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/safe"\n'
+                "for item in ITEMS:\n"
+                '    ROUTE = "/broker/order"\n'
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/safe"\n'
+                "while ENABLED:\n"
+                '    ROUTE = "/broker/order"\n'
+                "    break\n"
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+            ),
+            (
+                "src/research_os/ui/app.py",
+                'ROUTE = "/safe"\n'
+                "match MODE:\n"
+                '    case "trade":\n'
+                '        ROUTE = "/broker/order"\n'
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+            ),
+            (
+                "src/research_os/services/jobs.py",
+                'JOB_NAMES = {"daily"}\nJOB_NAMES |= {"trade"}\n',
+            ),
+            (
+                "src/research_os/services/jobs.py",
+                'JOB_NAMES = ("daily",)\nJOB_NAMES += ("trade",)\n',
+            ),
+            (
+                "src/research_os/services/jobs.py",
+                'JOB_NAMES = {"daily"}\nJOB_NAMES.add("trade")\n',
+            ),
+            (
+                "src/research_os/runtime/product.py",
+                '__all__ = []\n__all__.append("place_market_order")\n',
+            ),
+        )
+        for relative, source in cases:
+            with (
+                self.subTest(relative=relative, source=source),
+                tempfile.TemporaryDirectory() as temp,
+            ):
+                root = fixtures.RepositoryValidationTests().make_root(temp)
+                fixtures.write(
+                    root / "00_System/v0.3_Known_Limitations.md",
+                    "No automated investment action.\n"
+                    "No broker, order, or portfolio execution integration.\n",
+                )
+                fixtures.write(root / relative, source)
+                by_key = self.checks_by_key(root)
+                self.assertFalse(by_key["decision.no_automated_trading"].passed)
+
+    def test_v03_no_trading_static_names_use_latest_unconditional_value(
+        self,
+    ) -> None:
+        cases = (
+            (
+                'ROUTE = "/broker/order"\n'
+                'ROUTE = "/safe"\n'
+                "@app.post(ROUTE)\n"
+                "def status() -> None:\n    pass\n",
+                True,
+            ),
+            (
+                'ROUTE = "/broker/order"\n'
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n"
+                'ROUTE = "/safe"\n',
+                False,
+            ),
+            (
+                'ROUTE = "/broker/order"\n'
+                "ROUTE: str\n"
+                "@app.post(ROUTE)\n"
+                "def submit() -> None:\n    pass\n",
+                False,
+            ),
+            (
+                'ROUTE = "/broker/order"\n'
+                "ROUTE = configured_route()\n"
+                "@app.post(ROUTE)\n"
+                "def status() -> None:\n    pass\n",
+                True,
+            ),
+            (
+                'ROUTE = "/safe"\n'
+                "def configure() -> None:\n"
+                '    ROUTE = "/broker/order"\n'
+                "@app.post(ROUTE)\n"
+                "def status() -> None:\n    pass\n",
+                True,
+            ),
+        )
+        for source, expected in cases:
+            with self.subTest(source=source), tempfile.TemporaryDirectory() as temp:
+                root = fixtures.RepositoryValidationTests().make_root(temp)
+                fixtures.write(
+                    root / "00_System/v0.3_Known_Limitations.md",
+                    "No automated investment action.\n"
+                    "No broker, order, or portfolio execution integration.\n",
+                )
+                fixtures.write(root / "src/research_os/ui/app.py", source)
+
+                by_key = self.checks_by_key(root)
+                self.assertEqual(
+                    expected,
+                    by_key["decision.no_automated_trading"].passed,
+                )
+
+    def test_v03_no_trading_rejects_position_surfaces(self) -> None:
+        cases = (
+            ("src/research_os/cli.py", 'parser.add_parser("position")\n'),
+            (
+                "src/research_os/ui/app.py",
+                '@app.get("/positions")\ndef positions() -> None:\n    pass\n',
+            ),
+            (
+                "src/research_os/services/jobs.py",
+                'JOB_NAMES = {"position-size"}\n',
+            ),
+            (
+                "src/research_os/runtime/product.py",
+                '__all__ = ["position_sizes"]\n',
+            ),
+        )
+        for relative, source in cases:
+            with (
+                self.subTest(relative=relative, source=source),
+                tempfile.TemporaryDirectory() as temp,
+            ):
+                root = fixtures.RepositoryValidationTests().make_root(temp)
+                fixtures.write(
+                    root / "00_System/v0.3_Known_Limitations.md",
+                    "No automated investment action.\n"
+                    "No broker, order, or portfolio execution integration.\n",
+                )
+                fixtures.write(root / relative, source)
+                by_key = self.checks_by_key(root)
+                self.assertFalse(by_key["decision.no_automated_trading"].passed)
 
     def test_v03_pilot_requires_b026_and_a_distinct_30_day_acceptance(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -707,6 +991,55 @@ class ReleaseReadinessTests(unittest.TestCase):
             "launchd",
         ):
             self.assertIn(text, record)
+
+    def test_v03_recovery_chain_rejects_empty_structured_fields(self) -> None:
+        labels = (
+            "Candidate",
+            "Channel",
+            "Candidate URL",
+            "Promoted Source",
+            "Source record",
+            "Raw asset",
+            "Raw bytes",
+            "Expected and actual SHA-256",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = fixtures.RepositoryValidationTests().make_root(temp)
+            recovery_path = self.seed_v03_recovery_chain_evidence(root)
+            original = recovery_path.read_text(encoding="utf-8")
+            baseline = self.checks_by_key(root)
+            self.assertTrue(baseline["engineering.recovery_boundaries"].passed)
+
+            for label in labels:
+                with self.subTest(label=label):
+                    recovery_path.write_text(
+                        self.replace_recovery_chain_value(original, label, ""),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaises(ReleaseEvaluationError):
+                        release_readiness_v03(root, as_of="2026-08-10")
+
+    def test_v03_recovery_chain_blocks_completely_forged_links(self) -> None:
+        replacements = {
+            "Candidate": "`CND-aaaaaaaaaaaaaaaaaaaa`, status `promoted`",
+            "Channel": "`CHN-forged`",
+            "Candidate URL": "`https://example.invalid/forged`",
+            "Promoted Source": "`SRC-20990101-999`",
+            "Source record": "`01_Inbox/Articles/SRC-20990101-999-forged.md`",
+            "Raw asset": "`01_Inbox/_assets/SRC-20990101-999/forged.bin`",
+            "Raw bytes": "123",
+            "Expected and actual SHA-256": f"`{'a' * 64}`",
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            root = fixtures.RepositoryValidationTests().make_root(temp)
+            recovery_path = self.seed_v03_recovery_chain_evidence(root)
+            forged = recovery_path.read_text(encoding="utf-8")
+            for label, value in replacements.items():
+                forged = self.replace_recovery_chain_value(forged, label, value)
+            recovery_path.write_text(forged, encoding="utf-8")
+
+            by_key = self.checks_by_key(root)
+            self.assertFalse(by_key["engineering.recovery_boundaries"].passed)
 
     def test_v03_migration_rehearsal_records_forward_and_rollback_gates(
         self,
