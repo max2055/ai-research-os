@@ -1,6 +1,6 @@
 # v0.3 Master Backlog 与实施波次
 
-状态：`wave6-engineering-completed`（Wave 0-5 工程完成；WP-530 future-date dependent；Wave 6 WP-600～612 工程完成，WP-620 保持真实时间依赖）
+状态：`wave6-operational-hardening`（Wave 0-5 工程完成；F-023 已实现；WP-530、WP-620、F-024 保持 BLOCKED，未批准 v0.3 发布）
 规则：本文件是执行索引；任务细节以各 Phase 文件为准。Agent 不得只读本表就开工。
 
 ## 1. 状态枚举
@@ -236,7 +236,7 @@ WP-412 close-out（2026-08-08）：D-014~016 落地，Phase 4 命令层完成。
 | WP-511 | E-014～015 | supersession/calibration | completed |
 | WP-512 | E-016～018 | CLI/UI/alerts | completed |
 | WP-520 | E-019～021 | license + 10 forecast + 3 company Pilot | completed |
-| WP-530 | E-022～023 | natural resolution + acceptance | future-date dependent |
+| WP-530 | E-022～023 | natural resolution + acceptance | **BLOCKED**（future-date dependent；earliest 2026-10-31） |
 
 WP-530 不能用回填或合成 outcome 提前完成。
 
@@ -251,8 +251,8 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-610 | F-012～014 | profile/SLO/security | completed |
 | WP-611 | F-015～018 | license/backup/recovery/migration | completed |
 | WP-612 | F-019～020 | runbook/limitations | completed |
-| WP-620 | F-021～022 | 30-day Pilot/resolutions | future-date dependent |
-| WP-630 | F-023～025 | release check/human decision/tag | WP-620 | proposed |
+| WP-620 | F-021～022 | 30-day Pilot/resolutions | **BLOCKED**（future-date dependent；real 30-day Pilot） |
+| WP-630 | F-023～025 | release check/human decision/tag | in_progress（F-023 completed；F-024 BLOCKED；F-025 waits for all Gates） |
 
 Wave 6 开工前置已满足：RCP-v03-010 已获批（2026-08-09，`6e5aa8e` 修订 + approval）；F-001 页面/查询/边界按 RCP 批准时点同步完成。WP-600 起可开工。
 
@@ -289,15 +289,17 @@ WP-610 close-out（2026-08-10）：F-012~014 完成实测性能与安全门禁�
 
 WP-611 close-out（2026-08-10）：F-015~018 完成许可、备份、恢复与迁移工程证据。
 - **F-015**：`v0.3_Channel_License_Audit.md` 精确覆盖 20/20 enabled Channels；仅证明 repository metadata governance 完整，不声称 fresh legal/robots verification。
-- **F-016**：Candidate SQLite live backup、atomic rename、integrity、SHA-256 manifest、age status、CLI dry-run/`--apply` 与 `backup-candidate` Job 已落地。基线 snapshot schema v2 / integrity `ok` / SHA-256 `07c3e245...`；二进制与 manifest 保持 operational/untracked，不作为 Markdown 权威提交。
+- **F-016**：Candidate SQLite live backup、atomic rename、integrity、SHA-256 manifest、age status、CLI dry-run/`--apply` 与 `backup-candidate` Job 已落地。Durable extension 现支持 Candidate + Source assets 两组 `age` 加密、private GitHub fixed prerelease、remote hash verify、disposable restore 与 redacted `backup-durable` Job；config/receipt/key 仍 operational/untracked。基线 snapshot schema v2 / integrity `ok` / SHA-256 `07c3e245...`；未把 production remote run 或第二密钥 custody 伪造成 repository evidence。
 - **F-017**：`v0.3_Recovery_Drill.md` 在 disposable clean clone 恢复 Git、真实 assets 与 Candidate snapshot；RTO 21m26s、snapshot-based RPO 上限 2m51s；148/148 archived Source hash、Candidate→Source→asset 抽样链、validate/index/full pytest/ruff/mypy/UI/discovery dry-run 均通过。secrets/launchd/private remote 明确保留在恢复边界外。
 - **F-018**：`v0.3_Migration_Rehearsal.md` 在另一 disposable clone 对 8 个 v0.2 legacy Company 做 v1→v2 plan/apply；1027/1027 unowned objects apply 期间不变。故障注入触发 `rollback precondition changed` 且拒绝覆盖；修复 after-hash 后 1035/1035 正式对象字节级恢复，Candidate DB hash/schema v2 不变；forward/rollback 后 validate/index/full pytest 通过。
 
 WP-612 close-out（2026-08-10）：F-019~020 完成 operator 与决策边界文档。
-- **F-019**：`v0.3_User_Runbook.md` 覆盖 install/config、loopback Dashboard、daily/weekly/monthly、Candidate/Evidence/Impact/Analysis/Forecast/Decision review、backup/restore、P0~P3 failure response、secrets/escalation；所有写命令明确 dry-run 与 `--apply` 边界。
-- **F-020**：`v0.3_Known_Limitations.md` 以 Facts/Inferences/Judgments 分离数据/时效、模型/provider retention、许可、SQLite/single-user、read-only Web、校准、投资行为边界；release completeness tests 固化文档必备项与 WP-530/WP-620 状态。
+- **F-019**：`v0.3_User_Runbook.md` 覆盖 install/config、loopback Dashboard、daily/weekly/monthly、Candidate/Evidence/Impact/Analysis/Forecast/Decision review、local+durable backup、recipient/identity 分离、off-device receipt/key custody、disposable restore、P0~P3 failure response、secrets/escalation；所有写命令明确 dry-run 与 `--apply` 边界。
+- **F-020**：`v0.3_Known_Limitations.md` 以 Facts/Inferences/Judgments 分离数据/时效、模型/provider retention、许可、SQLite/single-user、read-only Web、metadata-only CI、strict local Gate、六态 cost、backup receipt/key custody、校准和投资行为边界；document contract tests 固化必备项与 blocked 状态。
 - **真实时间门不变**：WP-530 最早真实 Forecast resolution 仍为 2026-10-31；WP-620 仍需真实 30-day Pilot/natural resolutions；不生成 synthetic outcome、reviewer、date 或 approval。WP-630 继续等待这些 Gate 与 human release packet。
-- **release check 边界**：当前 `research-os release check` 仍是 v0.2 的 18 Gate（当前 18/18 Ready），不是 v0.3 发布判定；v0.3 machine-verifiable check 属 WP-630/F-023，未借本次工程 close-out 提前实现或批准。
+- **release check 边界**：默认 `research-os release check` 仍是 v0.2 的 18 Gate；显式 `--version 0.3` 已实现 WP-630/F-023 的 21-key read-only evaluator。当前结果必须保持 BLOCKED，至少独立显示 WP-530、WP-620、F-024；checker 不创建 packet、reviewer、date、approval、tag 或 release。
+- **private CI 边界**：hosted workflow 仅用 metadata-only validation/index、asset-independent tests、Ruff/mypy、10-route smoke 与预期 blocker assertion；权限 `contents: read`，不读取 raw assets、Candidate DB、secret、backup identity，不替代 strict local/full restore Gate。
+- **durable health/cost**：local snapshot 与 durable receipt age 分开；durable `missing/failed/invalid/stale (>24h)` 用稳定 `BKP_DURABLE_*` code 报 P1，Dashboard 正常 render 不联网。model/API cost 按 natural month 显示 `unconfigured/no_data/ok/warning/exceeded/invalid`，missing 不当作 zero，raw budget 不渲染。
 
 ## 10. 建议首批派发顺序
 

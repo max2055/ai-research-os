@@ -490,6 +490,68 @@ raise SystemExit(2)
                 ).exists()
             )
 
+    def test_durable_backup_operator_docs_pin_commands_and_key_custody(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        recovery = (root / "00_System/Recovery_Runbook.md").read_text(
+            encoding="utf-8"
+        )
+        user = (root / "00_System/v0.3_User_Runbook.md").read_text(encoding="utf-8")
+        launchd = (root / "09_Automation/launchd/RUNBOOK.md").read_text(
+            encoding="utf-8"
+        )
+        readme = (root / "README.md").read_text(encoding="utf-8")
+
+        for text in (
+            "brew install age gh jq",
+            "age-keygen",
+            "gh auth status",
+            "research-os-durable-backups-v1",
+            '"repository"',
+            '"recipients"',
+            "recipient is a public encryption identity",
+            "identity is a private decryption key",
+            "second independent identity",
+            "offline",
+            "09_Automation/operational/backups/durable/latest-success.json",
+            'backup durable create --config "$BACKUP_CONFIG"',
+            'backup durable create --config "$BACKUP_CONFIG" --apply',
+            'backup durable verify-remote --backup-id "$BACKUP_ID"',
+            'backup durable restore --backup-id "$BACKUP_ID"',
+            '--identity "$AGE_IDENTITY"',
+            '--destination "$RESTORE_DESTINATION"',
+        ):
+            with self.subTest(document="recovery", text=text):
+                self.assertIn(text, recovery)
+
+        for text in (
+            'backup durable create --config "$BACKUP_CONFIG"',
+            'backup durable create --config "$BACKUP_CONFIG" --apply',
+            'backup durable verify-remote --backup-id "$BACKUP_ID"',
+            'backup durable restore --backup-id "$BACKUP_ID"',
+            "BKP_DURABLE_MISSING",
+            "BKP_DURABLE_FAILED",
+            "BKP_DURABLE_INVALID",
+            "BKP_DURABLE_STALE",
+            "24-hour RPO",
+            "P1",
+        ):
+            with self.subTest(document="user", text=text):
+                self.assertIn(text, user)
+
+        for text in (
+            "does not run durable backup",
+            "at least once every 24 hours",
+            "BKP_DURABLE_STALE",
+            "P1",
+        ):
+            with self.subTest(document="launchd", text=text):
+                self.assertIn(text, launchd)
+
+        self.assertIn(
+            'research-os backup durable create --config "$BACKUP_CONFIG"', readme
+        )
+        self.assertIn("00_System/Recovery_Runbook.md", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

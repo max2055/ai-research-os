@@ -89,7 +89,25 @@ research-os candidates purge                                   # dry-run 预览
 ## 备份与故障处理（§13）
 
 - Candidate DB（`09_Automation/operational/candidates.db`）为派生数据，
-  按 Recovery_Runbook 加密备份；可从 Channel 重跑重建。
+  按 Recovery_Runbook 加密备份；可从 Channel 重跑重建，但重跑不保证重现已过期或
+  上游已删除的 Candidate。
+- The bundled discovery LaunchAgent does not run durable backup. `run_daily.sh` 只执行
+  due discovery 与 retention，避免把 ignored key/config 隐式注入现有 plist。
+- Operator 必须另行调度或手动执行 durable create --apply at least once every 24 hours：
+
+```bash
+BACKUP_CONFIG=09_Automation/operational/backup.local.json
+research-os backup durable create --config "$BACKUP_CONFIG"
+research-os backup durable create --config "$BACKUP_CONFIG" --apply
+```
+
+- `/health` 只读 local receipt，不联网。`missing`、`failed`、`invalid` 或超过 24 小时
+  的 `stale` durable 状态均为 P1；例如 `BKP_DURABLE_STALE`。收到告警后保留 Job 和
+  receipt，显式运行 `verify-remote`，并按 `00_System/Recovery_Runbook.md` 在 disposable
+  directory 验证 restore。不得通过删除失败 Job 或修改 receipt 时间消除告警。
+- 若为 durable backup 建立另一个 LaunchAgent，plist 只能引用 ignored config path，
+  不能嵌入 recipient、private identity、token 或 raw budget。先手动完成 dry-run/apply/
+  verify/restore，再启用调度；该额外 plist 不属于当前仓库基线。
 - 单 Channel 可 `channels disable`，不删除配置。
 - Adapter 失败不得创建 processed Source（promote 才写权威仓库）。
 - 许可变为 restricted 时停抓、保留合规记录。

@@ -1124,8 +1124,13 @@ class ReleaseReadinessTests(unittest.TestCase):
             "no automated investment action",
             "WP-530",
             "WP-620",
+            "F-024",
             "2026-10-31",
-            "release check is v0.2-only",
+            "default release check remains v0.2",
+            "explicit --version 0.3",
+            "metadata-only",
+            "strict local",
+            "blocked",
             "not buy, sell, position-size, or execution instructions",
         ):
             self.assertIn(text.lower(), normalized)
@@ -1141,6 +1146,73 @@ class ReleaseReadinessTests(unittest.TestCase):
         )
         self.assertIn("future-date dependent", wp530)
         self.assertIn("future-date dependent", wp620)
+
+    def test_v03_docs_pin_ci_cost_and_blocked_release_contract(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        runbook = (root / "00_System/v0.3_User_Runbook.md").read_text(
+            encoding="utf-8"
+        )
+        limitations = (root / "00_System/v0.3_Known_Limitations.md").read_text(
+            encoding="utf-8"
+        )
+        backlog = (
+            root / "00_System/v0.3_AI_Industry_Intelligence_OS/09_Master_Backlog.md"
+        ).read_text(encoding="utf-8")
+
+        for text in (
+            "research-os validate --strict",
+            "research-os validate --metadata-only",
+            "research-os release check --version 0.3 --format json",
+            "metadata-only",
+            "strict local",
+        ):
+            with self.subTest(document="readme", text=text):
+                self.assertIn(text, readme)
+
+        combined = f"{runbook}\n{limitations}"
+        for state in (
+            "unconfigured",
+            "no_data",
+            "ok",
+            "warning",
+            "exceeded",
+            "invalid",
+        ):
+            with self.subTest(cost_state=state):
+                self.assertIn(f"`{state}`", combined)
+        for text in (
+            "RESEARCH_OS_MODEL_COST_BUDGET",
+            "natural month",
+            "missing cost is not zero",
+            "metadata-only",
+            "strict local",
+            "WP-530",
+            "WP-620",
+            "F-024",
+            "2026-10-31",
+            "BLOCKED",
+        ):
+            with self.subTest(operational_contract=text):
+                self.assertIn(text, combined)
+
+        wp530 = next(
+            line for line in backlog.splitlines() if line.startswith("| WP-530")
+        )
+        wp620 = next(
+            line for line in backlog.splitlines() if line.startswith("| WP-620")
+        )
+        wp630 = next(
+            line for line in backlog.splitlines() if line.startswith("| WP-630")
+        )
+        self.assertIn("BLOCKED", wp530)
+        self.assertIn("future-date dependent", wp530)
+        self.assertIn("2026-10-31", wp530)
+        self.assertIn("BLOCKED", wp620)
+        self.assertIn("future-date dependent", wp620)
+        self.assertIn("30-day Pilot", wp620)
+        self.assertIn("F-023 completed", wp630)
+        self.assertIn("F-024 BLOCKED", wp630)
 
     def test_v03_license_audit_covers_every_enabled_channel(self) -> None:
         root = Path(__file__).resolve().parents[2]
