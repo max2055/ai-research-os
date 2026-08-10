@@ -8,6 +8,7 @@ import math
 import os
 import platform
 import sqlite3
+import stat
 import tempfile
 import time
 from collections.abc import Callable
@@ -16,6 +17,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+from research_os.repositories.markdown import OBJECT_PATTERNS
 from research_os.services import candidate_db
 from research_os.services.candidate_db import candidate_db_path
 from research_os.services.candidate_queue import queue_rows, render_candidate_list
@@ -111,6 +113,17 @@ _DASHBOARD_SLO = {
 }
 
 
+@dataclass(frozen=True)
+class _FormalPathState:
+    kind: str
+    mode: int | None
+    size_bytes: int | None
+    mtime_ns: int | None
+    sha256: str | None
+    link_target: str | None = None
+    error: str | None = None
+
+
 def _nearest_rank_p95(samples: tuple[float, ...] | list[float]) -> float:
     if not samples:
         raise ValueError("p95 requires at least one sample")
@@ -123,16 +136,108 @@ def _p95(samples: list[float]) -> float:
     return _nearest_rank_p95(samples)
 
 
-def _formal_state(objects: list[Any]) -> dict[str, tuple[int, int, str]]:
-    state: dict[str, tuple[int, int, str]] = {}
-    for obj in objects:
-        file_state = _file_state(obj.path)
-        state[str(obj.path)] = (
-            int(file_state["size_bytes"]),
-            int(file_state["mtime_ns"]),
-            str(file_state["sha256"]),
+def _formal_path_state(path: Path) -> _FormalPathState:
+    try:
+        path_stat = path.lstat()
+    except OSError as exc:
+        return _FormalPathState(
+            kind="error",
+            mode=None,
+            size_bytes=None,
+            mtime_ns=None,
+            sha256=None,
+            error=str(exc),
         )
-    return state
+
+    def observed_state(
+        kind: str,
+        *,
+        link_target: str | None = None,
+        error: str | None = None,
+    ) -> _FormalPathState:
+        return _FormalPathState(
+            kind=kind,
+            mode=path_stat.st_mode,
+            size_bytes=path_stat.st_size,
+            mtime_ns=path_stat.st_mtime_ns,
+            sha256=None,
+            link_target=link_target,
+            error=error,
+        )
+
+    if stat.S_ISLNK(path_stat.st_mode):
+        try:
+            target = os.readlink(path)
+        except OSError as exc:
+            return observed_state("symlink", error=str(exc))
+        return observed_state("symlink", link_target=target)
+    if stat.S_ISDIR(path_stat.st_mode):
+        return observed_state("directory")
+    if not stat.S_ISREG(path_stat.st_mode):
+        return observed_state("other")
+
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    flags |= getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        return observed_state("error", error=str(exc))
+    try:
+        opened_stat = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(opened_stat.st_mode)
+            or (opened_stat.st_dev, opened_stat.st_ino)
+            != (path_stat.st_dev, path_stat.st_ino)
+        ):
+            return observed_state(
+                "error", error="path changed while opening formal file"
+            )
+        digest = hashlib.sha256()
+        while chunk := os.read(descriptor, 1024 * 1024):
+            digest.update(chunk)
+        final_stat = os.fstat(descriptor)
+        if (
+            final_stat.st_mode,
+            final_stat.st_size,
+            final_stat.st_mtime_ns,
+        ) != (
+            opened_stat.st_mode,
+            opened_stat.st_size,
+            opened_stat.st_mtime_ns,
+        ):
+            return observed_state("error", error="formal file changed while hashing")
+        return _FormalPathState(
+            kind="regular",
+            mode=final_stat.st_mode,
+            size_bytes=final_stat.st_size,
+            mtime_ns=final_stat.st_mtime_ns,
+            sha256=digest.hexdigest(),
+        )
+    finally:
+        os.close(descriptor)
+
+
+def _formal_state(root: Path) -> dict[str, _FormalPathState]:
+    paths: set[Path] = set()
+    for pattern in OBJECT_PATTERNS:
+        paths.update(root.glob(pattern))
+    return {str(path): _formal_path_state(path) for path in sorted(paths)}
+
+
+def _non_regular_formal_paths(
+    state: dict[str, _FormalPathState],
+) -> tuple[str, ...]:
+    return tuple(
+        sorted(path for path, value in state.items() if value.kind != "regular")
+    )
+
+
+def _require_regular_formal_paths(state: dict[str, _FormalPathState]) -> None:
+    unsafe = _non_regular_formal_paths(state)
+    if unsafe:
+        raise ValueError(
+            "formal Markdown paths must be regular files: " + ", ".join(unsafe)
+        )
 
 
 def _candidate_count(root: Path) -> int:
@@ -323,12 +428,14 @@ def benchmark_candidate_queue(
         raise ValueError("page_size must be positive")
     if offset < 0:
         raise ValueError("offset must be non-negative")
-    if max_seconds <= 0:
-        raise ValueError("max_seconds must be positive")
+    if not math.isfinite(max_seconds) or max_seconds <= 0:
+        raise ValueError("max_seconds must be finite and positive")
 
     root = root.resolve()
     real_db = candidate_db_path(root)
     real_db_before = _file_state(real_db)
+    formal_before = _formal_state(root)
+    _require_regular_formal_paths(formal_before)
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
         raise ValueError("repository validation must pass before benchmark")
@@ -344,8 +451,6 @@ def benchmark_candidate_queue(
     if not companies:
         raise ValueError("candidate benchmark requires a Company with coverage_tier")
     entity_id, tier = companies[0]
-    formal_before = _formal_state(objects)
-
     with tempfile.TemporaryDirectory(prefix="research-os-candidate-benchmark-") as temp:
         fixture_path = Path(temp) / "candidates.db"
         distribution = _candidate_fixture(
@@ -379,15 +484,19 @@ def benchmark_candidate_queue(
             operation()
             samples.append(round(time.perf_counter() - started, 6))
 
-    after_objects, _ = validate_repository(root)
-    formal_after = _formal_state(after_objects)
-    authoritative_writes = tuple(
-        sorted(
-            path
-            for path in set(formal_before) | set(formal_after)
-            if formal_before.get(path) != formal_after.get(path)
+    formal_after = _formal_state(root)
+    authoritative_writes = {
+        path
+        for path in set(formal_before) | set(formal_after)
+        if formal_before.get(path) != formal_after.get(path)
+    }
+    if not _non_regular_formal_paths(formal_after):
+        _, after_findings = validate_repository(root)
+        authoritative_writes.update(
+            str(finding.path)
+            for finding in after_findings
+            if finding.level == "error"
         )
-    )
     real_db_after = _file_state(real_db)
     real_db_unchanged = real_db_before == real_db_after
     sample_tuple = tuple(samples)
@@ -419,7 +528,7 @@ def benchmark_candidate_queue(
                 "after": real_db_after,
             },
         },
-        authoritative_writes=authoritative_writes,
+        authoritative_writes=tuple(sorted(authoritative_writes)),
         real_candidate_store_unchanged=real_db_unchanged,
     )
 
@@ -429,6 +538,8 @@ def benchmark_dashboard(root: Path, *, repeats: int = 5) -> DashboardBenchmark:
     if repeats < 3:
         raise ValueError("benchmark requires at least 3 repeats")
     root = root.resolve()
+    before = _formal_state(root)
+    _require_regular_formal_paths(before)
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
         raise ValueError("repository validation must pass before benchmark")
@@ -438,7 +549,6 @@ def benchmark_dashboard(root: Path, *, repeats: int = 5) -> DashboardBenchmark:
     sectors = sorted(obj.object_id for obj in objects if obj.object_type == "sector")
     if not companies or not sectors:
         raise ValueError("benchmark requires at least one Company and Sector")
-    before = _formal_state(objects)
     functions: dict[str, Callable[[], object]] = {
         "home": lambda: industry_home_snapshot(root),
         "candidate_queue": lambda: queue_rows(root, limit=200),
@@ -466,13 +576,19 @@ def benchmark_dashboard(root: Path, *, repeats: int = 5) -> DashboardBenchmark:
             threshold_seconds=threshold,
             passed=p95 < threshold,
         )
-    after_objects, _ = validate_repository(root)
-    after = _formal_state(after_objects)
-    changed = sorted(
+    after = _formal_state(root)
+    changed = {
         path
         for path in set(before) | set(after)
         if before.get(path) != after.get(path)
-    )
+    }
+    if not _non_regular_formal_paths(after):
+        _, after_findings = validate_repository(root)
+        changed.update(
+            str(finding.path)
+            for finding in after_findings
+            if finding.level == "error"
+        )
     return DashboardBenchmark(
         repeats=repeats,
         scale={
@@ -488,7 +604,7 @@ def benchmark_dashboard(root: Path, *, repeats: int = 5) -> DashboardBenchmark:
             ),
         },
         measurements=measurements,
-        authoritative_writes=changed,
+        authoritative_writes=sorted(changed),
     )
 
 

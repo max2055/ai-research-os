@@ -1102,6 +1102,7 @@ def _pipeline_queue(
         if has_next
         else '<span class="muted">Next</span>'
     )
+    page_range = "0" if not rows else f"{offset + 1}–{offset + len(rows)}"
     tier_options = "".join(
         f'<option value="{value}"'
         f"{' selected' if tier == value else ''}>{label}</option>"
@@ -1130,7 +1131,7 @@ def _pipeline_queue(
 <button type="submit">筛选</button>
 </form></section>
 <section class="panel">{table(["优先级", "状态", "重复", "实体", "板块", "通道", "发现时间", "标题"], body_rows)}</section>
-<nav aria-label="Candidate queue pages" style="min-height:2.5rem;display:flex;align-items:center;justify-content:space-between">{previous}<span class="muted">{offset + 1}–{offset + len(rows)}</span>{next_link}</nav>"""
+<nav aria-label="Candidate queue pages" style="min-height:2.5rem;display:flex;align-items:center;justify-content:space-between">{previous}<span class="muted" data-page-range="true">{page_range}</span>{next_link}</nav>"""
     return shell("管线队列", content)
 
 

@@ -1599,3 +1599,16 @@ class CandidateDetailTests(unittest.TestCase):
                 "&amp;show_dups=true",
                 page.text,
             )
+
+    def test_candidate_queue_empty_page_uses_zero_range(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            page = TestClient(create_app(root)).get(
+                "/pipeline/queue",
+                params={"limit": "1", "offset": "200"},
+            )
+
+            self.assertEqual(200, page.status_code)
+            self.assertIn('data-page-range="true">0</span>', page.text)
+            self.assertNotIn("201–200", page.text)

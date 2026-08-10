@@ -1,24 +1,64 @@
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
+from research_os.repositories.markdown import object_paths
 from research_os.services import benchmark as benchmark_service
 from research_os.services.benchmark import (
     CandidateQueueBenchmark,
+    _formal_state,
     _nearest_rank_p95,
     benchmark_candidate_queue,
     benchmark_dashboard,
     benchmark_repository,
     run_scale_benchmark,
 )
+from test_candidate_queue import CandidateQueueTests
 from test_cli import run_cli
 
 
 class ScaleBenchmarkTests(unittest.TestCase):
+    def _candidate_root(self, temp: str) -> Path:
+        return CandidateQueueTests()._make_root(temp).resolve()
+
+    def _benchmark_with_mutation(
+        self,
+        root: Path,
+        mutation: object,
+    ) -> CandidateQueueBenchmark:
+        applied = False
+
+        def mutate_then_read(
+            *args: object, **kwargs: object
+        ) -> list[dict[str, object]]:
+            nonlocal applied
+            del args, kwargs
+            if not applied:
+                assert callable(mutation)
+                mutation()
+                applied = True
+            return []
+
+        with mock.patch.object(
+            benchmark_service,
+            "queue_rows",
+            side_effect=mutate_then_read,
+        ):
+            return benchmark_candidate_queue(
+                root,
+                rows=8,
+                repeats=1,
+                warmups=0,
+                page_size=1,
+                offset=0,
+                max_seconds=10.0,
+            )
+
     def test_real_read_model_benchmark_reports_slo_without_writes(self) -> None:
         root = Path(__file__).resolve().parents[2]
         result = benchmark_dashboard(root, repeats=3)
@@ -148,6 +188,103 @@ class ScaleBenchmarkTests(unittest.TestCase):
         for values in invalid:
             with self.subTest(values=values), self.assertRaises(ValueError):
                 benchmark_candidate_queue(root, **values)
+
+    def test_candidate_queue_benchmark_rejects_non_finite_thresholds(self) -> None:
+        for value in (float("nan"), float("inf"), float("-inf")):
+            with (
+                self.subTest(max_seconds=value),
+                mock.patch.object(
+                    benchmark_service,
+                    "validate_repository",
+                    side_effect=AssertionError("validation must not run"),
+                ),
+                self.assertRaisesRegex(ValueError, "finite and positive"),
+            ):
+                benchmark_candidate_queue(Path("/unused"), max_seconds=value)
+
+    def test_candidate_benchmark_cli_rejects_non_finite_thresholds(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        for value in ("nan", "inf", "-inf"):
+            with self.subTest(max_seconds=value):
+                result = run_cli(
+                    root,
+                    "benchmark-candidates",
+                    "--rows",
+                    "8",
+                    "--repeats",
+                    "1",
+                    "--warmups",
+                    "0",
+                    "--page-size",
+                    "1",
+                    "--offset",
+                    "0",
+                    f"--max-seconds={value}",
+                )
+                self.assertEqual(2, result.returncode, result.stdout)
+                self.assertIn("max_seconds must be finite and positive", result.stdout)
+                self.assertNotIn("NaN", result.stdout)
+                self.assertNotIn("Infinity", result.stdout)
+
+    def test_candidate_benchmark_detects_new_malformed_formal_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._candidate_root(temp)
+            path = root / "04_Evidence" / "Events" / "EVT-20260810-999-bad.md"
+            result = self._benchmark_with_mutation(
+                root,
+                lambda: path.write_text("not front matter\n", encoding="utf-8"),
+            )
+            self.assertIn(str(path), result.authoritative_writes)
+            self.assertFalse(result.passed)
+
+    def test_candidate_benchmark_detects_deleted_formal_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._candidate_root(temp)
+            path = next(
+                candidate
+                for candidate in object_paths(root)
+                if candidate.name.startswith("SRC-")
+            )
+            result = self._benchmark_with_mutation(root, path.unlink)
+            self.assertIn(str(path), result.authoritative_writes)
+            self.assertFalse(result.passed)
+
+    def test_candidate_benchmark_does_not_follow_symlink_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._candidate_root(temp)
+            path = next(
+                candidate
+                for candidate in object_paths(root)
+                if candidate.name.startswith("SRC-")
+            )
+            outside = Path(temp) / "outside.md"
+            shutil.copy2(path, outside)
+
+            def replace_with_symlink() -> None:
+                path.unlink()
+                path.symlink_to(outside)
+
+            result = self._benchmark_with_mutation(root, replace_with_symlink)
+            self.assertIn(str(path), result.authoritative_writes)
+            self.assertFalse(result.passed)
+
+    def test_formal_manifest_records_symlink_and_directory_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._candidate_root(temp)
+            path = next(
+                candidate
+                for candidate in object_paths(root)
+                if candidate.name.startswith("SRC-")
+            )
+            outside = Path(temp) / "outside.md"
+            shutil.copy2(path, outside)
+            path.unlink()
+            path.symlink_to(outside)
+            self.assertEqual("symlink", _formal_state(root)[str(path)].kind)
+
+            path.unlink()
+            path.mkdir()
+            self.assertEqual("directory", _formal_state(root)[str(path)].kind)
 
     def test_cli_candidate_benchmark_emits_json(self) -> None:
         root = Path(__file__).resolve().parents[2]
