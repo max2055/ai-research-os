@@ -434,11 +434,55 @@ class MultiTargetDiscoveryTests(unittest.TestCase):
         self.assertIsInstance(sec, SECDiscoveryAdapter)
 
 
-class AdapterTransportAllowlistTests(unittest.TestCase):
-    def test_each_adapter_passes_its_explicit_transport_hosts(self) -> None:
+class AdapterFetcherCompatibilityTests(unittest.TestCase):
+    @staticmethod
+    def _payload_for(url: str) -> str:
+        if "api.github.com" in url:
+            return "[]"
+        if "data.sec.gov" in url:
+            return '{"filings": {"recent": {}}}'
+        return "<feed/>"
+
+    def test_all_adapters_accept_legacy_three_argument_fetcher(self) -> None:
+        calls: list[str] = []
+
+        def legacy_fetcher(
+            url: str,
+            *,
+            headers: dict[str, str],
+            max_bytes: int,
+        ) -> str:
+            del headers, max_bytes
+            calls.append(url)
+            return self._payload_for(url)
+
+        rss_hosts = frozenset({"feeds.example", "articles.example"})
+        adapters = (
+            RSSDiscoveryAdapter(
+                "https://feeds.example/rss",
+                allowed_hosts=rss_hosts,
+                publisher="Example",
+                fetcher=legacy_fetcher,
+            ),
+            GitHubReleaseDiscoveryAdapter("org/repo", fetcher=legacy_fetcher),
+            ArxivDiscoveryAdapter("all:agent", fetcher=legacy_fetcher),
+            SECDiscoveryAdapter(
+                "1",
+                forms=frozenset({"10-K"}),
+                user_agent="Researcher contact@example.com",
+                fetcher=legacy_fetcher,
+            ),
+        )
+
+        for adapter in adapters:
+            adapter.discover()
+
+        self.assertEqual(4, len(calls))
+
+    def test_default_fetcher_binds_each_adapters_explicit_transport_hosts(self) -> None:
         calls: list[tuple[str, frozenset[str]]] = []
 
-        def fetcher(
+        def default_fetcher(
             url: str,
             *,
             headers: dict[str, str],
@@ -447,32 +491,36 @@ class AdapterTransportAllowlistTests(unittest.TestCase):
         ) -> str:
             del headers, max_bytes
             calls.append((url, allowed_hosts))
-            if "api.github.com" in url:
-                return "[]"
-            if "data.sec.gov" in url:
-                return '{"filings": {"recent": {}}}'
-            return "<feed/>"
+            return self._payload_for(url)
 
         rss_hosts = frozenset({"feeds.example", "articles.example"})
-        adapters = (
-            RSSDiscoveryAdapter(
-                "https://feeds.example/rss",
-                allowed_hosts=rss_hosts,
-                publisher="Example",
-                fetcher=fetcher,
+        with (
+            patch(
+                "research_os.adapters.discovery.fetch_text",
+                side_effect=default_fetcher,
             ),
-            GitHubReleaseDiscoveryAdapter("org/repo", fetcher=fetcher),
-            ArxivDiscoveryAdapter("all:agent", fetcher=fetcher),
-            SECDiscoveryAdapter(
-                "1",
-                forms=frozenset({"10-K"}),
-                user_agent="Researcher contact@example.com",
-                fetcher=fetcher,
-            ),
-        )
+            patch(
+                "research_os.adapters.discovery._build_discovery_opener",
+                side_effect=AssertionError("patched fetch_text was bypassed"),
+            ) as build_opener,
+        ):
+            adapters = (
+                RSSDiscoveryAdapter(
+                    "https://feeds.example/rss",
+                    allowed_hosts=rss_hosts,
+                    publisher="Example",
+                ),
+                GitHubReleaseDiscoveryAdapter("org/repo"),
+                ArxivDiscoveryAdapter("all:agent"),
+                SECDiscoveryAdapter(
+                    "1",
+                    forms=frozenset({"10-K"}),
+                    user_agent="Researcher contact@example.com",
+                ),
+            )
 
-        for adapter in adapters:
-            adapter.discover()
+            for adapter in adapters:
+                adapter.discover()
 
         self.assertEqual(
             [
@@ -494,6 +542,31 @@ class AdapterTransportAllowlistTests(unittest.TestCase):
             ],
             calls,
         )
+        build_opener.assert_not_called()
+
+    def test_legacy_fetcher_internal_type_error_propagates_without_retry(self) -> None:
+        calls = 0
+
+        def failing_fetcher(
+            url: str,
+            *,
+            headers: dict[str, str],
+            max_bytes: int,
+        ) -> str:
+            nonlocal calls
+            del url, headers, max_bytes
+            calls += 1
+            raise TypeError("legacy fetcher body failed")
+
+        adapter = RSSDiscoveryAdapter(
+            "https://feeds.example/rss",
+            allowed_hosts=frozenset({"feeds.example"}),
+            publisher="Example",
+            fetcher=failing_fetcher,
+        )
+        with self.assertRaisesRegex(TypeError, "legacy fetcher body failed"):
+            adapter.discover()
+        self.assertEqual(1, calls)
 
 
 if __name__ == "__main__":

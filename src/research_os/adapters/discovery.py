@@ -13,6 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from email.utils import parsedate_to_datetime
+from functools import partial
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urljoin, urlsplit
@@ -109,7 +110,6 @@ class TextFetcher(Protocol):
         url: str,
         *,
         headers: dict[str, str],
-        allowed_hosts: frozenset[str],
         max_bytes: int,
     ) -> str: ...
 
@@ -373,7 +373,7 @@ class RSSDiscoveryAdapter:
         allowed_hosts: frozenset[str],
         publisher: str,
         limit: int = DEFAULT_DISCOVERY_LIMIT,
-        fetcher: TextFetcher = fetch_text,
+        fetcher: TextFetcher | None = None,
     ) -> None:
         self.feed_url = canonicalize_url(feed_url)
         if not allowed_hosts or not _host_allowed(self.feed_url, allowed_hosts):
@@ -381,13 +381,16 @@ class RSSDiscoveryAdapter:
         self.allowed_hosts = allowed_hosts
         self.publisher = publisher
         self.limit = _bounded_limit(limit)
-        self.fetcher = fetcher
+        self.fetcher: TextFetcher = (
+            partial(fetch_text, allowed_hosts=self.allowed_hosts)
+            if fetcher is None
+            else fetcher
+        )
 
     def discover(self) -> tuple[SourceCandidate, ...]:
         content = self.fetcher(
             self.feed_url,
             headers={"User-Agent": "AI-Research-OS/0.2 bounded-rss-discovery"},
-            allowed_hosts=self.allowed_hosts,
             max_bytes=DEFAULT_RESPONSE_LIMIT,
         )
         return parse_feed(
@@ -405,13 +408,17 @@ class GitHubReleaseDiscoveryAdapter:
         repository: str,
         *,
         limit: int = DEFAULT_DISCOVERY_LIMIT,
-        fetcher: TextFetcher = fetch_text,
+        fetcher: TextFetcher | None = None,
     ) -> None:
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
             raise ValueError("GitHub repository must be OWNER/REPO")
         self.repository = repository
         self.limit = _bounded_limit(limit)
-        self.fetcher = fetcher
+        self.fetcher: TextFetcher = (
+            partial(fetch_text, allowed_hosts=frozenset({"api.github.com"}))
+            if fetcher is None
+            else fetcher
+        )
 
     def discover(self) -> tuple[SourceCandidate, ...]:
         api_url = (
@@ -424,7 +431,6 @@ class GitHubReleaseDiscoveryAdapter:
                 "User-Agent": "AI-Research-OS/0.2 bounded-github-discovery",
                 "Accept": "application/vnd.github+json",
             },
-            allowed_hosts=frozenset({"api.github.com"}),
             max_bytes=DEFAULT_RESPONSE_LIMIT,
         )
         payload = json.loads(content)
@@ -458,13 +464,20 @@ class ArxivDiscoveryAdapter:
         query: str,
         *,
         limit: int = DEFAULT_DISCOVERY_LIMIT,
-        fetcher: TextFetcher = fetch_text,
+        fetcher: TextFetcher | None = None,
     ) -> None:
         if not query.strip():
             raise ValueError("arXiv query must be explicit and non-empty")
         self.query = query.strip()
         self.limit = _bounded_limit(limit)
-        self.fetcher = fetcher
+        self.fetcher: TextFetcher = (
+            partial(
+                fetch_text,
+                allowed_hosts=frozenset({"arxiv.org", "export.arxiv.org"}),
+            )
+            if fetcher is None
+            else fetcher
+        )
 
     def discover(self) -> tuple[SourceCandidate, ...]:
         query = urlencode(
@@ -480,7 +493,6 @@ class ArxivDiscoveryAdapter:
         content = self.fetcher(
             url,
             headers={"User-Agent": "AI-Research-OS/0.2 bounded-arxiv-discovery"},
-            allowed_hosts=frozenset({"arxiv.org", "export.arxiv.org"}),
             max_bytes=DEFAULT_RESPONSE_LIMIT,
         )
         return parse_feed(
@@ -500,7 +512,7 @@ class SECDiscoveryAdapter:
         forms: frozenset[str],
         user_agent: str,
         limit: int = DEFAULT_DISCOVERY_LIMIT,
-        fetcher: TextFetcher = fetch_text,
+        fetcher: TextFetcher | None = None,
     ) -> None:
         digits = re.sub(r"\D", "", cik)
         if not 1 <= len(digits) <= 10:
@@ -513,14 +525,20 @@ class SECDiscoveryAdapter:
         self.forms = frozenset(value.upper() for value in forms)
         self.user_agent = user_agent.strip()
         self.limit = _bounded_limit(limit)
-        self.fetcher = fetcher
+        self.fetcher: TextFetcher = (
+            partial(
+                fetch_text,
+                allowed_hosts=frozenset({"data.sec.gov", "www.sec.gov"}),
+            )
+            if fetcher is None
+            else fetcher
+        )
 
     def discover(self) -> tuple[SourceCandidate, ...]:
         api_url = f"https://data.sec.gov/submissions/CIK{self.cik}.json"
         content = self.fetcher(
             api_url,
             headers={"User-Agent": self.user_agent, "Accept": "application/json"},
-            allowed_hosts=frozenset({"data.sec.gov", "www.sec.gov"}),
             max_bytes=DEFAULT_RESPONSE_LIMIT,
         )
         payload = json.loads(content)
