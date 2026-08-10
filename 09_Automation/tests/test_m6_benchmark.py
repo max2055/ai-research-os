@@ -268,6 +268,25 @@ class ScaleBenchmarkTests(unittest.TestCase):
             self.assertIn(str(path), result.authoritative_writes)
             self.assertFalse(result.passed)
 
+    def test_candidate_benchmark_detects_symlinked_formal_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._candidate_root(temp)
+            events = root / "04_Evidence" / "Events"
+            moved_events = root / "04_Evidence" / "Events-original"
+
+            def replace_parent_with_symlink() -> None:
+                events.rename(moved_events)
+                events.symlink_to(moved_events, target_is_directory=True)
+
+            result = self._benchmark_with_mutation(
+                root,
+                replace_parent_with_symlink,
+            )
+
+            self.assertEqual("symlink", _formal_state(root)[str(events)].kind)
+            self.assertIn(str(events), result.authoritative_writes)
+            self.assertFalse(result.passed)
+
     def test_formal_manifest_records_symlink_and_directory_types(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = self._candidate_root(temp)
