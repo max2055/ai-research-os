@@ -552,9 +552,12 @@ class OperationalJobAuditTests(unittest.TestCase):
                 _assert_file_sha256(tampered, expected)
 
     def test_live_db_connection_requires_explicit_environment_path(self) -> None:
-        with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
-            pytest.skip.Exception,
-            LIVE_DB_ENV,
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            self.assertRaisesRegex(
+                pytest.skip.Exception,
+                LIVE_DB_ENV,
+            ),
         ):
             _candidate_connection()
 
