@@ -36,9 +36,7 @@ def _load_json_spec(path: Path) -> dict[str, object]:
     return payload
 
 
-def _resolved_model(
-    root: Path, provider_flag: str, model_flag: str
-) -> tuple[str, str]:
+def _resolved_model(root: Path, provider_flag: str, model_flag: str) -> tuple[str, str]:
     """Resolve provider/model from CLI flags, falling back to the repo-root llm
     config (provider) and finally echo. An explicit flag always wins. Reads the
     config from ``root`` so operating on a different repo never bleeds in the
@@ -49,9 +47,7 @@ def _resolved_model(
     model = model_flag
     if not model:
         model = (
-            str(config.get("model") or "")
-            if provider == configured_provider
-            else ""
+            str(config.get("model") or "") if provider == configured_provider else ""
         )
     return provider, model or "echo"
 
@@ -196,9 +192,7 @@ def parse_args() -> argparse.Namespace:
     pipeline = subparsers.add_parser(
         "pipeline", help="pipeline operational metrics (B-023)"
     )
-    pipeline_commands = pipeline.add_subparsers(
-        dest="pipeline_command", required=True
-    )
+    pipeline_commands = pipeline.add_subparsers(dest="pipeline_command", required=True)
     pipeline_metrics_parser = pipeline_commands.add_parser(
         "metrics", help="compute Candidate-pipeline metrics (freshness/yield/noise)"
     )
@@ -206,9 +200,7 @@ def parse_args() -> argparse.Namespace:
     pipeline_metrics_parser.add_argument(
         "--format", choices=("markdown", "json"), default="markdown"
     )
-    pilot = subparsers.add_parser(
-        "pilot", help="14-day Pilot status (B-025)"
-    )
+    pilot = subparsers.add_parser("pilot", help="14-day Pilot status (B-025)")
     pilot_commands = pilot.add_subparsers(dest="pilot_command", required=True)
     pilot_status_parser = pilot_commands.add_parser(
         "status", help="show Pilot Gate progress for the window"
@@ -217,20 +209,14 @@ def parse_args() -> argparse.Namespace:
     universe = subparsers.add_parser(
         "universe", help="inspect the Universe (A-014 registry CLI)"
     )
-    universe_commands = universe.add_subparsers(
-        dest="universe_command", required=True
-    )
+    universe_commands = universe.add_subparsers(dest="universe_command", required=True)
     universe_commands.add_parser("list", help="list companies (read-only)")
-    universe_commands.add_parser(
-        "coverage", help="Universe coverage metrics (A-018)"
-    )
+    universe_commands.add_parser("coverage", help="Universe coverage metrics (A-018)")
 
     channels = subparsers.add_parser(
         "channels", help="manage Source Channels (B-006 Registry CLI)"
     )
-    channels_commands = channels.add_subparsers(
-        dest="channel_command", required=True
-    )
+    channels_commands = channels.add_subparsers(dest="channel_command", required=True)
     channels_commands.add_parser("list", help="list channels (read-only)")
     channels_commands.add_parser(
         "check", help="show which channels are schedulable (reviewed + enabled)"
@@ -240,9 +226,7 @@ def parse_args() -> argparse.Namespace:
     )
     channel_enable.add_argument("--id", required=True)
     channel_enable.add_argument("--apply", action="store_true")
-    channel_disable = channels_commands.add_parser(
-        "disable", help="disable a channel"
-    )
+    channel_disable = channels_commands.add_parser("disable", help="disable a channel")
     channel_disable.add_argument("--id", required=True)
     channel_disable.add_argument("--apply", action="store_true")
 
@@ -263,9 +247,7 @@ def parse_args() -> argparse.Namespace:
         "due", help="list channels due for discovery"
     )
     discover_due.add_argument("--as-of", default="")
-    candidates = subparsers.add_parser(
-        "candidates", help="Candidate Queue (B-018)"
-    )
+    candidates = subparsers.add_parser("candidates", help="Candidate Queue (B-018)")
     candidates_commands = candidates.add_subparsers(
         dest="candidates_command", required=True
     )
@@ -376,9 +358,7 @@ def parse_args() -> argparse.Namespace:
     forecast = subparsers.add_parser(
         "forecast", help="Forecast lifecycle (WP-501, E-007~010)"
     )
-    forecast_commands = forecast.add_subparsers(
-        dest="forecast_command", required=True
-    )
+    forecast_commands = forecast.add_subparsers(dest="forecast_command", required=True)
     forecast_draft = forecast_commands.add_parser(
         "draft", help="dry-run/apply a Forecast spec -> pending FCT object"
     )
@@ -452,16 +432,12 @@ def parse_args() -> argparse.Namespace:
     valuation_supersede.add_argument("--actor", default="max")
     valuation_supersede.add_argument("--date", default=date.today().isoformat())
     valuation_supersede.add_argument("--apply", action="store_true")
-    valuation_commands.add_parser(
-        "list", help="list Valuation Snapshots"
-    )
+    valuation_commands.add_parser("list", help="list Valuation Snapshots")
 
     scenario = subparsers.add_parser(
         "scenario", help="Scenario workflow (WP-510, E-012)"
     )
-    scenario_commands = scenario.add_subparsers(
-        dest="scenario_command", required=True
-    )
+    scenario_commands = scenario.add_subparsers(dest="scenario_command", required=True)
     scenario_extract = scenario_commands.add_parser(
         "extract", help="extract + validate the three-scenario set from a run"
     )
@@ -536,9 +512,7 @@ def parse_args() -> argparse.Namespace:
         "show", help="show one mode's versioned contract"
     )
     modes_show.add_argument("mode_id", help="MOD-ANL-<slug>-vN")
-    modes_commands.add_parser(
-        "check", help="check which modes may produce a new run"
-    )
+    modes_commands.add_parser("check", help="check which modes may produce a new run")
 
     analyze = subparsers.add_parser("analyze", help="Analysis Runs (D-014/D-016)")
     analyze_commands = analyze.add_subparsers(dest="analyze_command", required=True)
@@ -552,10 +526,14 @@ def parse_args() -> argparse.Namespace:
     analyze_run.add_argument("--event", default="", help="comma-separated EVT-* ids")
     analyze_run.add_argument("--impact", default="", help="comma-separated IMP-* ids")
     analyze_run.add_argument("--thesis", default="", help="comma-separated THS-* ids")
-    analyze_run.add_argument("--model-provider", default="",
-                             help="provider (deepseek); empty = saved config or echo")
-    analyze_run.add_argument("--model-id", default="",
-                             help="model id; empty = saved config or echo")
+    analyze_run.add_argument(
+        "--model-provider",
+        default="",
+        help="provider (deepseek); empty = saved config or echo",
+    )
+    analyze_run.add_argument(
+        "--model-id", default="", help="model id; empty = saved config or echo"
+    )
     analyze_run.add_argument("--timeout", type=float, default=0.0)
     analyze_run.add_argument("--apply", action="store_true")
     analyze_show = analyze_commands.add_parser("show", help="show one Analysis Run")
@@ -572,11 +550,13 @@ def parse_args() -> argparse.Namespace:
     )
     analyze_replay.add_argument("run_id", help="ANL-YYYYMMDD-NNN to replay")
     analyze_replay.add_argument(
-        "--model-provider", default="",
+        "--model-provider",
+        default="",
         help="provider; empty = saved config or echo",
     )
-    analyze_replay.add_argument("--model-id", default="",
-                                help="model id; empty = saved config or echo")
+    analyze_replay.add_argument(
+        "--model-id", default="", help="model id; empty = saved config or echo"
+    )
     analyze_replay.add_argument("--timeout", type=float, default=0.0)
     analyze_replay.add_argument("--apply", action="store_true")
     analyze_propose = analyze_commands.add_parser(
@@ -934,7 +914,6 @@ def parse_args() -> argparse.Namespace:
     release_check.add_argument("--project", default="PRJ-002")
     release_check.add_argument(
         "--version",
-        choices=("0.2", "0.3"),
         default="0.2",
         help="release contract version (default: 0.2)",
     )
@@ -1195,10 +1174,7 @@ def main() -> int:
                     path.write_text(document.render(), encoding="utf-8")
                     print(f"APPLIED: {path.relative_to(args.root.resolve())}")
                     return 0
-                print(
-                    f"DRY-RUN: would {verb} {args.id} "
-                    f"(rerun with --apply)"
-                )
+                print(f"DRY-RUN: would {verb} {args.id} (rerun with --apply)")
                 return 0
         except (ValueError, OSError) as exc:
             print(f"ERROR: {exc}")
@@ -1300,9 +1276,7 @@ def main() -> int:
             return 0
         except (OSError, TransactionError, ValueError) as exc:
             if isinstance(exc, runtime.AlreadyPromoted):
-                print(
-                    f"IDEMPOTENT: candidate already promoted to {exc.source_id}"
-                )
+                print(f"IDEMPOTENT: candidate already promoted to {exc.source_id}")
                 return 0
             print(f"ERROR: {exc}")
             return 2
@@ -1911,8 +1885,7 @@ def main() -> int:
                     for obj in objects
                     if obj.object_type == "forecast"
                     and (
-                        args.status is None
-                        or obj.metadata.get("status") == args.status
+                        args.status is None or obj.metadata.get("status") == args.status
                     )
                 ]
                 if args.due_before:
@@ -1964,9 +1937,7 @@ def main() -> int:
                     )
                     for _path, content in updates.items():
                         print(content)
-                    print(
-                        "\nDRY-RUN: no files changed; rerun with --apply to write"
-                    )
+                    print("\nDRY-RUN: no files changed; rerun with --apply to write")
                 return 0
             except (OSError, TransactionError, ValueError) as exc:
                 print(f"ERROR: {exc}")
@@ -1986,9 +1957,7 @@ def main() -> int:
                         root, spec=spec, created_at=args.date
                     )
                     print(f"# {relative}\n\n{content}")
-                    print(
-                        "\nDRY-RUN: no files changed; rerun with --apply to write"
-                    )
+                    print("\nDRY-RUN: no files changed; rerun with --apply to write")
                 return 0
             except (OSError, TransactionError, ValueError) as exc:
                 print(f"ERROR: {exc}")
@@ -2089,9 +2058,7 @@ def main() -> int:
                     print("\nDRY-RUN: no files changed; rerun with --apply to write")
             elif args.recommendation_command == "gate":
                 spec = _load_json_spec(args.spec)
-                gate = runtime.recommendation_gate(
-                    root, spec=spec, as_of=args.as_of
-                )
+                gate = runtime.recommendation_gate(root, spec=spec, as_of=args.as_of)
                 problems = gate["problems"]
                 if not problems:
                     print("GATE PASS: spec is structurally complete and fresh.")
@@ -2131,8 +2098,7 @@ def main() -> int:
                     as_of=args.date,
                 )
                 print(
-                    f"superseded {args.old_id} by {args.new_id} "
-                    f"(dual pointers updated)"
+                    f"superseded {args.old_id} by {args.new_id} (dual pointers updated)"
                 )
             elif args.recommendation_command == "list":
                 objects, _ = runtime.validate_repository(root)
@@ -2141,8 +2107,7 @@ def main() -> int:
                     for obj in objects
                     if obj.object_type == "recommendation"
                     and (
-                        args.status is None
-                        or obj.metadata.get("status") == args.status
+                        args.status is None or obj.metadata.get("status") == args.status
                     )
                 ]
                 print(runtime.render_recommendation_rows(recs), end="")
@@ -2201,9 +2166,7 @@ def main() -> int:
                 return 0
             if args.analyze_command == "compare":
                 objects, _ = runtime.validate_repository(root)
-                report = runtime.compare_runs(
-                    objects, runtime.split_values(args.runs)
-                )
+                report = runtime.compare_runs(objects, runtime.split_values(args.runs))
                 print(runtime.render_compare_report(report), end="")
                 return 0
             if args.analyze_command == "replay":
@@ -2272,8 +2235,10 @@ def main() -> int:
                     slug = args.mode
                     if slug not in metrics["modes"]:
                         raise ValueError(f"no completed runs for mode slug {slug!r}")
-                    metrics = {"modes": {slug: metrics["modes"][slug]},
-                               "overall": metrics["overall"]}
+                    metrics = {
+                        "modes": {slug: metrics["modes"][slug]},
+                        "overall": metrics["overall"],
+                    }
                 print(runtime.render_mode_metrics(metrics), end="")
                 return 0
         except (OSError, TransactionError, ValueError, FileExistsError) as exc:

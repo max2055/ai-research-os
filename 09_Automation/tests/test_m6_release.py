@@ -46,6 +46,36 @@ class ReleaseReadinessTests(unittest.TestCase):
         "human.release_approval",
     )
 
+    def seed_v03_field_gate_evidence(self, root: Path) -> None:
+        source_root = Path(__file__).resolve().parents[2]
+        for relative in (
+            "00_System/C020_Phase_3_Acceptance.md",
+            "00_System/D020_Phase_4_Acceptance.md",
+            "05_Research/Reviews/Field_Gate_20_Impact_Judgments.json",
+            "05_Research/Reviews/Field_Gate_10_Case_Judgments.json",
+        ):
+            fixtures.write(
+                root / relative,
+                (source_root / relative).read_text(encoding="utf-8"),
+            )
+        for relative_folder in (
+            "04_Evidence/Events",
+            "05_Research/Analysis",
+            "02_Knowledge/Modes",
+        ):
+            for source in (source_root / relative_folder).glob("*.md"):
+                fixtures.write(
+                    root / source.relative_to(source_root),
+                    source.read_text(encoding="utf-8"),
+                )
+
+    @staticmethod
+    def checks_by_key(root: Path) -> dict[str, ReleaseCheck]:
+        return {
+            check.key: check
+            for check in release_readiness_v03(root, as_of="2026-08-10").checks
+        }
+
     def test_default_v02_remains_18_gate_text_contract(self) -> None:
         root = Path(__file__).resolve().parents[2]
         legacy = release_readiness(root)
@@ -77,14 +107,18 @@ class ReleaseReadinessTests(unittest.TestCase):
         blockers = {check.key: check for check in readiness.blockers}
 
         self.assertFalse(readiness.ready)
-        self.assertEqual(7, len(blockers))
+        self.assertEqual(8, len(blockers))
         self.assertIn("WP-620", blockers["ingestion.pilot_completion"].observed)
         self.assertIn("WP-530", blockers["decision.natural_resolutions"].observed)
         self.assertIn("2026-10-31", blockers["decision.natural_resolutions"].observed)
         self.assertIn("F-024", blockers["human.release_approval"].observed)
         by_key = {check.key: check for check in readiness.checks}
         self.assertTrue(by_key["decision.no_automated_trading"].passed)
-        self.assertTrue(by_key["engineering.dashboard_security"].passed)
+        self.assertFalse(by_key["engineering.quality_suite"].passed)
+        self.assertTrue(by_key["engineering.performance_slo"].passed)
+        self.assertTrue(by_key["engineering.migration_recovery"].passed)
+        self.assertTrue(by_key["engineering.recovery_boundaries"].passed)
+        self.assertFalse(by_key["engineering.dashboard_security"].passed)
 
     def test_v03_rejects_automatic_placeholder_and_future_human_evidence(
         self,
@@ -111,6 +145,9 @@ class ReleaseReadinessTests(unittest.TestCase):
                 "unknown",
                 "待定",
                 "系统",
+                "ＡＩ",
+                "ＳＹＳＴＥＭ",
+                "ⒶⒾ",
             ):
                 packet.write_text(
                     "Status: approved\n"
@@ -238,6 +275,190 @@ class ReleaseReadinessTests(unittest.TestCase):
             ):
                 release_readiness_v03(root, as_of="2026-08-10")
 
+    def test_v03_structured_gates_cross_check_real_objects_and_terminal_values(
+        self,
+    ) -> None:
+        source_root = Path(__file__).resolve().parents[2]
+        real = self.checks_by_key(source_root)
+        self.assertTrue(real["impact_analysis.impact_field_gate"].passed)
+        self.assertTrue(real["impact_analysis.mode_field_gate"].passed)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = fixtures.RepositoryValidationTests().make_root(temp)
+            self.seed_v03_field_gate_evidence(root)
+            impact_path = (
+                root / "05_Research/Reviews/Field_Gate_20_Impact_Judgments.json"
+            )
+            mode_path = root / "05_Research/Reviews/Field_Gate_10_Case_Judgments.json"
+            impact_original = json.loads(impact_path.read_text(encoding="utf-8"))
+            mode_original = json.loads(mode_path.read_text(encoding="utf-8"))
+
+            def reject_impact(label: str) -> None:
+                payload = json.loads(json.dumps(impact_original))
+                if label == "fake-event":
+                    payload["judgments"][0]["event_id"] = "EVT-20260810-999"
+                elif label == "duplicate-event":
+                    payload["judgments"][-1]["event_id"] = payload["judgments"][0][
+                        "event_id"
+                    ]
+                elif label == "wrong-count":
+                    payload["metrics"]["n"] = 13
+                elif label == "invalid-decision":
+                    payload["approved"]["decision"] = "approve-but-not-terminal"
+                impact_path.write_text(json.dumps(payload), encoding="utf-8")
+                with (
+                    self.subTest(gate="impact", mutation=label),
+                    self.assertRaises(ReleaseEvaluationError),
+                ):
+                    release_readiness_v03(root, as_of="2026-08-10")
+
+            for label in (
+                "fake-event",
+                "duplicate-event",
+                "wrong-count",
+                "invalid-decision",
+            ):
+                reject_impact(label)
+            impact_path.write_text(json.dumps(impact_original), encoding="utf-8")
+
+            def reject_mode(label: str) -> None:
+                payload = json.loads(json.dumps(mode_original))
+                if label == "fake-run":
+                    payload["runs"][0]["run_id"] = "ANL-20260810-999"
+                elif label == "missing-mode":
+                    payload["runs"][0].pop("mode")
+                elif label == "mismatched-mode":
+                    payload["runs"][0]["mode"] = "supply-demand"
+                elif label == "unregistered-mode":
+                    payload["runs"][0]["mode"] = "market-timing"
+                elif label == "duplicate-run":
+                    payload["runs"][-1]["run_id"] = payload["runs"][0]["run_id"]
+                elif label == "wrong-count":
+                    payload["gate_verdict"]["runs"] = 33
+                elif label == "invalid-status":
+                    payload["status"] = "confirmed-but-not-terminal"
+                mode_path.write_text(json.dumps(payload), encoding="utf-8")
+                with (
+                    self.subTest(gate="mode", mutation=label),
+                    self.assertRaises(ReleaseEvaluationError),
+                ):
+                    release_readiness_v03(root, as_of="2026-08-10")
+
+            for label in (
+                "fake-run",
+                "missing-mode",
+                "mismatched-mode",
+                "unregistered-mode",
+                "duplicate-run",
+                "wrong-count",
+                "invalid-status",
+            ):
+                reject_mode(label)
+
+    def test_v03_engineering_gates_reject_duplicate_and_label_only_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = fixtures.RepositoryValidationTests().make_root(temp)
+            performance_rows = "\n".join(
+                "| Home | 0.1 | 0.1 | <2 | pass |" for _ in range(7)
+            )
+            fixtures.write(
+                root / "00_System/v0.3_Performance_Benchmark.md",
+                "# Benchmark\n\n"
+                "Status: passed\nDate: 2026-08-10\n"
+                "authoritative writes: 0\n\n"
+                "| Operation | Samples (s) | p95 (s) | SLO (s) | Result |\n"
+                "|---|---|---:|---:|---|\n"
+                f"{performance_rows}\n"
+                "| Nearest-rank p95 | 0.1 s |\n",
+            )
+            recovery = (
+                "# Recovery labels only\n\n"
+                "Status: passed\nDate: 2026-08-10\n"
+                "Git recovery\nSource assets\nCandidate store\nsecrets\nlaunchd\n"
+                "| Full pytest | complete suite | pass |\n"
+                "| Ruff | source and tests | pass |\n"
+                "| mypy | source | pass |\n"
+                "| Coverage | 99% | pass |\n"
+                "| Dashboard | loopback GET smoke | pass |\n"
+            )
+            fixtures.write(root / "00_System/v0.3_Recovery_Drill.md", recovery)
+            fixtures.write(
+                root / "00_System/v0.3_Migration_Rehearsal.md",
+                "# Migration labels only\n\n"
+                "Status: passed\nDate: 2026-08-10\n"
+                "rollback precondition changed\n"
+                "Candidate DB schema version: 2\n"
+                "0 errors, 0 warnings\n",
+            )
+            fixtures.write(
+                root / "09_Automation/tests/test_m6_security.py",
+                "def test_dashboard_mutation_routes_remain_allowlisted(): pass\n"
+                "def test_traversal_payloads_never_escape_repository(): pass\n"
+                "def test_secrets_never_appear_in_health_html(): pass\n",
+            )
+
+            by_key = self.checks_by_key(root)
+            for key in (
+                "engineering.performance_slo",
+                "engineering.migration_recovery",
+                "engineering.recovery_boundaries",
+                "engineering.dashboard_security",
+            ):
+                with self.subTest(key=key):
+                    self.assertFalse(by_key[key].passed)
+
+    def test_v03_no_trading_rejects_recommendation_order_directives(self) -> None:
+        source_root = Path(__file__).resolve().parents[2]
+        recommendation = (
+            source_root / "05_Research/Recommendations/REC-20260809-001.md"
+        ).read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as temp:
+            root = fixtures.RepositoryValidationTests().make_root(temp)
+            fixtures.write(
+                root / "05_Research/Recommendations/REC-20260809-001.md",
+                recommendation
+                + "\nPlace a market order through the broker execution API.\n",
+            )
+            fixtures.write(
+                root / "00_System/v0.3_Known_Limitations.md",
+                "No automated investment action.\n"
+                "No broker, order, or portfolio execution integration.\n",
+            )
+
+            by_key = self.checks_by_key(root)
+            self.assertFalse(by_key["decision.no_automated_trading"].passed)
+
+    def test_v03_no_trading_rejects_public_action_surfaces_without_text_noise(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = fixtures.RepositoryValidationTests().make_root(temp)
+            fixtures.write(
+                root / "00_System/v0.3_Known_Limitations.md",
+                "No automated investment action.\n"
+                "No broker, order, or portfolio execution integration.\n",
+            )
+            runtime_path = root / "src/research_os/runtime/product.py"
+            fixtures.write(
+                runtime_path,
+                "def place_market_order() -> None:\n    pass\n\n"
+                '__all__ = ["place_market_order"]\n',
+            )
+            fixtures.write(
+                root / "src/research_os/services/query.py",
+                "# Enforcement note: no broker execution is allowed.\n"
+                'QUERY = "SELECT * FROM candidates ORDER BY created_at"\n',
+            )
+
+            by_key = self.checks_by_key(root)
+            self.assertFalse(by_key["decision.no_automated_trading"].passed)
+
+            runtime_path.write_text("__all__: list[str] = []\n", encoding="utf-8")
+            without_surface = self.checks_by_key(root)
+            self.assertTrue(without_surface["decision.no_automated_trading"].passed)
+
     def test_v03_pilot_requires_b026_and_a_distinct_30_day_acceptance(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = fixtures.RepositoryValidationTests().make_root(temp)
@@ -362,9 +583,21 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertEqual(2, invalid_date.returncode, invalid_date.stdout)
         self.assertNotIn("Traceback", invalid_date.stdout + invalid_date.stderr)
 
-        invalid_version = run_cli(root, "release", "check", "--version", "0.4")
-        self.assertEqual(2, invalid_version.returncode)
-        self.assertNotIn("Traceback", invalid_version.stdout + invalid_version.stderr)
+        for arguments in (
+            ("--version", "0.4", "--format", "json"),
+            ("--format", "json", "--version", "0.4"),
+        ):
+            invalid_version = run_cli(root, "release", "check", *arguments)
+            self.assertEqual(2, invalid_version.returncode)
+            self.assertEqual("", invalid_version.stderr)
+            payload = json.loads(invalid_version.stdout)
+            self.assertEqual("release_evaluation_error", payload["error"]["code"])
+            self.assertIn("version must be 0.2 or 0.3", payload["error"]["message"])
+
+        invalid_version_text = run_cli(root, "release", "check", "--version", "0.4")
+        self.assertEqual(2, invalid_version_text.returncode)
+        self.assertEqual("", invalid_version_text.stderr)
+        self.assertIn("ERROR: version must be 0.2 or 0.3", invalid_version_text.stdout)
 
     def test_v03_checker_is_read_only_and_release_check_is_compatible(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
