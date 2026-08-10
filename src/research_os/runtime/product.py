@@ -36,7 +36,10 @@ from research_os.services.analysis_runner import (
     render_run_detail,
     run_analysis,
 )
-from research_os.services.benchmark import run_scale_benchmark
+from research_os.services.benchmark import (
+    benchmark_candidate_queue,
+    run_scale_benchmark,
+)
 from research_os.services.brief import (
     brief_path,
     daily_brief,
@@ -251,6 +254,7 @@ __all__ = [
     "action_rows",
     "close_action",
     "compare_runs",
+    "benchmark_candidate_queue",
     "brief_path",
     "daily_brief",
     "compute_valuation",

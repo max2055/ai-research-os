@@ -7,6 +7,7 @@ import json
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import (
@@ -1003,18 +1004,26 @@ def _pipeline_queue(
     repo: DashboardRepository,
     status: str,
     channel: str | None,
+    entity: str | None,
+    tier: str | None,
     min_priority: float | None,
     limit: int,
+    offset: int,
     show_dups: bool,
 ) -> str:
-    rows = queue_rows(
+    page_rows = queue_rows(
         repo.root,
         status=status or "new",
         channel_id=channel or None,
+        entity_id=entity or None,
+        tier=tier or None,
         min_priority=min_priority,
-        limit=limit,
+        limit=limit + 1,
+        offset=offset,
         show_dups=show_dups,
     )
+    has_next = len(page_rows) > limit
+    rows = page_rows[:limit]
 
     def dup_cell(row: dict[str, Any]) -> str:
         if row.get("existing_source_id"):
@@ -1064,8 +1073,45 @@ def _pipeline_queue(
         for value in ("new", "triaged", "promoted", "dismissed", "expired", "failed")
     )
     channel_value = esc(channel or "")
+    entity_value = esc(entity or "")
     min_value = esc(min_priority if min_priority is not None else "")
     dup_check = " checked" if show_dups else ""
+
+    def page_url(page_offset: int) -> str:
+        params: list[tuple[str, str]] = [("status", status or "new")]
+        if channel:
+            params.append(("channel", channel))
+        if entity:
+            params.append(("entity", entity))
+        if tier:
+            params.append(("tier", tier))
+        if min_priority is not None:
+            params.append(("min_priority", str(min_priority)))
+        params.extend((("limit", str(limit)), ("offset", str(page_offset))))
+        if show_dups:
+            params.append(("show_dups", "true"))
+        return f"/pipeline/queue?{urlencode(params)}"
+
+    previous = (
+        f'<a href="{esc(page_url(max(0, offset - limit)))}">Previous</a>'
+        if offset > 0
+        else '<span class="muted">Previous</span>'
+    )
+    next_link = (
+        f'<a href="{esc(page_url(offset + limit))}">Next</a>'
+        if has_next
+        else '<span class="muted">Next</span>'
+    )
+    tier_options = "".join(
+        f'<option value="{value}"'
+        f"{' selected' if tier == value else ''}>{label}</option>"
+        for value, label in (
+            ("", "全部"),
+            ("core", "core"),
+            ("tracked", "tracked"),
+            ("discovery", "discovery"),
+        )
+    )
     content = f"""<section class="hero"><div>
 <div class="eyebrow">管线 → 队列</div><h2>候选队列</h2>
 <p>只读筛选列表。重复簇折叠为单行代表。</p>
@@ -1075,12 +1121,16 @@ def _pipeline_queue(
 <form method="get" action="/pipeline/queue">
 <label>状态 <select name="status">{status_options}</select></label>
 <label style="margin-left:1rem">通道 <input name="channel" value="{channel_value}"></label>
+<label style="margin-left:1rem">实体 <input name="entity" value="{entity_value}"></label>
+<label style="margin-left:1rem">层级 <select name="tier">{tier_options}</select></label>
 <label style="margin-left:1rem">最低优先级 <input type="number" step="0.01" min="0" max="1" name="min_priority" value="{min_value}"></label>
 <label style="margin-left:1rem">数量 <input type="number" min="1" max="200" name="limit" value="{esc(limit)}"></label>
 <label style="margin-left:1rem"><input type="checkbox" name="show_dups" value="1"{dup_check}> 显示重复</label>
+<input type="hidden" name="offset" value="0">
 <button type="submit">筛选</button>
 </form></section>
-<section class="panel">{table(["优先级", "状态", "重复", "实体", "板块", "通道", "发现时间", "标题"], body_rows)}</section>"""
+<section class="panel">{table(["优先级", "状态", "重复", "实体", "板块", "通道", "发现时间", "标题"], body_rows)}</section>
+<nav aria-label="Candidate queue pages" style="min-height:2.5rem;display:flex;align-items:center;justify-content:space-between">{previous}<span class="muted">{offset + 1}–{offset + len(rows)}</span>{next_link}</nav>"""
     return shell("管线队列", content)
 
 
@@ -2654,13 +2704,24 @@ def create_app(root: Path) -> FastAPI:
     def pipeline_queue(
         status: str = Query(default="new"),
         channel: str | None = Query(default=None),
+        entity: str | None = Query(default=None),
+        tier: str | None = Query(default=None),
         min_priority: float | None = Query(default=None),
         limit: int = Query(default=50, ge=1, le=200),
+        offset: int = Query(default=0, ge=0),
         show_dups: bool = Query(default=False),
     ) -> HTMLResponse:
         return HTMLResponse(
             _pipeline_queue(
-                repo, status, channel, min_priority, limit, show_dups
+                repo,
+                status,
+                channel,
+                entity,
+                tier,
+                min_priority,
+                limit,
+                offset,
+                show_dups,
             )
         )
 

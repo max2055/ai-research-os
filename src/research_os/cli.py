@@ -284,6 +284,7 @@ def parse_args() -> argparse.Namespace:
         "--min-priority", type=float, help="only candidates at/above this score"
     )
     candidates_list.add_argument("--limit", type=int, default=50)
+    candidates_list.add_argument("--offset", type=int, default=0)
     candidates_list.add_argument(
         "--show-dups",
         action="store_true",
@@ -908,6 +909,16 @@ def parse_args() -> argparse.Namespace:
     benchmark.add_argument("--sources", type=int, default=1000)
     benchmark.add_argument("--events", type=int, default=500)
     benchmark.add_argument("--max-seconds", type=float, default=10.0)
+    benchmark_candidates = subparsers.add_parser(
+        "benchmark-candidates",
+        help="benchmark stable Candidate Queue pagination with a disposable DB",
+    )
+    benchmark_candidates.add_argument("--rows", type=int, default=10_000)
+    benchmark_candidates.add_argument("--repeats", type=int, default=7)
+    benchmark_candidates.add_argument("--warmups", type=int, default=1)
+    benchmark_candidates.add_argument("--page-size", type=int, default=200)
+    benchmark_candidates.add_argument("--offset", type=int, default=200)
+    benchmark_candidates.add_argument("--max-seconds", type=float, default=2.0)
     release = subparsers.add_parser(
         "release",
         help="evaluate product release gates without changing the repository",
@@ -1188,6 +1199,7 @@ def main() -> int:
                     tier=args.tier,
                     min_priority=args.min_priority,
                     limit=args.limit,
+                    offset=args.offset,
                     show_dups=args.show_dups,
                 )
                 print(runtime.render_candidate_list(queue), end="")
@@ -1750,6 +1762,22 @@ def main() -> int:
             for key, value in benchmark_result.as_dict().items():
                 print(f"{key}: {value}")
             return 0 if benchmark_result.passed else 1
+        except (OSError, ValueError) as exc:
+            print(f"ERROR: {exc}")
+            return 2
+    if args.command == "benchmark-candidates":
+        try:
+            candidate_result = runtime.benchmark_candidate_queue(
+                args.root.resolve(),
+                rows=args.rows,
+                repeats=args.repeats,
+                warmups=args.warmups,
+                page_size=args.page_size,
+                offset=args.offset,
+                max_seconds=args.max_seconds,
+            )
+            print(json.dumps(candidate_result.as_dict(), sort_keys=True))
+            return 0 if candidate_result.passed else 1
         except (OSError, ValueError) as exc:
             print(f"ERROR: {exc}")
             return 2

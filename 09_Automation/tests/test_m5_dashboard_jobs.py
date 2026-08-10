@@ -1571,3 +1571,31 @@ class CandidateDetailTests(unittest.TestCase):
             self.assertEqual(200, page.status_code)
             self.assertIn("发现时间", page.text)
             self.assertIn("CAND-new-001", page.text)
+
+    def test_candidate_queue_navigation_preserves_encoded_filters(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            client = TestClient(create_app(root))
+            page = client.get(
+                "/pipeline/queue",
+                params={
+                    "status": "new",
+                    "channel": "CHN-test & special",
+                    "entity": "COM-test/value",
+                    "tier": "core",
+                    "min_priority": "0.25",
+                    "limit": "1",
+                    "offset": "1",
+                    "show_dups": "true",
+                },
+            )
+
+            self.assertEqual(200, page.status_code)
+            self.assertIn(
+                "status=new&amp;channel=CHN-test+%26+special"
+                "&amp;entity=COM-test%2Fvalue&amp;tier=core"
+                "&amp;min_priority=0.25&amp;limit=1&amp;offset=0"
+                "&amp;show_dups=true",
+                page.text,
+            )
