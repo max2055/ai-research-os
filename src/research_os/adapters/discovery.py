@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from email.utils import parsedate_to_datetime
 from functools import partial
-from typing import Any, Protocol
+from typing import IO, Any, Protocol, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, OpenerDirector, Request, build_opener
@@ -54,11 +54,78 @@ class _RedirectPolicyError(ValueError):
         super().__init__(failure_class)
 
 
+class _RedirectResponseError(ValueError):
+    def __init__(self, failure_class: str) -> None:
+        self.failure_class = failure_class
+        super().__init__(failure_class)
+
+
+class _BoundedRedirectResponse:
+    def __init__(self, response: Any, max_bytes: int) -> None:
+        self.response = response
+        self.max_bytes = max_bytes
+        self.closed = False
+        self.consumed = False
+
+    def read(self, size: int = -1) -> bytes:
+        del size
+        if self.consumed:
+            return b""
+        self.consumed = True
+        chunks: list[bytes] = []
+        remaining = self.max_bytes + 1
+        try:
+            while remaining:
+                chunk = self.response.read(remaining)
+                if not isinstance(chunk, bytes):
+                    raise _RedirectResponseError("response_type")
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+        except Exception:
+            self.close()
+            raise
+        content = b"".join(chunks)
+        if len(content) > self.max_bytes:
+            self.close()
+            raise _RedirectResponseError("response_too_large")
+        return content
+
+    def close(self) -> None:
+        if self.closed:
+            return
+        self.closed = True
+        self.response.close()
+
+
 class _AllowlistedRedirectHandler(HTTPRedirectHandler):
-    def __init__(self, allowed_hosts: frozenset[str]) -> None:
+    def __init__(self, allowed_hosts: frozenset[str], max_bytes: int) -> None:
         super().__init__()
         self.allowed_hosts = allowed_hosts
+        self.max_bytes = max_bytes
         self.redirects = 0
+
+    def http_error_302(
+        self,
+        req: Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+    ) -> Any:
+        response = _BoundedRedirectResponse(fp, self.max_bytes)
+        try:
+            return super().http_error_302(
+                req, cast("IO[bytes]", response), code, msg, headers
+            )
+        finally:
+            response.close()
+
+    http_error_301 = http_error_302
+    http_error_303 = http_error_302
+    http_error_307 = http_error_302
+    http_error_308 = http_error_302
 
     def redirect_request(
         self,
@@ -142,7 +209,7 @@ def fetch_text(
             telemetry.attempts += 1
         try:
             request = Request(url, headers=headers)
-            opener = _build_discovery_opener(allowed_hosts)
+            opener = _build_discovery_opener(allowed_hosts, max_bytes=max_bytes)
             with opener.open(request, timeout=timeout) as response:  # noqa: S310
                 content = response.read(max_bytes + 1)
             if not isinstance(content, bytes):
@@ -155,7 +222,7 @@ def fetch_text(
                 raise DiscoveryTransportError("decode", attempt) from None
         except DiscoveryTransportError:
             raise
-        except _RedirectPolicyError as exc:
+        except (_RedirectPolicyError, _RedirectResponseError) as exc:
             raise DiscoveryTransportError(exc.failure_class, attempt) from None
         except Exception as exc:
             failure_class, retriable, retry_after = _classify_transport_failure(
@@ -208,8 +275,12 @@ def _validate_fetch_policy(
         raise DiscoveryTransportError("policy", 0)
 
 
-def _build_discovery_opener(allowed_hosts: frozenset[str]) -> OpenerDirector:
-    return build_opener(_AllowlistedRedirectHandler(allowed_hosts))
+def _build_discovery_opener(
+    allowed_hosts: frozenset[str],
+    *,
+    max_bytes: int = DEFAULT_RESPONSE_LIMIT,
+) -> OpenerDirector:
+    return build_opener(_AllowlistedRedirectHandler(allowed_hosts, max_bytes))
 
 
 def _utc_now() -> datetime:
@@ -263,7 +334,13 @@ def _classify_transport_failure(
         return "tls_interruption", True, None
     if isinstance(reason, ssl.SSLError):
         detail = str(reason).upper()
-        if "EOF" in detail or "HANDSHAKE" in detail:
+        interruption_markers = (
+            "UNEXPECTED_EOF_WHILE_READING",
+            "EOF OCCURRED IN VIOLATION OF PROTOCOL",
+        )
+        if reason.errno in {ssl.SSL_ERROR_EOF, ssl.SSL_ERROR_SYSCALL} or any(
+            marker in detail for marker in interruption_markers
+        ):
             return "tls_interruption", True, None
         return "tls", False, None
     if isinstance(reason, ConnectionResetError):

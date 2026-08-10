@@ -86,9 +86,11 @@ def _opener_factory(
 
 def _opener_builder(
     openers: Iterator[_OutcomeOpener],
-) -> Callable[[frozenset[str]], _OutcomeOpener]:
-    def build(allowed_hosts: frozenset[str]) -> _OutcomeOpener:
-        del allowed_hosts
+) -> Callable[..., _OutcomeOpener]:
+    def build(
+        allowed_hosts: frozenset[str], *, max_bytes: int | None = None
+    ) -> _OutcomeOpener:
+        del allowed_hosts, max_bytes
         return next(openers)
 
     return build
@@ -121,6 +123,12 @@ class _RedirectServerHandler(BaseHTTPRequestHandler):
         if path == "/allowed":
             self._redirect("/final")
             return
+        if path == "/redirect-large-body":
+            self._redirect("/final", body=b"x" * 100)
+            return
+        if path == "/redirect-small-body":
+            self._redirect("/final", body=b"123")
+            return
         if path == "/cross-host":
             port = self.server.server_address[1]
             self._redirect(f"http://localhost:{port}/forbidden?token=secret")
@@ -139,10 +147,12 @@ class _RedirectServerHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"ok")
 
-    def _redirect(self, location: str) -> None:
+    def _redirect(self, location: str, *, body: bytes = b"") -> None:
         self.send_response(302)
         self.send_header("Location", location)
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
+        self.wfile.write(body)
 
     def log_message(self, format: str, *args: object) -> None:
         del format, args
@@ -245,6 +255,12 @@ class DiscoveryTransportContractTests(unittest.TestCase):
             ),
             "certificate": URLError(
                 ssl.SSLCertVerificationError(1, "certificate verify failed")
+            ),
+            "tls": URLError(
+                ssl.SSLError(
+                    ssl.SSL_ERROR_SSL,
+                    "[SSL: SSLV3_ALERT_HANDSHAKE_FAILURE] handshake failure",
+                )
             ),
         }
         for expected_class, terminal_error in terminal_errors.items():
@@ -548,6 +564,38 @@ class DiscoveryTransportContractTests(unittest.TestCase):
         self.assertEqual("ok", result)
         self.assertEqual(["/allowed", "/final"], _RedirectServerHandler.requested_paths)
         self.assertEqual(FetchTelemetry(attempts=1), telemetry)
+
+    def test_oversized_redirect_body_is_rejected_before_follow(self) -> None:
+        with _redirect_server() as base_url:
+            telemetry = FetchTelemetry()
+            with self.assertRaises(DiscoveryTransportError) as caught:
+                fetch_text(
+                    f"{base_url}/redirect-large-body",
+                    headers={},
+                    allowed_hosts=frozenset({"127.0.0.1"}),
+                    max_bytes=3,
+                    telemetry=telemetry,
+                )
+        self.assertEqual("response_too_large", caught.exception.failure_class)
+        self.assertEqual(1, caught.exception.attempts)
+        self.assertEqual(
+            ["/redirect-large-body"], _RedirectServerHandler.requested_paths
+        )
+        self.assertEqual(FetchTelemetry(attempts=1), telemetry)
+
+    def test_bounded_redirect_body_continues_to_final_response(self) -> None:
+        with _redirect_server() as base_url:
+            result = fetch_text(
+                f"{base_url}/redirect-small-body",
+                headers={},
+                allowed_hosts=frozenset({"127.0.0.1"}),
+                max_bytes=3,
+            )
+        self.assertEqual("ok", result)
+        self.assertEqual(
+            ["/redirect-small-body", "/final"],
+            _RedirectServerHandler.requested_paths,
+        )
 
     def test_rejected_redirect_is_blocked_before_follow_without_retry(self) -> None:
         for endpoint in ("cross-host", "invalid-scheme"):
