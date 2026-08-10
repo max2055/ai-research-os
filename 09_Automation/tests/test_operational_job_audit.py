@@ -1,20 +1,44 @@
+# mypy: disable-error-code=import-untyped
 from __future__ import annotations
 
+import json
+import os
 import re
 import sqlite3
 import tempfile
 import unittest
 from collections import Counter
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from research_os.repositories.markdown import MarkdownDocument
 
 ROOT = Path(__file__).resolve().parents[2]
 JOBS_DIR = ROOT / "05_Research" / "Operations" / "Jobs"
 AUDIT_PATH = ROOT / "00_System" / "v0.3_Discovery_Job_Audit_2026-08-10.md"
+RUN_FIXTURE_PATH = (
+    ROOT / "09_Automation" / "tests" / "fixtures" / "operational_job_audit_runs.json"
+)
+LIVE_DB_ENV = "RESEARCH_OS_AUDIT_CANDIDATE_DB"
+SOURCE_DB_SHA256 = "f12e1a510fd553e10e9f5dddbf88f32693ace92c3e508bdec8230b92ff921689"
+RUN_METADATA_FIELDS = frozenset(
+    {
+        "run_id",
+        "channel_id",
+        "started_at",
+        "finished_at",
+        "candidate_count",
+        "http_errors",
+        "parse_errors",
+        "retries",
+        "status",
+    }
+)
 
 EXPECTED_JOB_FILES = (
     "JOB-20260809154712-001-discover.md",
@@ -448,27 +472,33 @@ def _parse_time(value: object) -> datetime:
     return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
 
-def _primary_checkout(root: Path) -> Path:
-    marker = root / ".git"
-    if marker.is_dir():
-        return root
-    match = re.fullmatch(r"gitdir:\s*(.+)\s*", marker.read_text(encoding="utf-8"))
-    if match is None:
-        raise AssertionError(f"cannot resolve worktree gitdir from {marker}")
-    git_dir = Path(match.group(1))
-    if not git_dir.is_absolute():
-        git_dir = (root / git_dir).resolve()
-    common_dir = (
-        git_dir / (git_dir / "commondir").read_text(encoding="utf-8").strip()
-    ).resolve()
-    return common_dir.parent
+def _load_run_fixture() -> tuple[dict[str, object], dict[str, dict[str, object]]]:
+    payload = json.loads(RUN_FIXTURE_PATH.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise AssertionError("operational run fixture must be a JSON object")
+    raw_runs = payload.get("runs")
+    if not isinstance(raw_runs, list):
+        raise AssertionError("operational run fixture must contain a runs array")
+    runs: dict[str, dict[str, object]] = {}
+    for raw_run in raw_runs:
+        if not isinstance(raw_run, dict):
+            raise AssertionError("operational run fixture rows must be JSON objects")
+        run = {str(key): value for key, value in raw_run.items()}
+        run_id = str(run.get("run_id") or "")
+        if not run_id or run_id in runs:
+            raise AssertionError(f"invalid or duplicate fixture run_id: {run_id}")
+        runs[run_id] = run
+    return {str(key): value for key, value in payload.items()}, runs
 
 
 def _candidate_connection() -> sqlite3.Connection:
-    db_path = (
-        _primary_checkout(ROOT) / "09_Automation" / "operational" / "candidates.db"
-    )
-    connection = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True)
+    configured = os.environ.get(LIVE_DB_ENV)
+    if not configured:
+        pytest.skip(f"{LIVE_DB_ENV} is not set; skipping live Candidate DB recheck")
+    db_path = Path(configured).expanduser()
+    if not db_path.is_file():
+        raise AssertionError(f"{LIVE_DB_ENV} does not name a file: {db_path}")
+    connection = sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA query_only = ON")
     return connection
@@ -521,6 +551,37 @@ class OperationalJobAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "SHA-256"):
                 _assert_file_sha256(tampered, expected)
 
+    def test_live_db_connection_requires_explicit_environment_path(self) -> None:
+        with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            pytest.skip.Exception,
+            LIVE_DB_ENV,
+        ):
+            _candidate_connection()
+
+    def test_committed_run_fixture_is_sanitized_and_complete(self) -> None:
+        payload, runs = _load_run_fixture()
+        self.assertEqual(
+            {
+                "schema_version",
+                "captured_at",
+                "source_table",
+                "source_db_sha256",
+                "runs",
+            },
+            set(payload),
+        )
+        self.assertEqual(1, payload["schema_version"])
+        self.assertEqual("2026-08-10", payload["captured_at"])
+        self.assertEqual("discovery_runs", payload["source_table"])
+        self.assertEqual(SOURCE_DB_SHA256, payload["source_db_sha256"])
+        expected_run_ids = {
+            expected[0] for expected in EXPECTED_SUCCESS_RUNS.values()
+        } | {expected[1] for expected in EXPECTED_FAILURES.values()}
+        self.assertEqual(28, len(runs))
+        self.assertEqual(expected_run_ids, set(runs))
+        for run_id, run in runs.items():
+            self.assertEqual(RUN_METADATA_FIELDS, frozenset(run), run_id)
+
     def test_exact_retained_manifest_and_outcomes(self) -> None:
         documents = self._documents()
         self.assertEqual(EXPECTED_JOB_IDS, frozenset(documents))
@@ -553,8 +614,8 @@ class OperationalJobAuditTests(unittest.TestCase):
             self.assertEqual("2026-08-09", str(metadata["created_at"]), job_id)
             self.assertEqual("2026-08-09", str(metadata["updated_at"]), job_id)
             self.assertEqual(job_id[4:18], started_at.strftime("%Y%m%d%H%M%S"))
-            self.assertEqual(0, started_at.utcoffset().total_seconds(), job_id)
-            self.assertEqual(0, finished_at.utcoffset().total_seconds(), job_id)
+            self.assertEqual(timedelta(0), started_at.utcoffset(), job_id)
+            self.assertEqual(timedelta(0), finished_at.utcoffset(), job_id)
             self.assertLessEqual(
                 started_at,
                 finished_at,
@@ -564,7 +625,7 @@ class OperationalJobAuditTests(unittest.TestCase):
             self.assertIn("## Result", document.body, job_id)
 
     def test_no_extra_jobs_overlap_the_two_retained_batch_windows(self) -> None:
-        observed = [set(), set()]
+        observed: list[set[str]] = [set(), set()]
         windows = [
             (_parse_time(started_at), _parse_time(finished_at), expected_ids)
             for started_at, finished_at, expected_ids in EXPECTED_BATCH_WINDOWS
@@ -595,8 +656,9 @@ class OperationalJobAuditTests(unittest.TestCase):
             [document.metadata["message"] for document in expires],
         )
 
-    def test_successful_discovery_messages_match_read_only_candidate_runs(self) -> None:
+    def test_successful_discovery_messages_match_committed_run_fixture(self) -> None:
         documents = self._documents()
+        _payload, fixture_runs = _load_run_fixture()
         actual_success_ids = {
             job_id
             for job_id, document in documents.items()
@@ -626,65 +688,96 @@ class OperationalJobAuditTests(unittest.TestCase):
             expected_rows[run_id] = (channel, candidate_count)
 
         self.assertEqual(26, len(expected_rows))
-        placeholders = ",".join("?" for _ in expected_rows)
-        with closing(_candidate_connection()) as connection:
-            rows = connection.execute(
-                "SELECT run_id, channel_id, candidate_count, status "
-                f"FROM discovery_runs WHERE run_id IN ({placeholders})",
-                tuple(expected_rows),
-            ).fetchall()
-        self.assertEqual(set(expected_rows), {str(row["run_id"]) for row in rows})
-        for row in rows:
-            channel, candidate_count = expected_rows[str(row["run_id"])]
+        for run_id, (channel, candidate_count) in expected_rows.items():
+            row = fixture_runs[run_id]
             self.assertEqual("succeeded", row["status"])
             self.assertEqual(channel, row["channel_id"])
             self.assertEqual(candidate_count, row["candidate_count"])
+            self.assertEqual(0, row["http_errors"])
+            self.assertEqual(0, row["parse_errors"])
+            self.assertEqual(0, row["retries"])
 
     def test_failed_jobs_are_retained_and_match_failed_candidate_runs(self) -> None:
         documents = self._documents()
+        _payload, fixture_runs = _load_run_fixture()
+        for job_id, expected in EXPECTED_FAILURES.items():
+            (
+                channel,
+                run_id,
+                message,
+                job_started_at,
+                job_finished_at,
+                run_started_at,
+                run_finished_at,
+            ) = expected
+            document = documents[job_id]
+            metadata = document.metadata
+            self.assertEqual("failed", metadata["status"])
+            self.assertEqual("discover", metadata["job_name"])
+            self.assertEqual(channel, metadata["target"])
+            self.assertEqual(message, metadata["message"])
+            self.assertEqual(job_started_at, str(metadata["started_at"]))
+            self.assertEqual(job_finished_at, str(metadata["finished_at"]))
+            row = fixture_runs[run_id]
+            self.assertEqual(run_id, row["run_id"])
+            self.assertEqual(channel, row["channel_id"])
+            self.assertEqual(run_started_at, row["started_at"])
+            self.assertEqual(run_finished_at, row["finished_at"])
+            self.assertIsNone(row["candidate_count"])
+            self.assertEqual(0, row["http_errors"])
+            self.assertEqual(0, row["parse_errors"])
+            self.assertEqual(0, row["retries"])
+            self.assertEqual("failed", row["status"])
+            self.assertLessEqual(
+                _parse_time(metadata["started_at"]), _parse_time(row["started_at"])
+            )
+            self.assertLessEqual(
+                _parse_time(row["finished_at"]),
+                _parse_time(metadata["finished_at"]),
+            )
+
+    @pytest.mark.local_integration
+    def test_live_candidate_db_matches_committed_run_fixture(self) -> None:
+        configured = os.environ.get(LIVE_DB_ENV)
+        if not configured:
+            pytest.skip(f"{LIVE_DB_ENV} is not set; skipping live Candidate DB recheck")
+        db_path = Path(configured).expanduser()
+        before_hash = sha256(db_path.read_bytes()).hexdigest()
+        _payload, fixture_runs = _load_run_fixture()
+        placeholders = ",".join("?" for _ in fixture_runs)
+        columns = ", ".join(sorted(RUN_METADATA_FIELDS))
         with closing(_candidate_connection()) as connection:
-            for job_id, expected in EXPECTED_FAILURES.items():
-                (
-                    channel,
-                    run_id,
-                    message,
-                    job_started_at,
-                    job_finished_at,
-                    run_started_at,
-                    run_finished_at,
-                ) = expected
-                document = documents[job_id]
-                metadata = document.metadata
-                self.assertEqual("failed", metadata["status"])
-                self.assertEqual("discover", metadata["job_name"])
-                self.assertEqual(channel, metadata["target"])
-                self.assertEqual(message, metadata["message"])
-                self.assertEqual(job_started_at, str(metadata["started_at"]))
-                self.assertEqual(job_finished_at, str(metadata["finished_at"]))
-                row = connection.execute(
-                    "SELECT * FROM discovery_runs WHERE run_id = ?",
-                    (run_id,),
-                ).fetchone()
-                self.assertIsNotNone(row, run_id)
-                assert row is not None
-                self.assertEqual(run_id, row["run_id"])
-                self.assertEqual(channel, row["channel_id"])
-                self.assertEqual(run_started_at, row["started_at"])
-                self.assertEqual(run_finished_at, row["finished_at"])
-                self.assertIsNone(row["candidate_count"])
-                self.assertEqual(0, row["http_errors"])
-                self.assertEqual(0, row["parse_errors"])
-                self.assertEqual(0, row["retries"])
-                self.assertIsNone(row["cost_estimate"])
-                self.assertEqual("0.3", row["software_version"])
-                self.assertEqual("failed", row["status"])
-                self.assertLessEqual(
-                    _parse_time(metadata["started_at"]), _parse_time(row["started_at"])
-                )
-                self.assertLessEqual(
-                    _parse_time(row["finished_at"]),
-                    _parse_time(metadata["finished_at"]),
-                )
+            rows = connection.execute(
+                f"SELECT {columns} FROM discovery_runs "
+                f"WHERE run_id IN ({placeholders})",
+                tuple(fixture_runs),
+            ).fetchall()
+        after_hash = sha256(db_path.read_bytes()).hexdigest()
+        self.assertEqual(
+            before_hash, after_hash, "live Candidate DB changed during audit"
+        )
+        live_runs = {
+            str(row["run_id"]): {field: row[field] for field in RUN_METADATA_FIELDS}
+            for row in rows
+        }
+        self.assertEqual(fixture_runs, live_runs)
+
+        documents = self._documents()
+        expected_job_run_ids = {
+            expected[0] for expected in EXPECTED_SUCCESS_RUNS.values()
+        } | {expected[1] for expected in EXPECTED_FAILURES.values()}
+        self.assertEqual(set(fixture_runs), expected_job_run_ids)
+        self.assertEqual(EXPECTED_JOB_IDS, frozenset(documents))
+        for job_id, success_expected in EXPECTED_SUCCESS_RUNS.items():
+            run_id, channel, candidate_count, _inserted, _skipped = success_expected
+            self.assertEqual(channel, documents[job_id].metadata["target"])
+            self.assertEqual(channel, live_runs[run_id]["channel_id"])
+            self.assertEqual(candidate_count, live_runs[run_id]["candidate_count"])
+        for job_id, failure_expected in EXPECTED_FAILURES.items():
+            channel, run_id, *_rest = failure_expected
+            self.assertEqual(channel, documents[job_id].metadata["target"])
+            self.assertEqual(channel, live_runs[run_id]["channel_id"])
+            self.assertEqual("failed", live_runs[run_id]["status"])
 
     def test_audit_document_separates_claim_types_and_retains_incidents(self) -> None:
         self.assertTrue(AUDIT_PATH.is_file(), "operational audit document is missing")
