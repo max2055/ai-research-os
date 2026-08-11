@@ -33,6 +33,7 @@ from research_os.services.durable_backup import (
     RemoteAsset,
     build_source_asset_inventory,
     create_durable_backup,
+    load_durable_backup_receipt,
     restore_durable_backup,
 )
 
@@ -838,6 +839,84 @@ class DurableBackupTests(unittest.TestCase):
 
 
 class GitHubReleaseBackendTests(unittest.TestCase):
+    def test_backend_canonicalizes_github_host_for_every_remote_command(self) -> None:
+        calls: list[list[str]] = []
+
+        def runner(
+            argv: list[str], **_kwargs: object
+        ) -> subprocess.CompletedProcess[str]:
+            calls.append(argv)
+            if argv[1:3] == ["repo", "view"]:
+                return subprocess.CompletedProcess(argv, 0, '{"isPrivate":true}', "")
+            return subprocess.CompletedProcess(
+                argv,
+                0,
+                json.dumps(
+                    {
+                        "tagName": DURABLE_BACKUP_RELEASE_TAG,
+                        "isPrerelease": True,
+                        "assets": [],
+                    }
+                ),
+                "",
+            )
+
+        backend = GitHubReleaseBackend("owner/repo", runner=runner)
+        backend.preflight(("new.age",))
+
+        self.assertEqual("github.com/owner/repo", backend.repository)
+        for call in calls:
+            if call[1:3] == ["repo", "view"]:
+                self.assertEqual("github.com/owner/repo", call[3])
+            if "--repo" in call:
+                self.assertEqual(
+                    "github.com/owner/repo", call[call.index("--repo") + 1]
+                )
+        self.assertEqual(
+            "github.com/owner/repo",
+            GitHubReleaseBackend("github.com/owner/repo", runner=runner).repository,
+        )
+        with self.assertRaisesRegex(ValueError, "github.com"):
+            GitHubReleaseBackend("enterprise.example/owner/repo", runner=runner)
+
+    def test_load_legacy_receipt_migrates_repository_to_canonical_host(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "receipt.json"
+            backup_id = "BKP-20260810T010203Z-121212121212"
+            sets = []
+            for backup_set in ("candidate", "source_assets"):
+                name = f"{backup_id}-{backup_set}.tar.age"
+                sets.append(
+                    {
+                        "backup_set": backup_set,
+                        "name": name,
+                        "sha256": "a" * 64,
+                        "size_bytes": 1,
+                        "remote": {
+                            "name": name,
+                            "asset_id": f"asset-{backup_set}",
+                            "size_bytes": 1,
+                        },
+                    }
+                )
+            path.write_text(
+                json.dumps(
+                    {
+                        "backup_id": backup_id,
+                        "created_at": "2026-08-10T01:02:03Z",
+                        "status": "verified",
+                        "sets": sets,
+                        "remote_repository": "owner/repo",
+                        "remote_release": DURABLE_BACKUP_RELEASE_TAG,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            receipt = load_durable_backup_receipt(path)
+
+            self.assertEqual("github.com/owner/repo", receipt.remote_repository)
+
     def test_preflight_requires_private_prerelease_and_refuses_collisions(self) -> None:
         calls: list[list[str]] = []
 

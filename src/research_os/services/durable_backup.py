@@ -47,6 +47,9 @@ _AUTHORITATIVE_TOP_LEVEL = frozenset(
 )
 _BACKUP_ID_PATTERN = re.compile(r"BKP-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}")
 _SOURCE_ID_PATTERN = re.compile(r"SRC-[0-9]{8}-[0-9]{3}")
+_GITHUB_REPOSITORY_PATTERN = re.compile(
+    r"(?:github\.com/)?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)"
+)
 _OUTER_MANIFEST_KEYS = frozenset(
     {
         "backup_id",
@@ -174,6 +177,16 @@ def _validate_backup_id(value: str) -> str:
     if _BACKUP_ID_PATTERN.fullmatch(value) is None:
         raise ValueError("backup_id has invalid format")
     return value
+
+
+def canonical_github_repository(value: str) -> str:
+    """Bind a legacy owner/name identifier to the supported GitHub host."""
+    match = _GITHUB_REPOSITORY_PATTERN.fullmatch(value)
+    if match is None:
+        raise ValueError(
+            "GitHub repository must be owner/name or github.com/owner/name"
+        )
+    return f"github.com/{match.group(1)}/{match.group(2)}"
 
 
 def _asset_names(backup_id: str) -> tuple[str, ...]:
@@ -811,6 +824,10 @@ def load_durable_backup_receipt(path: Path) -> DurableBackupReceipt:
     ):
         raise ValueError("durable receipt is invalid")
     _validate_backup_id(backup_id)
+    try:
+        repository = canonical_github_repository(repository)
+    except ValueError as exc:
+        raise ValueError("durable receipt is invalid") from exc
     sets: list[EncryptedAsset] = []
     for raw in raw_sets:
         if not isinstance(raw, dict):

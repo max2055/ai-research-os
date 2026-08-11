@@ -8,10 +8,9 @@ import subprocess
 from pathlib import Path
 from typing import Any, Protocol, cast
 
-from research_os.services.durable_backup import RemoteAsset
+from research_os.services.durable_backup import RemoteAsset, canonical_github_repository
 
 DURABLE_BACKUP_RELEASE_TAG = "research-os-durable-backups-v1"
-_REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 _ASSET_NAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,254}")
 
 
@@ -33,11 +32,9 @@ class GitHubReleaseBackend:
         runner: CommandRunner | None = None,
         gh_binary: str = "gh",
     ) -> None:
-        if _REPOSITORY_PATTERN.fullmatch(repository) is None:
-            raise ValueError("GitHub repository must be owner/name")
         if not gh_binary or any(character.isspace() for character in gh_binary):
             raise ValueError("gh binary name is invalid")
-        self.repository = repository
+        self.repository = canonical_github_repository(repository)
         self._runner = (
             runner if runner is not None else cast(CommandRunner, subprocess.run)
         )
