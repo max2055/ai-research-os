@@ -412,13 +412,13 @@
 
 ## Failed jobs
 
-- [[JOB-20260809094218-001]] — discover: ValueError: discovery failed for CHN-sec-amazon: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1032)>
-- [[JOB-20260808050741-001]] — discover: ValueError: discovery failed for CHN-skhynix-ir: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050712-001]] — discover: ValueError: discovery failed for CHN-sec-tsmc: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050651-001]] — discover: ValueError: discovery failed for CHN-sec-nvidia: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050629-001]] — discover: ValueError: discovery failed for CHN-sec-microsoft: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050601-001]] — discover: ValueError: discovery failed for CHN-sec-micron: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050540-001]] — discover: ValueError: discovery failed for CHN-sec-meta: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050512-001]] — discover: ValueError: discovery failed for CHN-sec-coreweave: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050450-001]] — discover: ValueError: discovery failed for CHN-sec-amazon: <urlopen error [Errno 8] nodename nor servname provided, or not known>
-- [[JOB-20260808050422-001]] — discover: ValueError: discovery failed for CHN-github-openai: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+- [[JOB-20260811013747-001]] — expire: ValueError: repository has 2 validation errors
+- [[JOB-20260811013736-001]] — discover: ValueError: repository has 2 validation errors
+- [[JOB-20260811013724-001]] — discover: ValueError: repository has 2 validation errors
+- [[JOB-20260811013713-001]] — discover: ValueError: repository has 2 validation errors
+- [[JOB-20260811013701-001]] — discover: ValueError: repository has 2 validation errors
+- [[JOB-20260811013649-001]] — discover: ValueError: repository has 2 validation errors
+- [[JOB-20260811013638-001]] — discover: ValueError: repository has 2 validation errors
+- [[JOB-20260811013622-001]] — discover: ValueError: repository has 2 validation errors
+- [[JOB-20260811013605-001]] — discover: ValueError: repository has 2 validation errors
+- [[JOB-20260811013549-001]] — discover: ValueError: repository has 2 validation errors

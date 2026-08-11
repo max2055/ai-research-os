@@ -38,4 +38,4 @@
 
 ## Failed jobs
 
-- None
+- [[JOB-20260811013747-001]] — expire: ValueError: repository has 2 validation errors
