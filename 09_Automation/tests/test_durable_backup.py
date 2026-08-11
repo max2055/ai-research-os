@@ -3,11 +3,16 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import re
+import signal
 import sqlite3
 import subprocess
+import sys
 import tarfile
 import tempfile
+import textwrap
+import time
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -75,6 +80,192 @@ class FakeBackupBackend(BackupBackend):
 
 
 class DurableBackupTests(unittest.TestCase):
+    def assert_signal_cleans_owned_workspace(
+        self,
+        base: Path,
+        *,
+        operation: str,
+        termination_signal: signal.Signals,
+    ) -> None:
+        temp_parent = base / f"temporary-{operation}-{termination_signal.name}"
+        temp_parent.mkdir()
+        ready = base / f"ready-{operation}-{termination_signal.name}"
+        repository = Path(__file__).resolve().parents[2]
+        script = textwrap.dedent(
+            """
+            import sys
+            import time
+            from pathlib import Path
+
+            from research_os.services import durable_backup
+            from research_os.services.durable_backup import (
+                DurableBackupReceipt,
+                DurableBackupRequest,
+                EncryptedAsset,
+                RemoteAsset,
+                SourceAssetInventoryEntry,
+            )
+
+            operation = sys.argv[1]
+            base = Path(sys.argv[2])
+            temp_parent = Path(sys.argv[3])
+            ready = Path(sys.argv[4])
+            root = base / "repo"
+            root.mkdir()
+
+
+            class Backend:
+                repository = "github.com/example/private-research"
+                release_tag = "research-os-durable-backups-v1"
+
+                def preflight(self, asset_names):
+                    del asset_names
+
+                def upload(self, path, *, name):
+                    raise AssertionError((path, name))
+
+                def inspect(self, *, name):
+                    raise AssertionError(name)
+
+                def download(self, *, name, destination):
+                    raise AssertionError((name, destination))
+
+
+            backend = Backend()
+
+
+            def leave_plaintext_and_wait(work):
+                (work / "candidates.db").write_bytes(b"candidate plaintext")
+                (work / "candidates.db-wal").write_bytes(b"wal plaintext")
+                (work / "source-asset.bin").write_bytes(b"source plaintext")
+                ready.write_text("ready", encoding="utf-8")
+                while True:
+                    time.sleep(1)
+
+
+            if operation == "create":
+                durable_backup.build_source_asset_inventory = lambda root: (
+                    SourceAssetInventoryEntry(
+                        "SRC-20260810-001",
+                        "01_Inbox/_assets/SRC-20260810-001/source.bin",
+                        1,
+                        "a" * 64,
+                    ),
+                )
+                durable_backup.candidate_db_health = lambda path: {"status": "ok"}
+                durable_backup._preflight_age = lambda recipients: None
+
+                def block_create(root, work, **kwargs):
+                    del root, kwargs
+                    leave_plaintext_and_wait(work)
+
+                durable_backup._write_candidate_archive = block_create
+                request = DurableBackupRequest(
+                    root=root,
+                    recipients=("age1test",),
+                    backend=backend,
+                    apply=True,
+                )
+                durable_backup.create_durable_backup(
+                    request,
+                    now="2026-08-10T01:02:03Z",
+                    backup_id="BKP-20260810T010203Z-aaaaaaaaaaaa",
+                    temp_parent=temp_parent,
+                )
+            else:
+                identity = base / "identity.txt"
+                identity.write_text("test identity", encoding="utf-8")
+                candidate = EncryptedAsset(
+                    "candidate",
+                    "candidate.tar.age",
+                    "a" * 64,
+                    1,
+                    RemoteAsset("candidate.tar.age", "candidate", 1),
+                )
+                source_assets = EncryptedAsset(
+                    "source_assets",
+                    "source_assets.tar.age",
+                    "b" * 64,
+                    1,
+                    RemoteAsset("source_assets.tar.age", "source", 1),
+                )
+                receipt = DurableBackupReceipt(
+                    "BKP-20260810T010203Z-bbbbbbbbbbbb",
+                    "2026-08-10T01:02:03Z",
+                    "verified",
+                    (candidate, source_assets),
+                    backend.repository,
+                    backend.release_tag,
+                )
+                durable_backup._verified_assets = lambda receipt, backend: {
+                    "candidate": candidate,
+                    "source_assets": source_assets,
+                }
+
+                def fake_download(receipt, encrypted, backend, work):
+                    del receipt, encrypted, backend
+                    ciphertext = work / "ciphertext.age"
+                    ciphertext.write_bytes(b"ciphertext")
+                    return ciphertext
+
+                def block_decrypt(source, destination, identity):
+                    del source, identity
+                    leave_plaintext_and_wait(destination.parent)
+
+                durable_backup._download_verified_ciphertext = fake_download
+                durable_backup._decrypt_age = block_decrypt
+                durable_backup.restore_durable_backup(
+                    root,
+                    receipt,
+                    backend=backend,
+                    identity=identity,
+                    destination=base / "restore",
+                    temp_parent=temp_parent,
+                )
+            """
+        )
+        environment = dict(os.environ)
+        environment["PYTHONPATH"] = str(repository / "src")
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                script,
+                operation,
+                str(base),
+                str(temp_parent),
+                str(ready),
+            ],
+            cwd=repository,
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        deadline = time.monotonic() + 10
+        while (
+            not ready.is_file()
+            and process.poll() is None
+            and time.monotonic() < deadline
+        ):
+            time.sleep(0.01)
+        if not ready.is_file():
+            stdout, stderr = process.communicate(timeout=2)
+            self.fail(
+                f"signal fixture did not become ready: "
+                f"returncode={process.returncode}; stdout={stdout}; stderr={stderr}"
+            )
+
+        process.send_signal(termination_signal)
+        stdout, stderr = process.communicate(timeout=10)
+
+        self.assertEqual(
+            -int(termination_signal),
+            process.returncode,
+            f"stdout={stdout}; stderr={stderr}",
+        )
+        self.assertEqual([], list(temp_parent.iterdir()))
+
     def make_root(self, base: Path) -> tuple[Path, bytes]:
         root = base / "repo"
         root.mkdir()
@@ -354,6 +545,24 @@ class DurableBackupTests(unittest.TestCase):
                     / f"{backup_id}.json"
                 ).exists()
             )
+
+    def test_default_termination_signals_cleanup_owned_plaintext_workspaces(
+        self,
+    ) -> None:
+        for operation in ("create", "restore"):
+            for termination_signal in (signal.SIGTERM, signal.SIGHUP):
+                with (
+                    self.subTest(
+                        operation=operation,
+                        termination_signal=termination_signal.name,
+                    ),
+                    tempfile.TemporaryDirectory() as temp,
+                ):
+                    self.assert_signal_cleans_owned_workspace(
+                        Path(temp),
+                        operation=operation,
+                        termination_signal=termination_signal,
+                    )
 
     def test_plaintext_archive_integrity_is_verified_before_upload(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

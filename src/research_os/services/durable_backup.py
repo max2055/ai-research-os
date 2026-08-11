@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import stat
 import subprocess
 import tarfile
@@ -351,6 +352,39 @@ def _remove_temporary_directory(path: Path) -> None:
         raise DurableBackupError("durable backup temporary cleanup failed") from exc
 
 
+class _TemporaryWorkspaceSignalGuard:
+    """Remove one owned workspace before honoring default termination signals."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        self._previous: dict[int, Any] = {}
+
+    def install(self) -> None:
+        for termination_signal in (signal.SIGTERM, signal.SIGHUP):
+            if signal.getsignal(termination_signal) is not signal.SIG_DFL:
+                continue
+            try:
+                previous = signal.signal(termination_signal, self._handle)
+            except ValueError:
+                self.restore()
+                return
+            self._previous[termination_signal] = previous
+
+    def restore(self) -> None:
+        previous = self._previous
+        self._previous = {}
+        for termination_signal, handler in previous.items():
+            signal.signal(termination_signal, handler)
+
+    def _handle(self, signum: int, frame: object) -> None:
+        del frame
+        self.restore()
+        try:
+            _remove_temporary_directory(self._path)
+        finally:
+            os.kill(os.getpid(), signum)
+
+
 def _tar_info(name: str, size: int, timestamp: int) -> tarfile.TarInfo:
     info = tarfile.TarInfo(name)
     info.size = size
@@ -651,6 +685,8 @@ def create_durable_backup(
         )
 
     work = _temporary_directory(temp_parent, prefix="research-os-durable-create-")
+    signal_guard = _TemporaryWorkspaceSignalGuard(work)
+    signal_guard.install()
     encrypted_assets: list[EncryptedAsset] = []
     try:
         plaintext_archives: dict[BackupSet, Path] = {
@@ -718,6 +754,7 @@ def create_durable_backup(
             )
 
     finally:
+        signal_guard.restore()
         _remove_temporary_directory(work)
 
     receipt = DurableBackupReceipt(
@@ -1122,6 +1159,8 @@ def restore_durable_backup(
     by_set = _verified_assets(receipt, backend)
 
     work = _temporary_directory(temp_parent, prefix="research-os-durable-restore-")
+    signal_guard = _TemporaryWorkspaceSignalGuard(work)
+    signal_guard.install()
     staging = work / "staging"
     staging.mkdir(mode=0o700)
     candidate_sha256 = ""
@@ -1165,4 +1204,5 @@ def restore_durable_backup(
             source_asset_count=source_asset_count,
         )
     finally:
+        signal_guard.restore()
         _remove_temporary_directory(work)
