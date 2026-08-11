@@ -131,9 +131,7 @@ class PilotStatusTests(unittest.TestCase):
             with patch("research_os.services.pilot.date") as mock_date:
                 mock_date.today.return_value = date(2026, 8, 6)
                 mock_date.fromisoformat.side_effect = date.fromisoformat
-                self.assertEqual(
-                    1, pilot_status(root, since=DATE)["days_elapsed"]
-                )
+                self.assertEqual(1, pilot_status(root, since=DATE)["days_elapsed"])
             self.assertEqual(1, status["candidates"]["promoted"])
             self.assertEqual(0, status["candidates"]["dismissed"])
             self.assertEqual(2, status["candidates"]["discovered_since"])

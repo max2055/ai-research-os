@@ -23,15 +23,11 @@ class RedactionTests(unittest.TestCase):
     def test_canonicalize_url_drops_sensitive_params(self) -> None:
         self.assertEqual(
             "https://example.com/res?id=1",
-            canonicalize_url(
-                "https://example.com/res?token=SECRET&id=1&utm_source=x"
-            ),
+            canonicalize_url("https://example.com/res?token=SECRET&id=1&utm_source=x"),
         )
         self.assertEqual(
             "https://example.com/res",
-            canonicalize_url(
-                "https://example.com/res?access_token=abc&apikey=xyz"
-            ),
+            canonicalize_url("https://example.com/res?access_token=abc&apikey=xyz"),
         )
 
     def test_canonicalize_url_keeps_normal_params(self) -> None:

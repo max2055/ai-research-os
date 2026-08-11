@@ -731,9 +731,10 @@ def validate_valuation_rec_semantics(
             )
     elif obj.object_type == "recommendation":
         _check_supersession(obj, by_id, findings, "REC003")
-        if obj.metadata.get("status") == "active" and obj.metadata.get(
-            "review_status"
-        ) != "reviewed":
+        if (
+            obj.metadata.get("status") == "active"
+            and obj.metadata.get("review_status") != "reviewed"
+        ):
             add(
                 findings,
                 "error",

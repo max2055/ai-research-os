@@ -346,9 +346,7 @@ class V03EntitySchemaTests(unittest.TestCase):
         from research_os.schemas import validate_metadata
 
         with self.assertRaises(ValueError):
-            validate_metadata(
-                _v03_base(object_id="SEG-x", object_type="not-a-type")
-            )
+            validate_metadata(_v03_base(object_id="SEG-x", object_type="not-a-type"))
 
 
 class V03CompanyCompatibilityTests(unittest.TestCase):
@@ -442,13 +440,11 @@ class V03MigrationPlaceholderTests(unittest.TestCase):
 
         migration = RegisterV03SchemasMigration()
         self.assertEqual("MIG-v0.3-001-register-v0.3-schemas", migration.migration_id)
-        self.assertEqual("keep-me", migration.render(
-            type("D", (), {"original_text": "keep-me"})()
-        ))
+        self.assertEqual(
+            "keep-me", migration.render(type("D", (), {"original_text": "keep-me"})())
+        )
         self.assertNotEqual(
-            "keep-me", migration.render(
-                type("D", (), {"original_text": "altered"})()
-            )
+            "keep-me", migration.render(type("D", (), {"original_text": "altered"})())
         )
 
 
@@ -487,9 +483,7 @@ class V03OntologyAssertionTests(unittest.TestCase):
         self.assertEqual("REL-20260805-001", obj.id)
         self.assertEqual("SUPPLIES", obj.predicate)
         with self.assertRaises(ValidationError):
-            OntologyAssertionSchema.model_validate(
-                _assertion_base(id="REL-bad-id")
-            )
+            OntologyAssertionSchema.model_validate(_assertion_base(id="REL-bad-id"))
 
     def test_assertion_rejects_unknown_predicate(self) -> None:
         with self.assertRaises(ValidationError):
@@ -528,9 +522,7 @@ class V03OntologyAssertionTests(unittest.TestCase):
 
         # Can't add a REL object to the real repo (would mutate); instead
         # confirm the schema model_validate path + registry dispatch suffice.
-        self.assertIsNotNone(
-            OntologyAssertionSchema.model_validate(_assertion_base())
-        )
+        self.assertIsNotNone(OntologyAssertionSchema.model_validate(_assertion_base()))
 
 
 class V03AssertionReferenceTests(unittest.TestCase):

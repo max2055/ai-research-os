@@ -56,9 +56,14 @@ class GateMetricsTests(unittest.TestCase):
 
     def test_metrics_compute_rates_and_pass(self) -> None:
         judgments = [
-            {"event_id": f"EVT-{i}", "direct_precision": True,
-             "mechanism_backed": True, "direction_ok": True,
-             "horizon_ok": True, "contrary_omitted": False}
+            {
+                "event_id": f"EVT-{i}",
+                "direct_precision": True,
+                "mechanism_backed": True,
+                "direction_ok": True,
+                "horizon_ok": True,
+                "contrary_omitted": False,
+            }
             for i in range(20)
         ]
         metrics = gate_metrics(judgments)
@@ -70,12 +75,22 @@ class GateMetricsTests(unittest.TestCase):
 
     def test_metrics_fail_below_threshold(self) -> None:
         judgments = [
-            {"event_id": "EVT-1", "direct_precision": False,
-             "mechanism_backed": True, "direction_ok": True,
-             "horizon_ok": True, "contrary_omitted": True},
-            {"event_id": "EVT-2", "direct_precision": True,
-             "mechanism_backed": True, "direction_ok": True,
-             "horizon_ok": True, "contrary_omitted": False},
+            {
+                "event_id": "EVT-1",
+                "direct_precision": False,
+                "mechanism_backed": True,
+                "direction_ok": True,
+                "horizon_ok": True,
+                "contrary_omitted": True,
+            },
+            {
+                "event_id": "EVT-2",
+                "direct_precision": True,
+                "mechanism_backed": True,
+                "direction_ok": True,
+                "horizon_ok": True,
+                "contrary_omitted": False,
+            },
         ]
         metrics = gate_metrics(judgments)
         self.assertEqual(0.5, metrics["direct_precision"])

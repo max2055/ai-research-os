@@ -69,9 +69,7 @@ class CompareReport:
     questions: list[str] = field(default_factory=list)
     shared_facts: list[str] = field(default_factory=list)
     evidence_omitted: dict[str, list[str]] = field(default_factory=dict)
-    conflicting_signals: list[tuple[str, str, str, str]] = field(
-        default_factory=list
-    )
+    conflicting_signals: list[tuple[str, str, str, str]] = field(default_factory=list)
 
     @property
     def run_ids(self) -> list[str]:
@@ -165,10 +163,7 @@ def _shared_facts(runs: list[RunSummary]) -> list[str]:
 def _evidence_omitted(runs: list[RunSummary]) -> dict[str, list[str]]:
     """Per run: evidence used by OTHER runs but not this one (coverage gap)."""
     all_used = {fact for run in runs for fact in run.evidence_ids}
-    return {
-        run.run_id: sorted(all_used - run.evidence_set)
-        for run in runs
-    }
+    return {run.run_id: sorted(all_used - run.evidence_set) for run in runs}
 
 
 def _conflicting_signals(

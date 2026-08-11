@@ -181,9 +181,7 @@ class E018DecisionAlertsTests(unittest.TestCase):
             self.assertEqual(2, report["active_recommendations"])
             self.assertTrue(any("REC-STALE" in a for a in report["alerts"]))
             self.assertFalse(any("REC-FRESH 已过期" in a for a in report["alerts"]))
-            self.assertTrue(
-                any("REC-FRESH 催化剂" in a for a in report["alerts"])
-            )
+            self.assertTrue(any("REC-FRESH 催化剂" in a for a in report["alerts"]))
 
     def test_no_alerts_when_clean(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

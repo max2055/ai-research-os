@@ -288,9 +288,10 @@ class E012ScenarioTests(unittest.TestCase):
                 mode_id="MOD-ANL-value-chain-v1",
                 body="# Run\n\n## Mode-specific output\n\nvalue chain\n",
             )
-            with _patch(
-                "scenario_workflow", [run]
-            ), self.assertRaises(ValueError) as ctx:
+            with (
+                _patch("scenario_workflow", [run]),
+                self.assertRaises(ValueError) as ctx,
+            ):
                 scenario_set_for_valuation(Path(tmp), run_id="ANL-20260809-001")
             self.assertIn("scenario", str(ctx.exception))
 
@@ -357,33 +358,26 @@ class E013RecommendationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             bad = dict(_REC_SPEC, expected_case="建议买入 Micron，目标价 200 元。")
-            with _patch(
-                "recommendation", [_company(), _source(), _thesis()]
-            ), self.assertRaises(ValueError) as ctx:
+            with (
+                _patch("recommendation", [_company(), _source(), _thesis()]),
+                self.assertRaises(ValueError) as ctx,
+            ):
                 prepare_recommendation_draft(root, spec=bad, created_at="2026-08-09")
             self.assertIn("buy/sell", str(ctx.exception))
 
     def test_gate_complete_spec_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            with _patch(
-                "recommendation", [_company(), _source(), _thesis()]
-            ):
-                result = recommendation_gate(
-                    root, spec=_REC_SPEC, as_of="2026-08-09"
-                )
+            with _patch("recommendation", [_company(), _source(), _thesis()]):
+                result = recommendation_gate(root, spec=_REC_SPEC, as_of="2026-08-09")
             self.assertEqual([], result["problems"])
 
     def test_gate_flags_incomplete_spec(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             incomplete = dict(_REC_SPEC, unknowns=[], falsification_conditions=[])
-            with _patch(
-                "recommendation", [_company(), _source(), _thesis()]
-            ):
-                result = recommendation_gate(
-                    root, spec=incomplete, as_of="2026-08-09"
-                )
+            with _patch("recommendation", [_company(), _source(), _thesis()]):
+                result = recommendation_gate(root, spec=incomplete, as_of="2026-08-09")
             joined = " | ".join(result["problems"])
             self.assertIn("unknowns", joined)
             self.assertIn("falsification_conditions", joined)
@@ -392,9 +386,10 @@ class E013RecommendationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             stale = _val(root, as_of="2026-07-01")
-            with _patch(
-                "recommendation", [_company(), _source(), _thesis(), stale]
-            ), _patch("valuation", [stale]):
+            with (
+                _patch("recommendation", [_company(), _source(), _thesis(), stale]),
+                _patch("valuation", [stale]),
+            ):
                 result = recommendation_gate(
                     root,
                     spec=dict(_REC_SPEC, valuation_snapshot_id="VAL-20260809-001"),
@@ -480,9 +475,7 @@ class E019LicenseValidationTests(unittest.TestCase):
             body="",
         )
         findings: list[Finding] = []
-        validate_valuation_rec_semantics(
-            val, {source.object_id: source}, findings
-        )
+        validate_valuation_rec_semantics(val, {source.object_id: source}, findings)
         return [finding.code for finding in findings]
 
     def test_compliant_reviewed_valuation_passes(self) -> None:
@@ -490,9 +483,7 @@ class E019LicenseValidationTests(unittest.TestCase):
         self.assertEqual([], codes)
 
     def test_missing_data_license_flagged(self) -> None:
-        codes = self._codes(
-            self._val_meta(data_license=""), self._source_meta()
-        )
+        codes = self._codes(self._val_meta(data_license=""), self._source_meta())
         self.assertIn("VAL004", codes)
 
     def test_source_without_provider_timestamp_flagged(self) -> None:

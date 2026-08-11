@@ -134,9 +134,7 @@ tags: [EV-PRODUCT]
 def add_generated_event_with_asset(
     root: Path,
     *,
-    asset_path: str = (
-        "01_Inbox/_assets/SRC-20260729-001/source.html.extracted.txt"
-    ),
+    asset_path: str = ("01_Inbox/_assets/SRC-20260729-001/source.html.extracted.txt"),
     source_asset_path: str | None = None,
     quote: str = "Evidence line one",
     quote_sha256: str | None = None,
@@ -785,9 +783,7 @@ evidence_ids: []
             self.assertEqual(1, coverage["identity_completeness"]["complete"])
             # no reviewed event names it, no assertion endpoint -> 0
             self.assertEqual(0, coverage["source_completeness"]["complete"])
-            self.assertEqual(
-                0, coverage["relationship_completeness"]["complete"]
-            )
+            self.assertEqual(0, coverage["relationship_completeness"]["complete"])
             rendered = render_universe_coverage(coverage)
             self.assertIn("Total companies: 1", rendered)
             self.assertIn("| Identity (legal_name + HQ + region)", rendered)

@@ -1150,9 +1150,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_v03_docs_pin_ci_cost_and_blocked_release_contract(self) -> None:
         root = Path(__file__).resolve().parents[2]
         readme = (root / "README.md").read_text(encoding="utf-8")
-        runbook = (root / "00_System/v0.3_User_Runbook.md").read_text(
-            encoding="utf-8"
-        )
+        runbook = (root / "00_System/v0.3_User_Runbook.md").read_text(encoding="utf-8")
         limitations = (root / "00_System/v0.3_Known_Limitations.md").read_text(
             encoding="utf-8"
         )

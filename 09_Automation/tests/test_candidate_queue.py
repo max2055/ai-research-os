@@ -178,15 +178,11 @@ class CandidateQueueTests(unittest.TestCase):
                 "publisher": "Test",
                 "content_fingerprint": f"fp-{index}",
                 "language": None,
-                "duplicate_cluster_id": (
-                    cluster_ids[index] if cluster_ids else None
-                ),
+                "duplicate_cluster_id": (cluster_ids[index] if cluster_ids else None),
             }
             for index, title in enumerate(titles)
         ]
-        candidate_db.insert_candidates(
-            db_path, candidates, "CHN-test", discovered_at
-        )
+        candidate_db.insert_candidates(db_path, candidates, "CHN-test", discovered_at)
 
     def _priority(self, root: Path, candidate_id: str) -> float | None:
         connection = sqlite3.connect(candidate_db.candidate_db_path(root))
@@ -396,9 +392,7 @@ class CandidateQueueTests(unittest.TestCase):
             first = queue_rows(root, limit=2, offset=0)
             second = queue_rows(root, limit=2, offset=2)
             third = queue_rows(root, limit=2, offset=4)
-            actual = [
-                row["candidate_id"] for row in [*first, *second, *third]
-            ]
+            actual = [row["candidate_id"] for row in [*first, *second, *third]]
             self.assertEqual(expected, actual)
             self.assertEqual(len(actual), len(set(actual)))
 
@@ -448,8 +442,9 @@ class CandidateQueueTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = self._make_root(temp)
             for limit in (0, -1):
-                with self.subTest(limit=limit), self.assertRaisesRegex(
-                    ValueError, "limit must be positive"
+                with (
+                    self.subTest(limit=limit),
+                    self.assertRaisesRegex(ValueError, "limit must be positive"),
                 ):
                     queue_rows(root, limit=limit)
             with self.assertRaisesRegex(ValueError, "offset must be non-negative"):

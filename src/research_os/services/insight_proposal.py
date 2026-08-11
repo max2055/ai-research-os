@@ -64,9 +64,7 @@ def prepare_thesis_proposal(
         raise ValueError("created_at must be YYYY-MM-DD")
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before proposing an insight"
-        )
+        raise ValueError("repository validation must pass before proposing an insight")
     by_id = {obj.object_id: obj for obj in objects}
     run = by_id.get(run_id)
     if run is None or run.object_type != "analysis_run":

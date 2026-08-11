@@ -38,6 +38,7 @@ def _ensure_exist(values: list[str], by_id: dict[str, Any], field: str) -> None:
         if value not in by_id:
             raise ValueError(f"{field} references missing object {value}")
 
+
 POSTURES = ("avoid", "watch", "research", "investment_candidate")
 DIRECTIONS = ("positive", "neutral", "negative", "uncertain")
 CONVICTIONS = ("low", "medium", "high")
@@ -102,12 +103,17 @@ def prepare_recommendation_draft(
     posture = str(spec.get("research_posture", "research")).strip()
     if posture not in POSTURES:
         raise ValueError(f"research_posture must be one of {sorted(POSTURES)}")
-    body_text = " ".join(
-        str(spec.get(key, "") or "")
-        for key in ("expected_case", "downside_case", "upside_case")
-    ) + " " + " ".join(
-        str(item) for key in ("catalysts", "key_risks", "unknowns")
-        for item in (spec.get(key, []) or [])
+    body_text = (
+        " ".join(
+            str(spec.get(key, "") or "")
+            for key in ("expected_case", "downside_case", "upside_case")
+        )
+        + " "
+        + " ".join(
+            str(item)
+            for key in ("catalysts", "key_risks", "unknowns")
+            for item in (spec.get(key, []) or [])
+        )
     )
     if FORBIDDEN_INVESTMENT_ACTIONS.search(body_text):
         raise ValueError(
@@ -120,9 +126,7 @@ def prepare_recommendation_draft(
         ensure_known_ids([security_id], "security", by_id, "security_id")
     val_id = str(spec.get("valuation_snapshot_id", "")).strip() or None
     if val_id:
-        ensure_known_ids(
-            [val_id], "valuation_snapshot", by_id, "valuation_snapshot_id"
-        )
+        ensure_known_ids([val_id], "valuation_snapshot", by_id, "valuation_snapshot_id")
     ensure_known_ids(
         [str(v) for v in spec.get("forecast_ids", [])],
         "forecast",
@@ -132,9 +136,7 @@ def prepare_recommendation_draft(
     ensure_known_ids(
         [str(v) for v in spec.get("thesis_ids", [])], "thesis", by_id, "thesis_ids"
     )
-    _ensure_exist(
-        [str(v) for v in spec.get("evidence_ids", [])], by_id, "evidence_ids"
-    )
+    _ensure_exist([str(v) for v in spec.get("evidence_ids", [])], by_id, "evidence_ids")
     ensure_known_ids(
         [str(v) for v in spec.get("analysis_run_ids", [])],
         "analysis_run",
@@ -246,8 +248,7 @@ def recommendation_gate(
             ]
             if unreviewed:
                 problems.append(
-                    "thesis_ids reference non-reviewed Thesis: "
-                    + ", ".join(unreviewed)
+                    "thesis_ids reference non-reviewed Thesis: " + ", ".join(unreviewed)
                 )
     return {"problems": problems}
 
@@ -294,8 +295,7 @@ def _recommendation_meta(
     return {
         "id": rec_id,
         "type": "recommendation",
-        "title": str(spec.get("title", "")).strip()
-        or f"Recommendation: {company_id}",
+        "title": str(spec.get("title", "")).strip() or f"Recommendation: {company_id}",
         "created_at": created_at,
         "updated_at": created_at,
         "schema_version": 2,
@@ -338,49 +338,49 @@ def _recommendation_body(meta: dict[str, Any]) -> str:
 
 ## Posture
 
-- Company: {meta['company_id']}
+- Company: {meta["company_id"]}
 - Security: {security}
-- As of: {meta['as_of']}
+- As of: {meta["as_of"]}
 - Time horizon: {horizon}
-- Research posture: {meta['research_posture']} (ceiling: investment_candidate)
-- Direction: {meta['direction']}
-- Conviction: {meta['conviction']}
+- Research posture: {meta["research_posture"]} (ceiling: investment_candidate)
+- Direction: {meta["direction"]}
+- Conviction: {meta["conviction"]}
 
 ## Cases
 
-- Expected case: {meta['expected_case']}
-- Downside case: {meta['downside_case']}
-- Upside case: {meta['upside_case']}
+- Expected case: {meta["expected_case"]}
+- Downside case: {meta["downside_case"]}
+- Upside case: {meta["upside_case"]}
 
 ## Catalysts
 
-- {yaml_list(meta['catalysts'])}
+- {yaml_list(meta["catalysts"])}
 
 ## Falsification conditions
 
-- {yaml_list(meta['falsification_conditions'])}
+- {yaml_list(meta["falsification_conditions"])}
 
 ## Key risks
 
-- {yaml_list(meta['key_risks'])}
+- {yaml_list(meta["key_risks"])}
 
 ## Unknowns
 
-- {yaml_list(meta['unknowns'])}
+- {yaml_list(meta["unknowns"])}
 
 ## References
 
 - Valuation snapshot: {val_ref}
-- Forecasts: {yaml_list(meta['forecast_ids'])}
-- Theses: {yaml_list(meta['thesis_ids'])}
-- Evidence: {yaml_list(meta['evidence_ids'])}
-- Analysis runs: {yaml_list(meta['analysis_run_ids'])}
-- Freshness date: {meta['freshness_date']}
+- Forecasts: {yaml_list(meta["forecast_ids"])}
+- Theses: {yaml_list(meta["thesis_ids"])}
+- Evidence: {yaml_list(meta["evidence_ids"])}
+- Analysis runs: {yaml_list(meta["analysis_run_ids"])}
+- Freshness date: {meta["freshness_date"]}
 
 ## Review
 
 Pending — run `recommendation gate` until no problems, then review via
-`review apply --targets {meta['id']} --decision approve` before activating.
+`review apply --targets {meta["id"]} --decision approve` before activating.
 """
 
 

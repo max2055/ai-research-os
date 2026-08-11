@@ -144,9 +144,7 @@ def render_prompt(
     template_path = meta["prompt_template_path"]
     if template_path:
         if root is None:
-            raise PromptError(
-                "mode has prompt_template_path but no root was provided"
-            )
+            raise PromptError("mode has prompt_template_path but no root was provided")
         path = root / template_path
         try:
             template = path.read_text(encoding="utf-8")

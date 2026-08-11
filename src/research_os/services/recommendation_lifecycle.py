@@ -56,9 +56,7 @@ def prepare_activate_recommendation(
         raise ValueError("actor is required")
     obj = _require_recommendation(root, rec_id)
     if obj.metadata.get("review_status") != "reviewed":
-        raise ValueError(
-            f"cannot activate {rec_id}: review_status must be reviewed"
-        )
+        raise ValueError(f"cannot activate {rec_id}: review_status must be reviewed")
     status = str(obj.metadata.get("status"))
     if status not in _ACTIVATABLE:
         raise ValueError(f"cannot activate {rec_id} from status {status!r}")
@@ -150,9 +148,10 @@ def prepare_supersede_recommendation(
             f"cannot supersede {old_rec_id}: status must be active, "
             f"is {old.metadata.get('status')!r}"
         )
-    if new.metadata.get("review_status") != "reviewed" or str(
-        new.metadata.get("status")
-    ) != "active":
+    if (
+        new.metadata.get("review_status") != "reviewed"
+        or str(new.metadata.get("status")) != "active"
+    ):
         raise ValueError(
             f"successor {new_rec_id} must be reviewed and active to supersede"
         )

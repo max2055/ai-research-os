@@ -193,18 +193,14 @@ def industry_home_snapshot(
         raise ValueError("as_of must be YYYY-MM-DD")
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before Industry Home queries"
-        )
+        raise ValueError("repository validation must pass before Industry Home queries")
     db_path = db_path or candidate_db_path(root)
 
     brief = daily_brief_from_objects(objects, as_of, db_path=db_path)
     report = forecast_status_from_objects(objects, as_of=as_of)
     actions = action_rows_from_objects(
         objects, status="open", overdue_as_of=as_of
-    ) + action_rows_from_objects(
-        objects, status="in_progress", overdue_as_of=as_of
-    )
+    ) + action_rows_from_objects(objects, status="in_progress", overdue_as_of=as_of)
 
     stale = set(brief["stale"])
     never_run = set(brief["never_run"])
@@ -256,9 +252,7 @@ def _coverage_index(
     objects: list[ResearchObject],
 ) -> dict[str, dict[str, Any]]:
     coverage = universe_coverage_from_objects(objects)
-    return {
-        str(row["company_id"]): row for row in coverage.get("companies", [])
-    }
+    return {str(row["company_id"]): row for row in coverage.get("companies", [])}
 
 
 def _object_title(obj: ResearchObject) -> str:
@@ -269,9 +263,7 @@ def company_snapshot(root: Path, company_id: str) -> dict[str, Any]:
     """Industry radar snapshot for one company (WP-601 F-005, no writes)."""
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before Company queries"
-        )
+        raise ValueError("repository validation must pass before Company queries")
     company = next((o for o in objects if o.object_id == company_id), None)
     if company is None:
         raise KeyError(company_id)
@@ -314,9 +306,7 @@ def company_snapshot(root: Path, company_id: str) -> dict[str, Any]:
         )
     ]
     channel_by_id = {
-        obj.object_id: obj
-        for obj in objects
-        if obj.object_type == "source_channel"
+        obj.object_id: obj for obj in objects if obj.object_type == "source_channel"
     }
     linked_channels = sorted(_company_channel_ids(company, channel_by_id))
     due = due_channels_from_objects(
@@ -348,9 +338,7 @@ def company_snapshot(root: Path, company_id: str) -> dict[str, Any]:
         if obj.object_type == "event"
         and company_id in _str_list(obj.metadata.get("companies"))
     ]
-    events.sort(
-        key=lambda obj: str(obj.metadata.get("event_date") or ""), reverse=True
-    )
+    events.sort(key=lambda obj: str(obj.metadata.get("event_date") or ""), reverse=True)
     event_ids = {obj.object_id for obj in events}
     analysis_runs = [
         obj
@@ -420,9 +408,7 @@ def sector_snapshot(root: Path, sector_id: str) -> dict[str, Any]:
     """Industry radar snapshot for one sector (WP-601 F-004, no writes)."""
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before Sector queries"
-        )
+        raise ValueError("repository validation must pass before Sector queries")
     sector = next((o for o in objects if o.object_id == sector_id), None)
     if sector is None:
         raise KeyError(sector_id)
@@ -481,9 +467,7 @@ def sector_snapshot(root: Path, sector_id: str) -> dict[str, Any]:
         if obj.object_type == "event"
         and set(_str_list(obj.metadata.get("companies"))) & members
     ]
-    events.sort(
-        key=lambda obj: str(obj.metadata.get("event_date") or ""), reverse=True
-    )
+    events.sort(key=lambda obj: str(obj.metadata.get("event_date") or ""), reverse=True)
     impacts = [
         obj
         for obj in objects
@@ -519,11 +503,7 @@ def sector_snapshot(root: Path, sector_id: str) -> dict[str, Any]:
     def rate(flag: str) -> float:
         if not members:
             return 0.0
-        complete = sum(
-            1
-            for row in member_flags
-            if row.get(flag) is True
-        )
+        complete = sum(1 for row in member_flags if row.get(flag) is True)
         return round(complete / len(members), 4)
 
     return {
@@ -595,17 +575,21 @@ def impact_explorer_snapshot(
         key=lambda obj: obj.object_id,
     )
     direct = [_impact_row(obj) for obj in assertions]
-    event_ids = [start_id] if start_id is not None else sorted(
-        {
-            str(evidence_id)
-            for obj in objects
-            if obj.object_type == "ontology_assertion"
-            and obj.metadata.get("review_status") == "reviewed"
-            for evidence_id in _str_list(obj.metadata.get("evidence_ids"))
-            if evidence_id in by_id
-            and by_id[evidence_id].object_type == "event"
-            and by_id[evidence_id].metadata.get("review_status") == "reviewed"
-        }
+    event_ids = (
+        [start_id]
+        if start_id is not None
+        else sorted(
+            {
+                str(evidence_id)
+                for obj in objects
+                if obj.object_type == "ontology_assertion"
+                and obj.metadata.get("review_status") == "reviewed"
+                for evidence_id in _str_list(obj.metadata.get("evidence_ids"))
+                if evidence_id in by_id
+                and by_id[evidence_id].object_type == "event"
+                and by_id[evidence_id].metadata.get("review_status") == "reviewed"
+            }
+        )
     )
     paths: list[dict[str, Any]] = []
     pruning: list[dict[str, Any]] = []
@@ -690,9 +674,7 @@ def impact_explorer_snapshot(
             {
                 value
                 for obj in assertions
-                for value in _string_values(
-                    obj.metadata.get("countervailing_factors")
-                )
+                for value in _string_values(obj.metadata.get("countervailing_factors"))
             }
         ),
         "alternative_explanations": sorted(
@@ -858,9 +840,7 @@ def decision_desk_snapshot(
                 "age_days": freshness["age_days"],
                 "threshold_days": freshness["threshold_days"],
                 "freshness": "fresh" if freshness["fresh"] else "stale",
-                "scenario_references": _string_values(
-                    obj.metadata.get("scenario_set")
-                ),
+                "scenario_references": _string_values(obj.metadata.get("scenario_set")),
             }
         )
 
@@ -881,9 +861,7 @@ def decision_desk_snapshot(
             {
                 **_object_metadata_row(obj),
                 "company_id": str(obj.metadata.get("company_id") or ""),
-                "research_posture": str(
-                    obj.metadata.get("research_posture") or ""
-                ),
+                "research_posture": str(obj.metadata.get("research_posture") or ""),
                 "direction": str(obj.metadata.get("direction") or ""),
                 "freshness": "fresh" if freshness["fresh"] else "stale",
                 "age_days": freshness["age_days"],
@@ -912,11 +890,7 @@ def decision_desk_snapshot(
             ),
         }
         for obj in sorted(
-            (
-                item
-                for item in objects
-                if item.object_type == "forecast_resolution"
-            ),
+            (item for item in objects if item.object_type == "forecast_resolution"),
             key=lambda item: item.object_id,
             reverse=True,
         )

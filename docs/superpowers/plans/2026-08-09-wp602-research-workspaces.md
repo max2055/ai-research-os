@@ -75,7 +75,15 @@ Run the Step 2 command. Expected: all F-007 snapshot tests pass.
 ```python
 response = client.get(f"/impact?start={event_id}&depth=3")
 self.assertEqual(200, response.status_code)
-for label in ("直接断言", "1–3 跳路径", "最弱环节置信度", "剪枝原因", "冲突信号", "反向因素", "替代解释"):
+for label in (
+    "直接断言",
+    "1–3 跳路径",
+    "最弱环节置信度",
+    "剪枝原因",
+    "冲突信号",
+    "反向因素",
+    "替代解释",
+):
     self.assertIn(label, response.text)
 self.assertIn("Evidence", response.text)
 ```
@@ -97,7 +105,16 @@ Run the focused test. Expected: all F-007 route and escaping assertions pass.
 ```python
 snapshot = analysis_workspace_snapshot(root, run_ids=[run_a, run_b])
 self.assertEqual([run_a, run_b], [row["run_id"] for row in snapshot["runs"]])
-for key in ("input_ids", "mode_version", "model_version", "template_version", "input_snapshot_hash", "prompt_hash", "output_hash", "evaluator_scores"):
+for key in (
+    "input_ids",
+    "mode_version",
+    "model_version",
+    "template_version",
+    "input_snapshot_hash",
+    "prompt_hash",
+    "output_hash",
+    "evaluator_scores",
+):
     self.assertIn(key, snapshot["runs"][0])
 for key in ("shared_facts", "evidence_omitted", "conflicting_signals"):
     self.assertIn(key, snapshot["comparison"])
@@ -150,12 +167,26 @@ Expected: read model, route, escaping, empty-state, and GET-only tests pass.
 
 ```python
 snapshot = decision_desk_snapshot(root, as_of="2026-08-09")
-for key in ("open_forecasts", "due_forecasts", "overdue_forecasts", "calibration", "valuations", "recommendations", "resolution_history"):
+for key in (
+    "open_forecasts",
+    "due_forecasts",
+    "overdue_forecasts",
+    "calibration",
+    "valuations",
+    "recommendations",
+    "resolution_history",
+):
     self.assertIn(key, snapshot)
 self.assertEqual("insufficient_sample", snapshot["calibration"]["status"])
 for key in ("age_days", "threshold_days", "freshness"):
     self.assertIn(key, snapshot["valuations"][0])
-for key in ("catalysts", "falsification_conditions", "risks", "unknowns", "scenario_ids"):
+for key in (
+    "catalysts",
+    "falsification_conditions",
+    "risks",
+    "unknowns",
+    "scenario_ids",
+):
     self.assertIn(key, snapshot["recommendations"][0])
 ```
 

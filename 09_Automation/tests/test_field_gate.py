@@ -169,9 +169,7 @@ class FieldGatePacketTests(unittest.TestCase):
 
     def test_render_includes_cases_and_human_rubric(self) -> None:
         objects = _objects()
-        matrix = {
-            "case-x": {"value-chain": "ANL-1", "supply-demand": "ANL-2"}
-        }
+        matrix = {"case-x": {"value-chain": "ANL-1", "supply-demand": "ANL-2"}}
         rendered = render_field_gate_packet(objects, matrix)
         self.assertIn("D-019 Field Gate", rendered)
         self.assertIn("case-x", rendered)

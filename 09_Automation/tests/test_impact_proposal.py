@@ -22,8 +22,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class _Fake:
-    def __init__(self, object_id: str, object_type: str, metadata: dict,
-                 body: str = "") -> None:
+    def __init__(
+        self, object_id: str, object_type: str, metadata: dict, body: str = ""
+    ) -> None:
         self.object_id = object_id
         self.object_type = object_type
         self.metadata = metadata

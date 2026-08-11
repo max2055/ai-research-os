@@ -231,11 +231,10 @@ def _formal_entry_state_at(
         return _observed_state("error", path_stat, error=str(exc))
     try:
         opened_stat = os.fstat(descriptor)
-        if (
-            not stat.S_ISREG(opened_stat.st_mode)
-            or (opened_stat.st_dev, opened_stat.st_ino)
-            != (path_stat.st_dev, path_stat.st_ino)
-        ):
+        if not stat.S_ISREG(opened_stat.st_mode) or (
+            opened_stat.st_dev,
+            opened_stat.st_ino,
+        ) != (path_stat.st_dev, path_stat.st_ino):
             return _observed_state(
                 "error", path_stat, error="path changed while opening formal file"
             )
@@ -258,9 +257,7 @@ def _formal_entry_state_at(
                 current_stat,
                 "formal path changed while hashing",
             )
-        return _observed_state(
-            "regular", final_stat, sha256=digest.hexdigest()
-        )
+        return _observed_state("regular", final_stat, sha256=digest.hexdigest())
     finally:
         os.close(descriptor)
 
@@ -369,14 +366,10 @@ def _walk_formal_pattern(
             path = directory_path / name
             matches_leaf = fnmatchcase(name, leaf_pattern)
             if matches_leaf:
-                state[str(path)] = _formal_entry_state_at(
-                    directory_fd, name, path_stat
-                )
+                state[str(path)] = _formal_entry_state_at(directory_fd, name, path_stat)
             if stat.S_ISLNK(path_stat.st_mode):
                 if not matches_leaf:
-                    state[str(path)] = _symlink_state_at(
-                        directory_fd, name, path_stat
-                    )
+                    state[str(path)] = _symlink_state_at(directory_fd, name, path_stat)
                 continue
             if not stat.S_ISDIR(path_stat.st_mode):
                 continue
@@ -387,9 +380,7 @@ def _walk_formal_pattern(
                 continue
             try:
                 _walk_formal_pattern(child_fd, path, parts, state)
-                _verify_managed_directory(
-                    directory_fd, name, path, path_stat, state
-                )
+                _verify_managed_directory(directory_fd, name, path, path_stat, state)
             finally:
                 os.close(child_fd)
         return
@@ -403,9 +394,7 @@ def _walk_formal_pattern(
         ):
             if fnmatchcase(name, part):
                 path = directory_path / name
-                state[str(path)] = _formal_entry_state_at(
-                    directory_fd, name, path_stat
-                )
+                state[str(path)] = _formal_entry_state_at(directory_fd, name, path_stat)
         return
 
     path = directory_path / part
@@ -424,16 +413,12 @@ def _walk_formal_pattern(
             "managed path component is not a directory",
         )
         return
-    child_fd = _open_managed_directory(
-        directory_fd, part, path, path_stat, state
-    )
+    child_fd = _open_managed_directory(directory_fd, part, path, path_stat, state)
     if child_fd is None:
         return
     try:
         _walk_formal_pattern(child_fd, path, parts[1:], state)
-        _verify_managed_directory(
-            directory_fd, part, path, path_stat, state
-        )
+        _verify_managed_directory(directory_fd, part, path, path_stat, state)
     finally:
         os.close(child_fd)
 
@@ -447,14 +432,8 @@ def _formal_state(root: Path) -> dict[str, _FormalPathState]:
         try:
             target = os.readlink(root)
         except OSError as exc:
-            return {
-                str(root): _observed_state("symlink", root_stat, error=str(exc))
-            }
-        return {
-            str(root): _observed_state(
-                "symlink", root_stat, link_target=target
-            )
-        }
+            return {str(root): _observed_state("symlink", root_stat, error=str(exc))}
+        return {str(root): _observed_state("symlink", root_stat, link_target=target)}
     if not stat.S_ISDIR(root_stat.st_mode):
         return {str(root): _observed_state("other", root_stat)}
 
@@ -464,11 +443,10 @@ def _formal_state(root: Path) -> dict[str, _FormalPathState]:
     except OSError as exc:
         return {str(root): _observed_state("error", root_stat, error=str(exc))}
     try:
-        if (
-            not stat.S_ISDIR(opened_root_stat.st_mode)
-            or (root_stat.st_dev, root_stat.st_ino)
-            != (opened_root_stat.st_dev, opened_root_stat.st_ino)
-        ):
+        if not stat.S_ISDIR(opened_root_stat.st_mode) or (
+            root_stat.st_dev,
+            root_stat.st_ino,
+        ) != (opened_root_stat.st_dev, opened_root_stat.st_ino):
             return {
                 str(root): _observed_state(
                     "error",
@@ -722,8 +700,7 @@ def benchmark_candidate_queue(
             str(obj.metadata.get("coverage_tier") or ""),
         )
         for obj in objects
-        if obj.object_type == "company"
-        and str(obj.metadata.get("coverage_tier") or "")
+        if obj.object_type == "company" and str(obj.metadata.get("coverage_tier") or "")
     )
     if not companies:
         raise ValueError("candidate benchmark requires a Company with coverage_tier")
@@ -770,9 +747,7 @@ def benchmark_candidate_queue(
     if not _non_regular_formal_paths(formal_after):
         _, after_findings = validate_repository(root)
         authoritative_writes.update(
-            str(finding.path)
-            for finding in after_findings
-            if finding.level == "error"
+            str(finding.path) for finding in after_findings if finding.level == "error"
         )
     real_db_after = _file_state(real_db)
     real_db_unchanged = real_db_before == real_db_after
@@ -820,9 +795,7 @@ def benchmark_dashboard(root: Path, *, repeats: int = 5) -> DashboardBenchmark:
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
         raise ValueError("repository validation must pass before benchmark")
-    companies = sorted(
-        obj.object_id for obj in objects if obj.object_type == "company"
-    )
+    companies = sorted(obj.object_id for obj in objects if obj.object_type == "company")
     sectors = sorted(obj.object_id for obj in objects if obj.object_type == "sector")
     if not companies or not sectors:
         raise ValueError("benchmark requires at least one Company and Sector")
@@ -855,16 +828,12 @@ def benchmark_dashboard(root: Path, *, repeats: int = 5) -> DashboardBenchmark:
         )
     after = _formal_state(root)
     changed = {
-        path
-        for path in set(before) | set(after)
-        if before.get(path) != after.get(path)
+        path for path in set(before) | set(after) if before.get(path) != after.get(path)
     }
     if not _non_regular_formal_paths(after):
         _, after_findings = validate_repository(root)
         changed.update(
-            str(finding.path)
-            for finding in after_findings
-            if finding.level == "error"
+            str(finding.path) for finding in after_findings if finding.level == "error"
         )
     return DashboardBenchmark(
         repeats=repeats,

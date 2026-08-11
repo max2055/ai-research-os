@@ -550,11 +550,13 @@ Cover Source inventory path escape/symlink rejection; tar traversal/link/device/
 ```python
 BackupSet = Literal["candidate", "source_assets"]
 
+
 @dataclass(frozen=True)
 class RemoteAsset:
     name: str
     asset_id: str
     size_bytes: int
+
 
 @dataclass(frozen=True)
 class EncryptedAsset:
@@ -563,6 +565,7 @@ class EncryptedAsset:
     sha256: str
     size_bytes: int
     remote: RemoteAsset
+
 
 class BackupBackend(Protocol):
     """Private immutable storage operations used by durable backup."""
@@ -579,12 +582,14 @@ class BackupBackend(Protocol):
     def download(self, *, name: str, destination: Path) -> None:
         raise NotImplementedError
 
+
 @dataclass(frozen=True)
 class DurableBackupRequest:
     root: Path
     recipients: tuple[str, ...]
     backend: BackupBackend
     apply: bool
+
 
 @dataclass(frozen=True)
 class DurableBackupReceipt:
@@ -771,6 +776,7 @@ AuditRecommendation = Literal[
 ]
 AuditCheck = Literal["pass", "fail", "unknown", "not_applicable"]
 
+
 @dataclass(frozen=True)
 class ImpactAuditEntry:
     assertion_id: str
@@ -791,6 +797,7 @@ class ImpactAuditEntry:
     changes: tuple[dict[str, Any], ...]
     preserved_note_fragments: tuple[str, ...]
     human_review_required: bool
+
 
 @dataclass(frozen=True)
 class ImpactAuditPacket:

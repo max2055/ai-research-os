@@ -315,9 +315,10 @@ def _validate_entry(
         errors.append(
             f"{prefix}: unverifiable Source requires recommendation reject_recommended"
         )
-    if any(
-        value in {"fail", "unknown"} for value in entry.checks.values()
-    ) and not entry.issues:
+    if (
+        any(value in {"fail", "unknown"} for value in entry.checks.values())
+        and not entry.issues
+    ):
         errors.append(f"{prefix}: failed or unknown checks require a recorded issue")
 
     _validate_endpoint(entry.subject, meta.get("subject_id"), "subject", prefix, errors)

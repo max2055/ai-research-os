@@ -176,9 +176,7 @@ class EvaluatorDimensionTests(unittest.TestCase):
     def test_undeclared_evidence_fails_outside_facts(self) -> None:
         # run cites EVT-B (which exists) but it is NOT a declared input
         objects = [_mode(), _event("EVT-A"), _event("EVT-B")]
-        body = _VALID_BODY.replace(
-            "## Facts used\nEVT-A\n", "## Facts used\nEVT-B\n"
-        )
+        body = _VALID_BODY.replace("## Facts used\nEVT-A\n", "## Facts used\nEVT-B\n")
         run = _run(body, inputs=["EVT-A"])
         card = evaluate_run(objects + [run], "ANL-20260808-001")
         self.assertEqual(0.0, card.dimension("outside_facts").score)
@@ -232,9 +230,7 @@ class EvaluatorPacketTests(unittest.TestCase):
         self.assertIn("必填问题覆盖 ≥ 90%", packet)
 
     def test_scorecard_render(self) -> None:
-        card = evaluate_run(
-            [_mode(), _event(), _run(_VALID_BODY)], "ANL-20260808-001"
-        )
+        card = evaluate_run([_mode(), _event(), _run(_VALID_BODY)], "ANL-20260808-001")
         text = render_scorecard(card)
         self.assertIn("ANL-20260808-001", text)
         self.assertIn("citation", text)

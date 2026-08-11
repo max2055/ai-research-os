@@ -16,9 +16,7 @@ _SENSITIVE_QUERY_PARAM = re.compile(
     r"secret|signature|sig|auth|session|cookie|credential)=)([^&\s]+)"
 )
 _BEARER_RE = re.compile(r"(?i)(\bBearer\s+)(\S+)")
-_AUTH_HEADER_RE = re.compile(
-    r"(?i)((?:authorization|proxy-authorization):\s*)(\S+)"
-)
+_AUTH_HEADER_RE = re.compile(r"(?i)((?:authorization|proxy-authorization):\s*)(\S+)")
 _COOKIE_HEADER_RE = re.compile(r"(?i)(cookie:\s*)([^\r\n]+)")
 
 

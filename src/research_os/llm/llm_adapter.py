@@ -82,9 +82,7 @@ def parse_chat_response(data: dict[str, Any]) -> tuple[str, bool]:
     """
     choices = data.get("choices") or []
     if not choices or not isinstance(choices[0], dict):
-        raise _http.LLMError(
-            "invalid_response", "Chat Completions 响应缺少 choices"
-        )
+        raise _http.LLMError("invalid_response", "Chat Completions 响应缺少 choices")
     message = choices[0].get("message") or {}
     content = message.get("content")
     if content is None:

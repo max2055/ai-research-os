@@ -221,7 +221,10 @@ class TriageTests(unittest.TestCase):
             root = self._make_root(temp)
             self._insert(root, "CND-0000")
             result = dismiss_candidate(
-                root, "CND-0000", actor="max", reason="not in scope",
+                root,
+                "CND-0000",
+                actor="max",
+                reason="not in scope",
                 apply=True,
             )
             self.assertTrue(result["applied"])
@@ -247,9 +250,7 @@ class TriageTests(unittest.TestCase):
             finally:
                 connection.close()
             with self.assertRaises(ValueError):
-                dismiss_candidate(
-                    root, "CND-0000", actor="max", reason="x", apply=True
-                )
+                dismiss_candidate(root, "CND-0000", actor="max", reason="x", apply=True)
             with self.assertRaises(ValueError):
                 dismiss_candidate(root, "CND-0000", actor="max", reason="  ")
 
@@ -257,9 +258,7 @@ class TriageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = self._make_root(temp)
             self._insert(root, "CND-0000")
-            dismiss_candidate(
-                root, "CND-0000", actor="max", reason="noise", apply=True
-            )
+            dismiss_candidate(root, "CND-0000", actor="max", reason="noise", apply=True)
             result = restore_candidate(root, "CND-0000", actor="max", apply=True)
             self.assertTrue(result["applied"])
             self.assertEqual("new", self._status(root, "CND-0000"))
@@ -302,9 +301,7 @@ class TriageTests(unittest.TestCase):
             root = self._make_root(temp)
             self._insert(root, "CND-old", discovered_at="2026-06-01T00:00:00Z")
             self._insert(root, "CND-new", discovered_at="2026-08-05T00:00:00Z")
-            result = expire_candidates(
-                root, as_of="2026-08-06T00:00:00Z", apply=True
-            )
+            result = expire_candidates(root, as_of="2026-08-06T00:00:00Z", apply=True)
             expired_ids = [i["candidate_id"] for i in result["expired"]]
             self.assertEqual(["CND-old"], expired_ids)
             self.assertEqual("expired", self._status(root, "CND-old"))
@@ -332,9 +329,7 @@ class TriageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = self._make_root(temp)
             self._insert(root, "CND-0000")
-            dismiss_candidate(
-                root, "CND-0000", actor="max", reason="noise", apply=True
-            )
+            dismiss_candidate(root, "CND-0000", actor="max", reason="noise", apply=True)
             result = purge_candidates(root, apply=True)
             purged_ids = [i["candidate_id"] for i in result["purged"]]
             self.assertEqual(["CND-0000"], purged_ids)

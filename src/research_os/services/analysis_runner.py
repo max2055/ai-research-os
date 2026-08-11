@@ -252,9 +252,7 @@ def prepare_run(
         raise RunError("input-error", str(exc)) from exc
 
     try:
-        prompt, prompt_hash = render_prompt(
-            mode, resolved, as_of=as_of, root=root
-        )
+        prompt, prompt_hash = render_prompt(mode, resolved, as_of=as_of, root=root)
     except PromptError as exc:
         raise RunError("prompt-error", str(exc)) from exc
 

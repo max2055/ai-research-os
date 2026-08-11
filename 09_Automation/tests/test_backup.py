@@ -492,9 +492,7 @@ raise SystemExit(2)
 
     def test_durable_backup_operator_docs_pin_commands_and_key_custody(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        recovery = (root / "00_System/Recovery_Runbook.md").read_text(
-            encoding="utf-8"
-        )
+        recovery = (root / "00_System/Recovery_Runbook.md").read_text(encoding="utf-8")
         user = (root / "00_System/v0.3_User_Runbook.md").read_text(encoding="utf-8")
         launchd = (root / "09_Automation/launchd/RUNBOOK.md").read_text(
             encoding="utf-8"

@@ -321,34 +321,34 @@ def _valuation_body(meta: dict[str, Any]) -> str:
 
 ## Inputs
 
-- Company: {meta['company_id']}
-- Security: {meta['security_id'] if meta['security_id'] else '—'}
-- As of: {meta['as_of']}
-- Market price: {meta['market_price']} {meta['currency']}
-- Shares: {meta['shares']}
+- Company: {meta["company_id"]}
+- Security: {meta["security_id"] if meta["security_id"] else "—"}
+- As of: {meta["as_of"]}
+- Market price: {meta["market_price"]} {meta["currency"]}
+- Shares: {meta["shares"]}
 - Debt: {debt} / Cash: {cash} / Other adjustments: {adj}
 - Valuation identity: {identity}
 - Denominator period: {period}
 
 ## Derived valuation (deterministic from inputs)
 
-- Equity Value = price × shares = {computed['equity_value']:.2f}
+- Equity Value = price × shares = {computed["equity_value"]:.2f}
 - Enterprise Value = equity + debt − cash + adjustments
-  = {computed['enterprise_value']:.2f}
+  = {computed["enterprise_value"]:.2f}
 - Multiple ({identity}, {period}): {multiple}
 - Units: {unit}
 
 ## Scenario set
 
-- {meta['scenario_set'] if meta['scenario_set'] else '—'}
+- {meta["scenario_set"] if meta["scenario_set"] else "—"}
 
 ## Sources
 
-- {yaml_list(meta['source_ids'])}
+- {yaml_list(meta["source_ids"])}
 
 ## Review
 
-Pending — review via `review apply --targets {meta['id']} --decision approve`.
+Pending — review via `review apply --targets {meta["id"]} --decision approve`.
 """
 
 

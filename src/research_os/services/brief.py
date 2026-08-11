@@ -234,12 +234,8 @@ def daily_brief_from_objects(
         as_of=as_of or end_of_day,
         db_path=db_path,
     )
-    stale = sorted(
-        item["channel_id"] for item in due if item["last_run"]
-    )
-    never_run = sorted(
-        item["channel_id"] for item in due if not item["last_run"]
-    )
+    stale = sorted(item["channel_id"] for item in due if item["last_run"])
+    never_run = sorted(item["channel_id"] for item in due if not item["last_run"])
 
     return {
         "date": date_str,
@@ -305,8 +301,7 @@ def render_daily_brief(data: dict[str, Any]) -> str:
     else:
         for source in data["sources_today"]:
             lines.append(
-                f"- {source['object_id']} {source['title']} "
-                f"({source['review_status']})"
+                f"- {source['object_id']} {source['title']} ({source['review_status']})"
             )
 
     lines.append("")
@@ -327,9 +322,7 @@ def render_daily_brief(data: dict[str, Any]) -> str:
     lines.append("")
     lines.append(f"- Failed discovery runs: {len(data['failed_runs'])}")
     for run in data["failed_runs"]:
-        lines.append(
-            f"  - {run['run_id']} {run['channel_id']} {run['started_at']}"
-        )
+        lines.append(f"  - {run['run_id']} {run['channel_id']} {run['started_at']}")
     lines.append(f"- Stale channels (overdue): {', '.join(data['stale']) or '—'}")
     lines.append(f"- Coverage gap (never run): {', '.join(data['never_run']) or '—'}")
     return "\n".join(lines) + "\n"

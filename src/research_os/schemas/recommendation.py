@@ -33,9 +33,7 @@ ForecastRef = Annotated[str, StringConstraints(pattern=r"^FCT-\d{8}-\d{3}$")]
 ThesisRef = Annotated[str, StringConstraints(pattern=r"^THS-\d{3}$")]
 EvidenceRef = Annotated[
     str,
-    StringConstraints(
-        pattern=r"^(SRC-\d{8}-\d{3}|EVT-\d{8}-\d{3}|IMP-\d{8}-\d{3})$"
-    ),
+    StringConstraints(pattern=r"^(SRC-\d{8}-\d{3}|EVT-\d{8}-\d{3}|IMP-\d{8}-\d{3})$"),
 ]
 RunRef = Annotated[str, StringConstraints(pattern=r"^ANL-\d{8}-\d{3}$")]
 

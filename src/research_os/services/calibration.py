@@ -98,9 +98,7 @@ def calibration_buckets(
             {
                 "bucket": f"{_BUCKET_EDGES[index]:.1f}-{_BUCKET_EDGES[index + 1]:.1f}",
                 "n": len(outcomes),
-                "observed_frequency": (
-                    statistics.mean(outcomes) if outcomes else None
-                ),
+                "observed_frequency": (statistics.mean(outcomes) if outcomes else None),
             }
         )
     return rows
@@ -163,13 +161,9 @@ def void_ambiguous_rate(
 ) -> dict[str, float | int | None]:
     """Void/ambiguous share of all resolutions (honesty, not dropped failures)."""
     total = len(pairs)
-    void = sum(
-        1 for _, res in pairs if str(res.metadata.get("decision", "")) == "void"
-    )
+    void = sum(1 for _, res in pairs if str(res.metadata.get("decision", "")) == "void")
     ambiguous = sum(
-        1
-        for _, res in pairs
-        if str(res.metadata.get("decision", "")) == "ambiguous"
+        1 for _, res in pairs if str(res.metadata.get("decision", "")) == "ambiguous"
     )
     return {
         "n": total,
@@ -217,9 +211,7 @@ def calibration_report(
     """
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before a calibration report"
-        )
+        raise ValueError("repository validation must pass before a calibration report")
     pairs = resolved_pairs(objects)
     if mode or sector:
         filtered: list[tuple[ResearchObject, ResearchObject]] = []

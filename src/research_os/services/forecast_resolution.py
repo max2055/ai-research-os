@@ -70,9 +70,7 @@ def prepare_resolution_draft(
         raise ValueError("created_at must be YYYY-MM-DD")
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before creating a resolution"
-        )
+        raise ValueError("repository validation must pass before creating a resolution")
     forecast_id = str(spec.get("forecast_id", "")).strip()
     by_id = {obj.object_id: obj for obj in objects}
     forecast = by_id.get(forecast_id)
@@ -123,13 +121,9 @@ def apply_resolution(
     normal decision, ``void`` when the resolution voids it.
     """
     root = root.resolve()
-    relative, content = prepare_resolution_draft(
-        root, spec=spec, created_at=created_at
-    )
+    relative, content = prepare_resolution_draft(root, spec=spec, created_at=created_at)
     forecast_id = str(spec["forecast_id"])
-    forecast_status = (
-        "void" if str(spec.get("decision")) == "void" else "resolved"
-    )
+    forecast_status = "void" if str(spec.get("decision")) == "void" else "resolved"
     objects, _ = validate_repository(root)
     by_id = {obj.object_id: obj for obj in objects}
     forecast = by_id[forecast_id]
@@ -199,28 +193,28 @@ def _resolution_body(meta: dict[str, Any], forecast_id: str) -> str:
 ## Resolution
 
 - Forecast: {forecast_id}
-- Resolved at: {meta['resolved_at']}
-- Decision: {meta['decision']}
-- Scoring method: {meta['scoring_method']}
-- Score: {meta['score'] if meta['score'] is not None else '—'}
-- Reviewer: {meta['reviewer']}
+- Resolved at: {meta["resolved_at"]}
+- Decision: {meta["decision"]}
+- Scoring method: {meta["scoring_method"]}
+- Score: {meta["score"] if meta["score"] is not None else "—"}
+- Reviewer: {meta["reviewer"]}
 
 ## Outcome
 
-- Observed outcome: {meta['outcome']}
-- Observed value: {meta['observed_value'] if meta['observed_value'] else '—'}
+- Observed outcome: {meta["outcome"]}
+- Observed value: {meta["observed_value"] if meta["observed_value"] else "—"}
 
 ## Sources
 
-- {yaml_list(meta['source_ids'])}
+- {yaml_list(meta["source_ids"])}
 
 ## Reason
 
-{meta['resolution_reason']}
+{meta["resolution_reason"]}
 
 ## Review
 
-Pending — review via `review apply --targets {meta['id']} --decision approve`.
+Pending — review via `review apply --targets {meta["id"]} --decision approve`.
 The referenced Forecast is never retro-edited; only its status closes.
 """
 

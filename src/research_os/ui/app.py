@@ -71,6 +71,7 @@ _LLM_HUMAN_ERRORS = {
 def _llm_human(error_type: str) -> str:
     return _LLM_HUMAN_ERRORS.get(error_type, error_type)
 
+
 TYPE_LABELS = {
     "source": "来源",
     "event": "事件",
@@ -553,7 +554,6 @@ def _industry_home(repo: DashboardRepository) -> str:
     return shell("产业首页", content)
 
 
-
 def _review_rows(
     repo: DashboardRepository,
     project_id: str | None,
@@ -778,13 +778,13 @@ def _pipeline_overview(repo: DashboardRepository) -> str:
 <div class="eyebrow">管线</div><h2>机器运转中</h2>
 <p>发现 → 筛选 → 入库。只读视图，决定在命令行完成。</p>
 </div><div><div class="eyebrow">试点窗口</div>
-<h2>{esc(gate['days'])}/{esc(status['target_days'])}</h2>
-<p class="muted">自 {esc(status['since'])}</p></div></section>
+<h2>{esc(gate["days"])}/{esc(status["target_days"])}</h2>
+<p class="muted">自 {esc(status["since"])}</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(candidates['discovered_since'])}</strong><span>已发现</span></div>
-<div class="metric"><strong>{esc(candidates['promoted'])}</strong><span>已入库</span></div>
-<div class="metric"><strong>{esc(candidates['dismissed'])}</strong><span>已驳回</span></div>
-<div class="metric"><strong>{esc(gate['channels'])}</strong><span>通道就绪</span></div>
+<div class="metric"><strong>{esc(candidates["discovered_since"])}</strong><span>已发现</span></div>
+<div class="metric"><strong>{esc(candidates["promoted"])}</strong><span>已入库</span></div>
+<div class="metric"><strong>{esc(candidates["dismissed"])}</strong><span>已驳回</span></div>
+<div class="metric"><strong>{esc(gate["channels"])}</strong><span>通道就绪</span></div>
 </section>
 <section class="grid">
 <div class="panel"><h3>候选队列</h3>
@@ -842,14 +842,16 @@ def _candidate_facts(detail: dict[str, Any]) -> str:
     ]
     if detail.get("existing_source_id"):
         items.append(("已是正式来源", detail["existing_source_id"]))
-    if detail.get("is_representative") is False and detail.get(
-        "duplicate_cluster_id"
-    ):
+    if detail.get("is_representative") is False and detail.get("duplicate_cluster_id"):
         items.append(("簇角色", "非代表变体"))
-    return '<dl class="metadata">' + "".join(
-        f"<div><dt>{esc(label)}</dt><dd>{esc(value)}</dd></div>"
-        for label, value in items
-    ) + "</dl>"
+    return (
+        '<dl class="metadata">'
+        + "".join(
+            f"<div><dt>{esc(label)}</dt><dd>{esc(value)}</dd></div>"
+            for label, value in items
+        )
+        + "</dl>"
+    )
 
 
 def _proposal_rows(proposal: dict[str, Any]) -> list[list[str]]:
@@ -871,7 +873,7 @@ def _scoring_panel(detail: dict[str, Any]) -> str:
         if detail.get("model_version"):
             return (
                 '<section class="panel"><h3>评分分项</h3>'
-                f'<p>{badge("model version mismatch", warning=True)} · '
+                f"<p>{badge('model version mismatch', warning=True)} · "
                 f"评分版本 {esc(detail.get('model_version'))} 与当前不一致，跳过数值。</p></section>"
             )
         return ""
@@ -907,10 +909,11 @@ def _suggestion_panel(detail: dict[str, Any]) -> str:
         and score >= 0.6
     ):
         hints.append(badge("建议 promote"))
-    if (
-        not detail.get("is_representative", True)
-        or detail.get("status") in {"dismissed", "expired", "failed"}
-    ):
+    if not detail.get("is_representative", True) or detail.get("status") in {
+        "dismissed",
+        "expired",
+        "failed",
+    }:
         hints.append(badge("建议 dismiss", warning=True))
     if not hints:
         return ""
@@ -948,10 +951,7 @@ def _reviewed_evidence(
         ][:10]
     if not links and not event_rows:
         return '<p><span class="muted">无已评审证据关联该候选。</span></p>'
-    return (
-        "".join(links)
-        + table(["已评审事件", "日期", "标题"], event_rows)
-    )
+    return "".join(links) + table(["已评审事件", "日期", "标题"], event_rows)
 
 
 def _pipeline_candidate(repo: DashboardRepository, candidate_id: str) -> str:
@@ -1029,7 +1029,7 @@ def _pipeline_queue(
         if row.get("existing_source_id"):
             return (
                 f'<a href="/sources/{esc(row["existing_source_id"])}">'
-                f'已有来源 {esc(row["existing_source_id"])}</a>'
+                f"已有来源 {esc(row['existing_source_id'])}</a>"
             )
         if row.get("dup_count"):
             return badge(f"+{row['dup_count']} 个变体")
@@ -1046,8 +1046,7 @@ def _pipeline_queue(
         if not sector_ids:
             return "—"
         return "、".join(
-            f'<a href="/sectors/{esc(sid)}">{esc(sid)}</a>'
-            for sid in sector_ids
+            f'<a href="/sectors/{esc(sid)}">{esc(sid)}</a>' for sid in sector_ids
         )
 
     body_rows = [
@@ -1168,7 +1167,10 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
         ["成功 / 失败", f"{esc(discovery['succeeded'])} / {esc(discovery['failed'])}"],
         ["失败率", f"{discovery['failure_rate']:.0%}"],
         ["中位延迟", esc(latency_text)],
-        ["HTTP / 解析 / 重试", f"{esc(discovery['http_errors'])} / {esc(discovery['parse_errors'])} / {esc(discovery['retries'])}"],
+        [
+            "HTTP / 解析 / 重试",
+            f"{esc(discovery['http_errors'])} / {esc(discovery['parse_errors'])} / {esc(discovery['retries'])}",
+        ],
         ["成本估算", esc(discovery["cost_estimate"])],
     ]
     duplicate_rows = [
@@ -1182,14 +1184,16 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
         ],
         [
             "库内快照",
-            f"{duplicate['store_rate']:.0%} "
-            f"({duplicate['non_representative']} 非代表)",
+            f"{duplicate['store_rate']:.0%} ({duplicate['non_representative']} 非代表)",
         ],
         ["簇数", esc(duplicate["clusters"])],
     ]
-    dismiss_text = ", ".join(
-        f"{reason} ({count})" for reason, count in triage["top_dismiss_reasons"]
-    ) or "—"
+    dismiss_text = (
+        ", ".join(
+            f"{reason} ({count})" for reason, count in triage["top_dismiss_reasons"]
+        )
+        or "—"
+    )
     triage_rows = [
         ["已处理(审计)", esc(triage["total"])],
         ["已入库 / 已驳回", f"{esc(triage['promoted'])} / {esc(triage['dismissed'])}"],
@@ -1295,8 +1299,8 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>运营</h2>
 <p>统一读取调度、Jobs、Actions、研究评审与决策到期项；页面不执行任务。</p>
-</div><div><div class="eyebrow">待处理</div><h2>{esc(len(snapshot['schedules']) + len(snapshot['actions']) + len(snapshot['reviews']) + len(snapshot['forecasts']) + len(snapshot['recommendations']))}</h2>
-<p class="muted">截至 {esc(snapshot['as_of'])}</p></div></section>
+</div><div><div class="eyebrow">待处理</div><h2>{esc(len(snapshot["schedules"]) + len(snapshot["actions"]) + len(snapshot["reviews"]) + len(snapshot["forecasts"]) + len(snapshot["recommendations"]))}</h2>
+<p class="muted">截至 {esc(snapshot["as_of"])}</p></div></section>
 <section class="panel"><h3>调度</h3>{table(["Channel", "Schedule", "Last run", "状态"], schedule_rows)}</section>
 <section class="panel"><h3>Jobs</h3>{table(["Job", "名称", "Started", "状态", "消息"], job_rows_)}</section>
 <section class="panel"><h3>Actions</h3>{table(["Action", "Owner", "Due", "时点"], action_rows_)}</section>
@@ -1382,20 +1386,20 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
 <p>仓库、operational store、许可、备份与主机状态均在请求时只读检查。</p></div>
 <div><div class="eyebrow">状态</div>
 <h2>{badge("注意", warning=True) if attention else badge("健康")}</h2>
-<p class="muted">{esc(len(snapshot['indexes']['drift']))} 处漂移 · {esc(len(snapshot['assets']['failures']))} 个资产失败 · {esc(len(snapshot['failed_runs']))} 个失败运行</p></div></section>
+<p class="muted">{esc(len(snapshot["indexes"]["drift"]))} 处漂移 · {esc(len(snapshot["assets"]["failures"]))} 个资产失败 · {esc(len(snapshot["failed_runs"]))} 个失败运行</p></div></section>
 <section class="panel"><h3>仓库校验</h3>
 {table(["级别", "编码", "路径", "消息"], finding_rows)}</section>
-<section class="panel"><h3>索引</h3><p>scope={esc(snapshot['indexes']['scope'])} · {badge(snapshot['indexes']['status'], warning=snapshot['indexes']['status'] != 'ok')}</p>{table(["Drift"], index_rows) if index_rows else "<p class='muted'>无索引漂移。</p>"}</section>
+<section class="panel"><h3>索引</h3><p>scope={esc(snapshot["indexes"]["scope"])} · {badge(snapshot["indexes"]["status"], warning=snapshot["indexes"]["status"] != "ok")}</p>{table(["Drift"], index_rows) if index_rows else "<p class='muted'>无索引漂移。</p>"}</section>
 <section class="panel"><h3>Source assets</h3>{table(["Source", "状态", "消息"], asset_rows) if asset_rows else "<p class='muted'>资产完整性通过。</p>"}</section>
-<section class="panel"><h3>Candidate DB</h3>{_kv_table([["状态", badge(db['status'], warning=db['status'] != 'ok')], ["Integrity", esc(db['integrity'])], ["Schema", f"{esc(db['schema_version'])} / {esc(db['expected_schema_version'])}"], ["Size", esc(db['size_bytes'])], ["Modified", esc(db['modified_at'] or '—')]])}</section>
+<section class="panel"><h3>Candidate DB</h3>{_kv_table([["状态", badge(db["status"], warning=db["status"] != "ok")], ["Integrity", esc(db["integrity"])], ["Schema", f"{esc(db['schema_version'])} / {esc(db['expected_schema_version'])}"], ["Size", esc(db["size_bytes"])], ["Modified", esc(db["modified_at"] or "—")]])}</section>
 <section class="panel"><h3>Channels / License</h3>{table(["Channel", "Enabled", "Review", "License", "Robots checked"], channel_rows_)}</section>
 <section class="panel"><h3>失败任务与失败运行</h3>{table(["ID", "Type", "状态", "消息"], failed_rows)}</section>
 <section class="panel"><h3>P1 告警</h3>{table(["编码", "优先级", "状态", "消息"], alert_rows) if alert_rows else "<p class='muted'>无 P1 告警。</p>"}</section>
 <section class="grid">
-<div class="panel"><h3>备份</h3>{_kv_table([["本地状态", badge(backup['status'], warning=backup['status'] != 'fresh')], ["本地 Age hours", esc(backup['age_hours'] if backup['age_hours'] is not None else '—')], ["本地 Manifest", esc(backup['manifest'] or '—')], ["Durable 状态", badge(durable['status'], warning=durable['status'] != 'fresh')], ["Durable Age hours", esc(durable['age_hours'] if durable['age_hours'] is not None else '—')], ["Durable Receipt", esc(durable['receipt'] or '—')]])}</div>
-<div class="panel"><h3>磁盘与时区</h3>{_kv_table([["Free bytes", esc(disk['free_bytes'])], ["Disk status", badge(disk['status'], warning=disk['status'] != 'ok')], ["Timezone", esc(snapshot['host']['timezone'])]])}</div>
+<div class="panel"><h3>备份</h3>{_kv_table([["本地状态", badge(backup["status"], warning=backup["status"] != "fresh")], ["本地 Age hours", esc(backup["age_hours"] if backup["age_hours"] is not None else "—")], ["本地 Manifest", esc(backup["manifest"] or "—")], ["Durable 状态", badge(durable["status"], warning=durable["status"] != "fresh")], ["Durable Age hours", esc(durable["age_hours"] if durable["age_hours"] is not None else "—")], ["Durable Receipt", esc(durable["receipt"] or "—")]])}</div>
+<div class="panel"><h3>磁盘与时区</h3>{_kv_table([["Free bytes", esc(disk["free_bytes"])], ["Disk status", badge(disk["status"], warning=disk["status"] != "ok")], ["Timezone", esc(snapshot["host"]["timezone"])]])}</div>
 <div class="panel"><h3>配置存在性</h3>{table(["配置", "状态"], config_rows)}</div>
-<div class="panel"><h3>模型与成本</h3>{_kv_table([["状态", badge(model_cost['status'], warning=model_cost['status'] in {'unconfigured', 'no_data', 'warning'}, danger=model_cost['status'] in {'exceeded', 'invalid'})], ["周期", f"{esc(model_cost['period_start'])} - {esc(model_cost['period_end'])}"], ["已知成本", esc(model_cost['known_total'] if model_cost['known_total'] is not None else '—')], ["记录数", esc(model_cost['record_count'])], ["未知记录", esc(model_cost['unknown_record_count'])], ["无效记录", esc(model_cost['invalid_record_count'])], ["利用率", esc(model_cost['utilization'] if model_cost['utilization'] is not None else '—')], ["预算配置", badge('present' if model_cost['budget_configured'] else 'missing', warning=not model_cost['budget_configured'])]])}</div>
+<div class="panel"><h3>模型与成本</h3>{_kv_table([["状态", badge(model_cost["status"], warning=model_cost["status"] in {"unconfigured", "no_data", "warning"}, danger=model_cost["status"] in {"exceeded", "invalid"})], ["周期", f"{esc(model_cost['period_start'])} - {esc(model_cost['period_end'])}"], ["已知成本", esc(model_cost["known_total"] if model_cost["known_total"] is not None else "—")], ["记录数", esc(model_cost["record_count"])], ["未知记录", esc(model_cost["unknown_record_count"])], ["无效记录", esc(model_cost["invalid_record_count"])], ["利用率", esc(model_cost["utilization"] if model_cost["utilization"] is not None else "—")], ["预算配置", badge("present" if model_cost["budget_configured"] else "missing", warning=not model_cost["budget_configured"])]])}</div>
 </section>"""
     return shell("健康", content, project_id=selected)
 
@@ -1420,9 +1424,7 @@ def _intel_tabs(active: str) -> str:
 def _companies_page(repo: DashboardRepository) -> str:
     objects, _ = repo.all()
     companies = [obj for obj in objects if obj.object_type == "company"]
-    sectors = {
-        obj.object_id: obj for obj in objects if obj.object_type == "sector"
-    }
+    sectors = {obj.object_id: obj for obj in objects if obj.object_type == "sector"}
     tier_order = {"core": 0, "tracked": 1, "discovery": 2}
     companies.sort(
         key=lambda obj: (
@@ -1432,11 +1434,14 @@ def _companies_page(repo: DashboardRepository) -> str:
     )
     rows = []
     for company in companies:
-        sector_titles = "、".join(
-            sectors[sid].metadata.get("title", sid)
-            for sid in company.metadata.get("sector_ids", [])
-            if sid in sectors
-        ) or "—"
+        sector_titles = (
+            "、".join(
+                sectors[sid].metadata.get("title", sid)
+                for sid in company.metadata.get("sector_ids", [])
+                if sid in sectors
+            )
+            or "—"
+        )
         rows.append(
             [
                 object_link(company),
@@ -1456,7 +1461,7 @@ def _companies_page(repo: DashboardRepository) -> str:
 <div class="eyebrow">产业情报 → 企业</div><h2>企业名单</h2>
 <p>AI 产业链企业，按覆盖分层（core / tracked / discovery）。</p>
 </div><div><div class="eyebrow">企业总数</div><h2>{len(companies)}</h2>
-<p class="muted">Core {counts['core']} · Tracked {counts['tracked']} · Discovery {counts['discovery']}</p>
+<p class="muted">Core {counts["core"]} · Tracked {counts["tracked"]} · Discovery {counts["discovery"]}</p>
 </div></section>"""
     content = (
         hero
@@ -1474,16 +1479,17 @@ def _companies_page(repo: DashboardRepository) -> str:
 def _sectors_page(repo: DashboardRepository) -> str:
     objects, _ = repo.all()
     sectors = [obj for obj in objects if obj.object_type == "sector"]
-    companies = {
-        obj.object_id: obj for obj in objects if obj.object_type == "company"
-    }
+    companies = {obj.object_id: obj for obj in objects if obj.object_type == "company"}
     rows = []
     for sector in sectors:
-        core_links = "、".join(
-            f'<a href="/companies/{esc(cid)}">{esc(companies[cid].metadata.get("title", cid))}</a>'
-            for cid in sector.metadata.get("core_company_ids", [])
-            if cid in companies
-        ) or "—"
+        core_links = (
+            "、".join(
+                f'<a href="/companies/{esc(cid)}">{esc(companies[cid].metadata.get("title", cid))}</a>'
+                for cid in sector.metadata.get("core_company_ids", [])
+                if cid in companies
+            )
+            or "—"
+        )
         rows.append(
             [
                 object_link(sector),
@@ -1595,11 +1601,14 @@ def _company_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
             badge(assertion.metadata.get("review_status")),
         ]
         assertion_groups.setdefault(predicate, []).append(row)
-    assertion_panels = "".join(
-        f'<div class="panel"><h3>{esc(predicate)}</h3>'
-        f'{table(["对手实体", "生效", "评审"], rows)}</div>'
-        for predicate, rows in assertion_groups.items()
-    ) or '<div class="panel"><h3>供应链断言</h3><p><span class="muted">无记录</span></p></div>'
+    assertion_panels = (
+        "".join(
+            f'<div class="panel"><h3>{esc(predicate)}</h3>'
+            f"{table(['对手实体', '生效', '评审'], rows)}</div>"
+            for predicate, rows in assertion_groups.items()
+        )
+        or '<div class="panel"><h3>供应链断言</h3><p><span class="muted">无记录</span></p></div>'
+    )
 
     channel_rows_html = [
         [
@@ -1609,7 +1618,9 @@ def _company_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
         ]
         for channel in snapshot["channels"]
     ]
-    metric_rows = [[_object_cell(m), esc(m.metadata.get("unit"))] for m in snapshot["metrics"]]
+    metric_rows = [
+        [_object_cell(m), esc(m.metadata.get("unit"))] for m in snapshot["metrics"]
+    ]
     event_rows = [
         [
             _object_cell(event),
@@ -1709,7 +1720,9 @@ def _sector_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
     ]
     product_rows = [[_object_cell(p)] for p in snapshot["products"]]
     tech_rows = [[_object_cell(t)] for t in snapshot["technologies"]]
-    metric_rows = [[_object_cell(m), esc(m.metadata.get("unit"))] for m in snapshot["metrics"]]
+    metric_rows = [
+        [_object_cell(m), esc(m.metadata.get("unit"))] for m in snapshot["metrics"]
+    ]
     event_rows = [
         [_object_cell(event), esc(event.metadata.get("event_date"))]
         for event in snapshot["events"]
@@ -1734,9 +1747,16 @@ def _sector_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
     member_flag_rows = [
         [
             f'<a href="/companies/{esc(row["company_id"])}">{esc(row["company_id"])}</a>',
-            badge("身份" if row.get("identity_complete") else "缺失", warning=not row.get("identity_complete")),
-            badge("已证据" if row.get("sourced") else "无", warning=not row.get("sourced")),
-            badge("已关联" if row.get("related") else "无", warning=not row.get("related")),
+            badge(
+                "身份" if row.get("identity_complete") else "缺失",
+                warning=not row.get("identity_complete"),
+            ),
+            badge(
+                "已证据" if row.get("sourced") else "无", warning=not row.get("sourced")
+            ),
+            badge(
+                "已关联" if row.get("related") else "无", warning=not row.get("related")
+            ),
         ]
         for row in snapshot["member_flags"]
     ]
@@ -1799,7 +1819,7 @@ def _sector_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
 </section>
 <section class="panel full"><h3>成员覆盖完整度</h3>
 <table><thead><tr><th>企业</th><th>身份</th><th>证据</th><th>关联</th></tr></thead>
-<tbody>{''.join('<tr>' + ''.join(f'<td>{c}</td>' for c in row) + '</tr>' for row in member_flag_rows)}</tbody></table>
+<tbody>{"".join("<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>" for row in member_flag_rows)}</tbody></table>
 </section>"""
     )
     return shell(f"{obj.object_id} · 板块", content)
@@ -1873,12 +1893,12 @@ def _impact_page(
 <div class="eyebrow">影响引擎</div><h2>Impact Explorer</h2>
 <p>reviewed 直接断言与 1–3 跳解释路径分区展示；正反方向和不同 horizon 不静默合并。</p>
 </div><div><div class="eyebrow">最弱环节置信度</div>
-<h2>{esc(len(snapshot['paths']))}</h2><p class="muted">可解释路径</p></div></section>
+<h2>{esc(len(snapshot["paths"]))}</h2><p class="muted">可解释路径</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(snapshot['total_assertions'])}</strong><span>全部断言</span></div>
-<div class="metric"><strong>{esc(snapshot['pending_assertions'])}</strong><span>pending</span></div>
-<div class="metric"><strong>{esc(len(snapshot['direct_assertions']))}</strong><span>reviewed 直接断言</span></div>
-<div class="metric"><strong>{esc(len(snapshot['conflicts']))}</strong><span>冲突</span></div>
+<div class="metric"><strong>{esc(snapshot["total_assertions"])}</strong><span>全部断言</span></div>
+<div class="metric"><strong>{esc(snapshot["pending_assertions"])}</strong><span>pending</span></div>
+<div class="metric"><strong>{esc(len(snapshot["direct_assertions"]))}</strong><span>reviewed 直接断言</span></div>
+<div class="metric"><strong>{esc(len(snapshot["conflicts"]))}</strong><span>冲突</span></div>
 </section>
 <section class="panel"><h3>直接断言</h3>
 {table(["ID", "触发", "Target", "谓词/类型", "机制", "Evidence", "方向/Horizon", "置信度"], direct_rows) if direct_rows else "<p class='muted'>当前无 reviewed 直接断言；pending 断言未混入。</p>"}</section>
@@ -1887,8 +1907,8 @@ def _impact_page(
 <section class="grid">
 <div class="panel"><h3>剪枝原因</h3>{table(["原因", "位置", "详情"], pruning_rows) if pruning_rows else "<p class='muted'>无剪枝。</p>"}</div>
 <div class="panel"><h3>冲突信号</h3>{table(["Target", "方向", "Horizon", "冲突"], conflict_rows) if conflict_rows else "<p class='muted'>未检测到正负或多时间跨度冲突。</p>"}</div>
-<div class="panel"><h3>反向因素</h3>{text_list(snapshot['countervailing_factors'], 'reviewed 断言暂无反向因素。')}</div>
-<div class="panel"><h3>替代解释</h3>{text_list(snapshot['alternative_explanations'], 'reviewed 断言暂无替代解释。')}</div>
+<div class="panel"><h3>反向因素</h3>{text_list(snapshot["countervailing_factors"], "reviewed 断言暂无反向因素。")}</div>
+<div class="panel"><h3>替代解释</h3>{text_list(snapshot["alternative_explanations"], "reviewed 断言暂无替代解释。")}</div>
 </section>
 <p class="muted">C-018 已批准；路径查询只读，不自动提升 pending Assertion。</p>"""
     return shell("影响", content)
@@ -1902,9 +1922,7 @@ _ANALYSIS_INPUT_FIELDS = (
 )
 
 
-def _analysis_input_link(
-    by_id: dict[str, ResearchObject], object_id: str
-) -> str:
+def _analysis_input_link(by_id: dict[str, ResearchObject], object_id: str) -> str:
     obj = by_id.get(object_id)
     if obj is None:
         return esc(object_id)
@@ -1933,7 +1951,9 @@ def _val_link(obj: ResearchObject) -> str:
 
 
 def _rec_link(obj: ResearchObject) -> str:
-    return f'<a href="/decision/recommendation/{obj.object_id}">{esc(obj.object_id)}</a>'
+    return (
+        f'<a href="/decision/recommendation/{obj.object_id}">{esc(obj.object_id)}</a>'
+    )
 
 
 def _res_link(obj: ResearchObject) -> str:
@@ -1950,9 +1970,7 @@ def _analysis_page(
         repo.root,
         run_ids=selected_ids if selected_ids else None,
     )
-    all_snapshot = (
-        analysis_workspace_snapshot(repo.root) if selected_ids else snapshot
-    )
+    all_snapshot = analysis_workspace_snapshot(repo.root) if selected_ids else snapshot
     selected = set(selected_ids)
     selector = "".join(
         "<label style='display:block'>"
@@ -1965,9 +1983,7 @@ def _analysis_page(
     evaluator_rows = []
     for row in snapshot["runs"][:10]:
         inputs = [
-            object_id
-            for values in row["input_ids"].values()
-            for object_id in values
+            object_id for values in row["input_ids"].values() for object_id in values
         ]
         run_rows.append(
             [
@@ -1984,7 +2000,10 @@ def _analysis_page(
             [
                 esc(row["run_id"]),
                 f"{float(scores['overall']):.2f}",
-                badge("pass" if scores["gate_pass"] else "review", warning=not scores["gate_pass"]),
+                badge(
+                    "pass" if scores["gate_pass"] else "review",
+                    warning=not scores["gate_pass"],
+                ),
                 esc(
                     ", ".join(
                         f"{item['label']}={item['score']:.2f}"
@@ -2013,11 +2032,7 @@ def _analysis_page(
             esc(slug),
             esc(stats["run_count"]),
             esc(f"{stats['edit_distance']:.2f}"),
-            esc(
-                f"{stats['agreement']:.2f}"
-                if stats["agreement"] is not None
-                else "—"
-            ),
+            esc(f"{stats['agreement']:.2f}" if stats["agreement"] is not None else "—"),
             esc(stats["evidence_omitted"]),
         ]
         for slug, stats in metrics["modes"].items()
@@ -2037,8 +2052,8 @@ def _analysis_page(
     content = f"""<section class="hero"><div>
 <div class="eyebrow">分析工作区</div><h2>Analysis Workspace</h2>
 <p>冻结输入、版本、哈希与 Evaluator 结果均来自不可变 Run；比较不自动形成 Thesis 或 Recommendation。</p>
-</div><div><div class="eyebrow">Runs</div><h2>{esc(len(all_snapshot['runs']))}</h2>
-<p class="muted">mode families {esc(metrics['overall']['modes'])}</p></div></section>
+</div><div><div class="eyebrow">Runs</div><h2>{esc(len(all_snapshot["runs"]))}</h2>
+<p class="muted">mode families {esc(metrics["overall"]["modes"])}</p></div></section>
 <section class="panel"><h3>选择 Runs 比较</h3><form method="get" action="/analysis">
 {selector}<button type="submit">比较所选</button></form><p class="muted">最多比较前两个所选 Run。</p></section>
 <section class="panel"><h3>冻结输入 · 版本与哈希</h3>
@@ -2120,18 +2135,18 @@ def _decision_page(repo: DashboardRepository) -> str:
     content = f"""<section class="hero"><div>
 <div class="eyebrow">决策工作区</div><h2>Forecast &amp; Decision Desk</h2>
 <p>Forecast、估值和 Recommendation 只读组合；Resolution 只记录自然到期后的真实结果。</p>
-</div><div><div class="eyebrow">Open Forecast</div><h2>{esc(len(snapshot['open_forecasts']))}</h2>
-<p class="muted">as of {esc(snapshot['as_of'])}</p></div></section>
+</div><div><div class="eyebrow">Open Forecast</div><h2>{esc(len(snapshot["open_forecasts"]))}</h2>
+<p class="muted">as of {esc(snapshot["as_of"])}</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(len(snapshot['open_forecasts']))}</strong><span>Open Forecast</span></div>
+<div class="metric"><strong>{esc(len(snapshot["open_forecasts"]))}</strong><span>Open Forecast</span></div>
 <div class="metric"><strong>{esc(len(due_ids))}</strong><span>Due</span></div>
 <div class="metric"><strong>{esc(len(overdue_ids))}</strong><span>Overdue</span></div>
-<div class="metric"><strong>{esc(len(snapshot['resolution_history']))}</strong><span>Resolution</span></div>
+<div class="metric"><strong>{esc(len(snapshot["resolution_history"]))}</strong><span>Resolution</span></div>
 </section>
 <section class="panel"><h3>Open Forecast</h3>{table(["ID", "问题", "Horizon", "Resolution date"], open_rows)}</section>
 <section class="panel"><h3>到期提醒 · Due / Overdue</h3>{table(["Forecast", "Resolution date", "状态"], due_rows) if due_rows else "<p class='muted'>当前没有到期 Forecast。</p>"}</section>
 <section class="panel"><h3>校准样本</h3><p><strong>{esc(calibration_label)}</strong></p>
-<p>reviewed Resolution n={esc(calibration['n_resolutions'])}；Brier/coverage/timeliness 仅在真实样本存在时解释。</p></section>
+<p>reviewed Resolution n={esc(calibration["n_resolutions"])}；Brier/coverage/timeliness 仅在真实样本存在时解释。</p></section>
 <section class="panel"><h3>估值新鲜度</h3>{table(["Valuation", "公司", "年龄(天)", "阈值(天)", "状态"], valuation_rows)}</section>
 <section class="panel"><h3>催化剂与证伪条件</h3>
 {table(["Recommendation", "公司", "姿态", "方向", "催化剂", "证伪条件", "风险", "未知", "Scenario 引用"], recommendation_rows)}</section>
@@ -2178,8 +2193,14 @@ def _analysis_metrics_panel(objects: list[ResearchObject]) -> str:
         )
         mm_rows.append(
             [
-                _mode_link(next(o for o in objects if o.object_type == "analysis_mode"
-                               and mode_slug(o.object_id) == slug)),
+                _mode_link(
+                    next(
+                        o
+                        for o in objects
+                        if o.object_type == "analysis_mode"
+                        and mode_slug(o.object_id) == slug
+                    )
+                ),
                 esc(stats["run_count"]),
                 esc(f"{stats['edit_distance']:.2f}"),
                 esc(agreement),
@@ -2254,12 +2275,8 @@ def _analysis_mode_detail(repo: DashboardRepository, mode_id: str) -> str:
         raise KeyError(mode_id)
     meta = mode_metadata(mode)
     questions = "".join(f"<li>{esc(q)}</li>" for q in meta["required_questions"])
-    sections = "".join(
-        f"<li>{esc(s)}</li>" for s in meta["required_output_sections"]
-    )
-    banned = "".join(
-        f"<li>{esc(c)}</li>" for c in meta["prohibited_conclusions"]
-    )
+    sections = "".join(f"<li>{esc(s)}</li>" for s in meta["required_output_sections"])
+    banned = "".join(f"<li>{esc(c)}</li>" for c in meta["prohibited_conclusions"])
     rows = [
         ["状态", badge(meta["status"], warning=meta["status"] != "active")],
         [
@@ -2336,9 +2353,7 @@ def _analysis_run_detail(repo: DashboardRepository, run_id: str) -> str:
     for field in _ANALYSIS_INPUT_FIELDS:
         ids = run.metadata.get(field, []) or []
         if ids:
-            links = " · ".join(
-                _analysis_input_link(by_id, str(value)) for value in ids
-            )
+            links = " · ".join(_analysis_input_link(by_id, str(value)) for value in ids)
             inputs.append(f"<dt>{esc(field)}</dt><dd>{links}</dd>")
     input_block = "".join(inputs) or "<p class='muted'>无冻结输入</p>"
     rows = [
@@ -2370,13 +2385,16 @@ def _analysis_run_detail(repo: DashboardRepository, run_id: str) -> str:
             [
                 esc(dimension.label),
                 esc(f"{dimension.score:.2f}"),
-                badge("达标" if dimension.passed else "未达标",
-                      warning=not dimension.passed),
+                badge(
+                    "达标" if dimension.passed else "未达标",
+                    warning=not dimension.passed,
+                ),
             ]
             for dimension in card.dimensions
         ]
-        eval_gate = badge("PASS" if card.gate_pass else "FAIL",
-                          danger=not card.gate_pass)
+        eval_gate = badge(
+            "PASS" if card.gate_pass else "FAIL", danger=not card.gate_pass
+        )
     except ValueError:
         pass
     eval_block = (
@@ -2403,9 +2421,7 @@ def _analysis_compare(repo: DashboardRepository, run_ids: list[str]) -> str:
     objects, _ = repo.all()
     if not run_ids:
         run_ids = sorted(
-            o.object_id
-            for o in objects
-            if o.object_type == "analysis_run"
+            o.object_id for o in objects if o.object_type == "analysis_run"
         )
     by_id = {obj.object_id: obj for obj in objects}
     report = compare_runs(objects, run_ids)
@@ -2442,8 +2458,8 @@ def _analysis_compare(repo: DashboardRepository, run_ids: list[str]) -> str:
 <section class="panel"><h3>运行</h3>
 {table(["Run", "模式", "as-of", "评审", "信号", "证据"], run_rows)}</section>
 <section class="grid">
-<div class="panel"><h3>共享事实</h3><p>{esc(', '.join(report.shared_facts) or '—')}</p>
-<h3>时间视野</h3><p>{esc(', '.join(report.time_horizons) or '—')}</p></div>
+<div class="panel"><h3>共享事实</h3><p>{esc(", ".join(report.shared_facts) or "—")}</p>
+<h3>时间视野</h3><p>{esc(", ".join(report.time_horizons) or "—")}</p></div>
 <div class="panel"><h3>证据遗漏（别 run 用了、本 run 没用）</h3><ul>{omitted or "<li class='muted'>—</li>"}</ul></div>
 <div class="panel full"><h3>冲突信号（启发式，需人工复核）</h3><ul>{conflicts or "<li class='muted'>无</li>"}</ul></div>
 </section>"""
@@ -2462,7 +2478,7 @@ def _llm_page() -> str:
     )
     key_hint = (
         f'<span class="muted">当前 Key：{esc(public["key_masked"])}'
-        f'（{esc("已配置" if public["has_api_key"] else "未配置")}）</span>'
+        f"（{esc('已配置' if public['has_api_key'] else '未配置')}）</span>"
         if public["has_api_key"]
         else '<span class="muted">尚未配置 API Key。</span>'
     )
@@ -2769,9 +2785,7 @@ def create_app(root: Path) -> FastAPI:
         depth: int = Query(default=3, ge=1, le=3),
     ) -> HTMLResponse:
         try:
-            return HTMLResponse(
-                _impact_page(repo, start_id=start, max_depth=depth)
-            )
+            return HTMLResponse(_impact_page(repo, start_id=start, max_depth=depth))
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -2791,27 +2805,19 @@ def create_app(root: Path) -> FastAPI:
 
     @app.get("/decision/forecast/{object_id}", response_class=HTMLResponse)
     def decision_forecast(object_id: str) -> HTMLResponse:
-        return HTMLResponse(
-            _decision_detail(repo, object_id, title="Forecast")
-        )
+        return HTMLResponse(_decision_detail(repo, object_id, title="Forecast"))
 
     @app.get("/decision/valuation/{object_id}", response_class=HTMLResponse)
     def decision_valuation(object_id: str) -> HTMLResponse:
-        return HTMLResponse(
-            _decision_detail(repo, object_id, title="Valuation")
-        )
+        return HTMLResponse(_decision_detail(repo, object_id, title="Valuation"))
 
     @app.get("/decision/recommendation/{object_id}", response_class=HTMLResponse)
     def decision_recommendation(object_id: str) -> HTMLResponse:
-        return HTMLResponse(
-            _decision_detail(repo, object_id, title="Recommendation")
-        )
+        return HTMLResponse(_decision_detail(repo, object_id, title="Recommendation"))
 
     @app.get("/decision/resolution/{object_id}", response_class=HTMLResponse)
     def decision_resolution(object_id: str) -> HTMLResponse:
-        return HTMLResponse(
-            _decision_detail(repo, object_id, title="Resolution")
-        )
+        return HTMLResponse(_decision_detail(repo, object_id, title="Resolution"))
 
     @app.get("/analysis/modes", response_class=HTMLResponse)
     def analysis_modes(project: str | None = Query(default=None)) -> HTMLResponse:
@@ -2835,9 +2841,7 @@ def create_app(root: Path) -> FastAPI:
     ) -> HTMLResponse:
         objects, _ = repo.all()
         if not run:
-            content = (
-                "<section class='panel'><p class='muted'>用 ?run=ANL-xxx 指定运行。</p></section>"
-            )
+            content = "<section class='panel'><p class='muted'>用 ?run=ANL-xxx 指定运行。</p></section>"
         else:
             try:
                 packet = render_evaluation_packet(objects, run)

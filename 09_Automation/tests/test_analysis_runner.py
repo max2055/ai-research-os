@@ -513,9 +513,7 @@ class RunTransactionTests(unittest.TestCase):
             "",
         )
         adapter = _adapter_from(body)
-        with self.assertRaises(RunError) as ctx, self._patch_repo(
-            [_mode(), _event()]
-        ):
+        with self.assertRaises(RunError) as ctx, self._patch_repo([_mode(), _event()]):
             prepare_run(
                 ROOT,
                 mode_id="MOD-ANL-value-chain-v1",
@@ -528,9 +526,7 @@ class RunTransactionTests(unittest.TestCase):
 
     def test_empty_output_raises(self) -> None:
         adapter = _adapter_from("   ")
-        with self.assertRaises(RunError) as ctx, self._patch_repo(
-            [_mode(), _event()]
-        ):
+        with self.assertRaises(RunError) as ctx, self._patch_repo([_mode(), _event()]):
             prepare_run(
                 ROOT,
                 mode_id="MOD-ANL-value-chain-v1",
@@ -566,9 +562,10 @@ class RunTransactionTests(unittest.TestCase):
     def test_timeout_raises_and_writes_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            with self._patch_repo([_mode(), _event()]), self.assertRaises(
-                RunError
-            ) as ctx:
+            with (
+                self._patch_repo([_mode(), _event()]),
+                self.assertRaises(RunError) as ctx,
+            ):
                 run_analysis(
                     root,
                     mode_id="MOD-ANL-value-chain-v1",
@@ -581,9 +578,7 @@ class RunTransactionTests(unittest.TestCase):
             self.assertFalse((root / "05_Research").exists())
 
     def test_provider_failure_raises(self) -> None:
-        with self.assertRaises(RunError) as ctx, self._patch_repo(
-            [_mode(), _event()]
-        ):
+        with self.assertRaises(RunError) as ctx, self._patch_repo([_mode(), _event()]):
             prepare_run(
                 ROOT,
                 mode_id="MOD-ANL-value-chain-v1",
@@ -634,9 +629,7 @@ o
 ## Limitations
 l
 """
-        with self.assertRaises(RunError) as ctx, self._patch_repo(
-            [red_team, _event()]
-        ):
+        with self.assertRaises(RunError) as ctx, self._patch_repo([red_team, _event()]):
             prepare_run(
                 ROOT,
                 mode_id="MOD-ANL-red-team-v1",
@@ -693,8 +686,9 @@ l
 ## Recommendation
 建议买入。
 """
-        with self.assertRaises(RunError) as ctx, self._patch_repo(
-            [discovery, _event()]
+        with (
+            self.assertRaises(RunError) as ctx,
+            self._patch_repo([discovery, _event()]),
         ):
             prepare_run(
                 ROOT,
@@ -807,9 +801,7 @@ class ModeDefinitionsTests(unittest.TestCase):
     def test_all_first_batch_modes_registered(self) -> None:
         objects = self._repo_objects()
         modes = sorted(
-            obj.object_id
-            for obj in objects
-            if obj.object_type == "analysis_mode"
+            obj.object_id for obj in objects if obj.object_type == "analysis_mode"
         )
         self.assertEqual(sorted(self.EXPECTED), modes)
         for mode_id in self.EXPECTED:

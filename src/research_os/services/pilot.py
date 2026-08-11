@@ -72,9 +72,7 @@ def pilot_status(
         connection = sqlite3.connect(db_path)
         connection.row_factory = sqlite3.Row
         try:
-            for row in connection.execute(
-                "SELECT discovered_at FROM candidates"
-            ):
+            for row in connection.execute("SELECT discovered_at FROM candidates"):
                 if str(row["discovered_at"]).startswith(since_value):
                     discovered_since += 1
             # Triage counts from the action audit so purged dismissed/expired
@@ -142,9 +140,9 @@ def render_pilot_status(status: dict[str, Any]) -> str:
     jobs = status["jobs"]
     candidates = status["candidates"]
     brief_text = ", ".join(status["briefs"]) or "—"
-    by_name_text = ", ".join(
-        f"{name}={count}" for name, count in jobs["by_name"].items()
-    ) or "—"
+    by_name_text = (
+        ", ".join(f"{name}={count}" for name, count in jobs["by_name"].items()) or "—"
+    )
     lines = [
         f"# Pilot Status — day {gate['days']}/{status['target_days']} "
         f"(since {status['since']})",
@@ -165,8 +163,7 @@ def render_pilot_status(status: dict[str, Any]) -> str:
         lines.append("Failed jobs:")
         for failure in status["job_failures"]:
             lines.append(
-                f"- {failure['job_id']} ({failure['job_name']}): "
-                f"{failure['message']}"
+                f"- {failure['job_id']} ({failure['job_name']}): {failure['message']}"
             )
     lines += [
         "",

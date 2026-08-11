@@ -188,9 +188,7 @@ def enrich_candidates(
             channel_meta = channels.get(str(row["channel_id"])) or {}
             score = score_candidate(
                 title=title,
-                source_grade=str(
-                    channel_meta.get("source_grade_proposal") or "B"
-                ),
+                source_grade=str(channel_meta.get("source_grade_proposal") or "B"),
                 entity_status=str(entity["status"]),
                 sector_count=len(sector["sector_ids"]),
                 is_duplicate_representative=is_representative,
@@ -227,9 +225,7 @@ def enrich_candidates(
         return enriched
     except sqlite3.Error as exc:
         connection.rollback()
-        raise TransactionError(
-            f"candidate enrichment failed: {exc}"
-        ) from exc
+        raise TransactionError(f"candidate enrichment failed: {exc}") from exc
     finally:
         connection.close()
 
@@ -324,9 +320,7 @@ def queue_rows(
                 "entity_status": entity.get("status", "unknown"),
                 "entity_id": resolved_entity,
                 "sector_ids": sector.get("sector_ids", []),
-                "existing_source_id": source_urls.get(
-                    str(row["canonical_url"] or "")
-                ),
+                "existing_source_id": source_urls.get(str(row["canonical_url"] or "")),
                 "already_sourced": False,
                 "is_representative": False,
                 "dup_count": 0,
@@ -370,12 +364,8 @@ def queue_show(
     finally:
         connection.close()
     detail = dict(zip(row.keys(), row, strict=True))
-    detail["entity_proposals"] = _load_json(
-        detail.pop("entity_proposals_json", None)
-    )
-    detail["sector_proposals"] = _load_json(
-        detail.pop("sector_proposals_json", None)
-    )
+    detail["entity_proposals"] = _load_json(detail.pop("entity_proposals_json", None))
+    detail["sector_proposals"] = _load_json(detail.pop("sector_proposals_json", None))
     detail["reason_codes"] = _load_json(detail.pop("reason_codes_json", None))
     detail["actions"] = [dict(action) for action in actions]
     objects, _ = validate_repository(root)

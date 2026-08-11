@@ -119,22 +119,23 @@ def render_gate_packet(
     for event_id in sorted(bucket_map):
         event = by_id.get(event_id)
         proposals = propose_direct_impacts(objects, event_id=event_id)
-        impact_summary = "; ".join(
-            f"{p['target_id']} {p['impact_type']} ({p['direction']})"
-            for p in sorted(proposals, key=lambda p: p["target_id"])
-        ) or "—"
+        impact_summary = (
+            "; ".join(
+                f"{p['target_id']} {p['impact_type']} ({p['direction']})"
+                for p in sorted(proposals, key=lambda p: p["target_id"])
+            )
+            or "—"
+        )
         title = event.metadata.get("title", "") if event else ""
         rows.append(
-            f"| {event_id} | {bucket_map[event_id]} | {title} | "
-            f"{impact_summary} | ⬜ |"
+            f"| {event_id} | {bucket_map[event_id]} | {title} | {impact_summary} | ⬜ |"
         )
     counts = {bucket: 0 for bucket in QUOTA}
     for bucket in bucket_map.values():
         if bucket in counts:
             counts[bucket] += 1
     composition = "\n".join(
-        f"| {bucket} | {QUOTA[bucket]} | {counts.get(bucket, 0)} |"
-        for bucket in QUOTA
+        f"| {bucket} | {QUOTA[bucket]} | {counts.get(bucket, 0)} |" for bucket in QUOTA
     )
     return f"""# C-018 Field Gate — 20 真实事件人工影响路径核验包
 
@@ -206,9 +207,7 @@ def gate_metrics(judgments: list[dict[str, Any]]) -> dict[str, float | bool | in
 
 def gate_metrics_from_reviews(objects: list[ResearchObject]) -> dict[str, Any]:
     """Approve-rate proxy from review outcomes on materialized IMPs."""
-    impacts = [
-        obj for obj in objects if obj.object_type == "impact_assertion"
-    ]
+    impacts = [obj for obj in objects if obj.object_type == "impact_assertion"]
     if not impacts:
         return {}
     approved = sum(

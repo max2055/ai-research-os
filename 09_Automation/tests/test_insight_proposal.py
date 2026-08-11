@@ -224,7 +224,9 @@ class ThesisProposalGateTests(unittest.TestCase):
                 ROOT, run_id="ANL-20260808-001", created_at="2026-08-08"
             )
         self.assertTrue(
-            str(relative).startswith("05_Research/Analysis_Proposals/Thesis_Proposal_ANL-20260808-001.md")
+            str(relative).startswith(
+                "05_Research/Analysis_Proposals/Thesis_Proposal_ANL-20260808-001.md"
+            )
         )
         self.assertIn("## Proposed Thesis", content)
         self.assertIn("## Evidence used", content)
@@ -275,16 +277,13 @@ class ThesisProposalGateTests(unittest.TestCase):
 
 class ThesisProposalEnforcementTests(unittest.TestCase):
     def test_red_team_boilerplate_refused(self) -> None:
-        boilerplate = (
-            _RED_TEAM_BODY.replace(
-                "## Counter-evidence\n"
-                "历史表明新产能投产快于指引，且二供已在客户端验证，议价权判断可能被证伪。\n",
-                "## Counter-evidence\nNone found.\n",
-            )
-            .replace(
-                "## Alternative explanations\n共同上游约束导致所有环节同步承压。\n",
-                "## Alternative explanations\n无。\n",
-            )
+        boilerplate = _RED_TEAM_BODY.replace(
+            "## Counter-evidence\n"
+            "历史表明新产能投产快于指引，且二供已在客户端验证，议价权判断可能被证伪。\n",
+            "## Counter-evidence\nNone found.\n",
+        ).replace(
+            "## Alternative explanations\n共同上游约束导致所有环节同步承压。\n",
+            "## Alternative explanations\n无。\n",
         )
         run = _run(
             mode_id="MOD-ANL-red-team-v1",

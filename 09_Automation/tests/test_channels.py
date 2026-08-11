@@ -69,6 +69,7 @@ class ChannelRegistryTests(unittest.TestCase):
 
     def _make_root(self, temp: str) -> Path:
         return fixtures.RepositoryValidationTests().make_root(temp)
+
     def test_list_reports_channels(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = self._make_root(temp)

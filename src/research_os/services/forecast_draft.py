@@ -34,6 +34,7 @@ def _ensure_exist(values: list[str], by_id: dict[str, Any], field: str) -> None:
         if value not in by_id:
             raise ValueError(f"{field} references missing object {value}")
 
+
 OUTCOME_TYPES = ("binary", "categorical", "numeric_range")
 
 _FORECAST_FIELD_ORDER = [
@@ -86,9 +87,7 @@ def prepare_forecast_draft(
         raise ValueError("created_at must be YYYY-MM-DD")
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before creating a forecast"
-        )
+        raise ValueError("repository validation must pass before creating a forecast")
     question = str(spec.get("question", "")).strip()
     if not question:
         raise ValueError("question is required")
@@ -122,9 +121,7 @@ def prepare_forecast_draft(
     project_ids = [str(v) for v in spec.get("project_ids", [])]
     ensure_known_ids(project_ids, "project", by_id, "project_ids")
     _ensure_exist([str(v) for v in spec.get("scope_ids", [])], by_id, "scope_ids")
-    _ensure_exist(
-        [str(v) for v in spec.get("evidence_ids", [])], by_id, "evidence_ids"
-    )
+    _ensure_exist([str(v) for v in spec.get("evidence_ids", [])], by_id, "evidence_ids")
     ensure_known_ids(
         [str(v) for v in spec.get("analysis_run_ids", [])],
         "analysis_run",
@@ -200,9 +197,7 @@ def _forecast_meta(
         "evidence_ids": [str(v) for v in spec.get("evidence_ids", [])],
         "analysis_run_ids": [str(v) for v in spec.get("analysis_run_ids", [])],
         "assumptions": [str(v) for v in spec.get("assumptions", [])],
-        "alternative_outcomes": [
-            str(v) for v in spec.get("alternative_outcomes", [])
-        ],
+        "alternative_outcomes": [str(v) for v in spec.get("alternative_outcomes", [])],
         "falsification_conditions": [
             str(v) for v in spec.get("falsification_conditions", [])
         ],
@@ -225,44 +220,44 @@ def _forecast_body(meta: dict[str, Any]) -> str:
 
 ## Question
 
-{meta['question']}
+{meta["question"]}
 
 ## Outcome
 
-- Type: {meta['outcome_type']}
-- Definition: {meta['outcome_definition']}
-- Base rate: {meta['base_rate']}
+- Type: {meta["outcome_type"]}
+- Definition: {meta["outcome_definition"]}
+- Base rate: {meta["base_rate"]}
 - Probability: {probability_line}
 {range_line}
-- Unit: {meta.get('unit', '') if meta.get('unit', '') else '—'}
+- Unit: {meta.get("unit", "") if meta.get("unit", "") else "—"}
 
 ## Horizon
 
-- Forecast as of: {meta['forecast_as_of']}
-- Horizon: {meta['horizon'] if meta['horizon'] else '—'}
-- Resolution date: {meta['resolution_date']}
-- Resolution source requirements: {yaml_list(meta['resolution_source_requirements'])}
+- Forecast as of: {meta["forecast_as_of"]}
+- Horizon: {meta["horizon"] if meta["horizon"] else "—"}
+- Resolution date: {meta["resolution_date"]}
+- Resolution source requirements: {yaml_list(meta["resolution_source_requirements"])}
 
 ## Assumptions
 
-- {yaml_list(meta['assumptions'])}
+- {yaml_list(meta["assumptions"])}
 
 ## Alternative outcomes
 
-- {yaml_list(meta['alternative_outcomes'])}
+- {yaml_list(meta["alternative_outcomes"])}
 
 ## Falsification conditions
 
-- {yaml_list(meta['falsification_conditions'])}
+- {yaml_list(meta["falsification_conditions"])}
 
 ## Evidence
 
-- {yaml_list(meta['evidence_ids'])}
+- {yaml_list(meta["evidence_ids"])}
 
 ## Review
 
-Pending — review via `review apply --targets {meta['id']} --decision approve`;
-then open via `forecast open --id {meta['id']}`. Resolution criteria are
+Pending — review via `review apply --targets {meta["id"]} --decision approve`;
+then open via `forecast open --id {meta["id"]}`. Resolution criteria are
 immutable after open.
 """
 

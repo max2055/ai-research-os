@@ -504,7 +504,7 @@ mode_id: {mode_id}
 scope_ids: []
 as_of: 2026-08-08
 input_source_ids: []
-input_event_ids: [{', '.join(event_ids)}]
+input_event_ids: [{", ".join(event_ids)}]
 input_impact_ids: []
 input_thesis_ids: []
 input_snapshot_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -695,7 +695,9 @@ class AnalysisCliTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stdout)
             self.assertIn("CREATED: 05_Research/Analysis_Proposals/", result.stdout)
             proposal = (
-                root / "05_Research" / "Analysis_Proposals"
+                root
+                / "05_Research"
+                / "Analysis_Proposals"
                 / "Thesis_Proposal_ANL-20260808-001.md"
             )
             self.assertTrue(proposal.exists())

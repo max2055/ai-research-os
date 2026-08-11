@@ -712,9 +712,7 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
             self.assertEqual("failed", failed.status)
 
             failed_snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
-            self.assertEqual(
-                "failed", failed_snapshot["backup"]["durable"]["status"]
-            )
+            self.assertEqual("failed", failed_snapshot["backup"]["durable"]["status"])
             self.assertEqual(
                 ["BKP_DURABLE_FAILED"],
                 [item["code"] for item in failed_snapshot["alerts"]],
@@ -722,9 +720,7 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
 
             self.write_durable_receipt(root, created_at="2026-08-10T02:00:00Z")
             recovered_snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
-            self.assertEqual(
-                "fresh", recovered_snapshot["backup"]["durable"]["status"]
-            )
+            self.assertEqual("fresh", recovered_snapshot["backup"]["durable"]["status"])
             self.assertEqual([], recovered_snapshot["alerts"])
 
     def test_health_cost_uses_discovery_runs_and_never_exposes_budget(self) -> None:

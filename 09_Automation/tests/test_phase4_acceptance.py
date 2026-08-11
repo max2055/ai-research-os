@@ -194,9 +194,7 @@ class ReplayCreatesNewIdTests(unittest.TestCase):
                 self.assertNotEqual(path_a, path_b)
                 # old run unchanged; inputs frozen identically
                 self.assertEqual(first_content, path_a.read_text(encoding="utf-8"))
-                self.assertEqual(
-                    first.input_snapshot_hash, second.input_snapshot_hash
-                )
+                self.assertEqual(first.input_snapshot_hash, second.input_snapshot_hash)
 
     def test_replay_cannot_overwrite_existing(self) -> None:
         objects = [_mode(), _event()]
@@ -240,9 +238,7 @@ class HashRebuildTests(unittest.TestCase):
                 input_event_ids=["EVT-A"],
                 as_of="2026-08-09",
             )
-            self.assertEqual(
-                plan.input_snapshot_hash, resolved.input_snapshot_hash
-            )
+            self.assertEqual(plan.input_snapshot_hash, resolved.input_snapshot_hash)
             # prompt hash: re-rendering the same prompt reproduces it
             prompt, prompt_hash = render_prompt(
                 _mode(), resolved, as_of="2026-08-09", root=root
