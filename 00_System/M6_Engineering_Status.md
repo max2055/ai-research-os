@@ -1,8 +1,20 @@
 # M6 Engineering and Pilot Status
 
-Status: release candidate / real cadence pending
+Status: completed / v0.2.0 released
 
-Updated: 2026-07-30
+Updated: 2026-08-11
+
+## Current disposition
+
+- v0.2 release check: 18/18 Ready.
+- Human release decision: approved by max on 2026-08-08.
+- Required cadence: two Weekly and one Monthly review completed.
+- All M6 and research-quality Actions are resolved.
+- Release engineering completed on 2026-08-11 with annotated tag `v0.2.0`, private
+  GitHub Release, wheel, sdist and SHA-256 manifest.
+
+The engineering evidence below is the 2026-07-30 verification snapshot retained for
+traceability; later Gate closure does not rewrite its recorded counts.
 
 ## Completed engineering
 
@@ -16,7 +28,7 @@ Updated: 2026-07-30
 - PRJ-002 real Source capture and anchored Event-draft pipeline.
 - Clean-clone Git/package/index and encrypted Source-asset recovery drill.
 
-## Current verification
+## 2026-07-30 verification snapshot
 
 - Tests: 98/98.
 - Coverage: 84.03%.
@@ -49,10 +61,11 @@ Updated: 2026-07-30
   review packet, and RQ-08 has an approved engineering contract, template and sourced
   Microsoft instance without a target price or security recommendation.
 
-## Human and time-dependent gates
+## Gate closure
 
-- Two real Weekly cycles and one Monthly review.
-- Completion of the remaining cadence Action `ACT-20260729-009`.
-- Final human v0.2 release decision.
+- Two real Weekly cycles and one Monthly review: completed by 2026-08-08.
+- Cadence Action `ACT-20260729-009`: completed.
+- Final human v0.2 release decision: approved on 2026-08-08.
 
-M6 and v0.2 are not complete while any of these remain.
+M6 and v0.2.0 release engineering are complete. This status does not alter any v0.3
+release Gate.

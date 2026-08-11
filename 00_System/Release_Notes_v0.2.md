@@ -1,15 +1,17 @@
 # AI Research OS v0.2 Release Notes
 
-Status: draft — release gate pending
+Status: released
 Prepared: 2026-07-30
-Package version during pilot: `0.2.0.dev0`
+Approved: 2026-08-08
+Released: 2026-08-11
+Package version: `0.2.0`
+Git tag: `v0.2.0`
 
 ## Release decision
 
-This document is prepared for the v0.2 release candidate. It is not a declaration
-that v0.2 has shipped. `research-os release check` remains authoritative for the
-machine-verifiable checklist, and the final release requires an explicit human
-decision in `05_Research/Projects/PRJ-002/Pilot_Gate.md`.
+The v0.2 machine-verifiable checklist is 18/18 Ready and the explicit human decision
+in `05_Research/Projects/PRJ-002/Pilot_Gate.md` is approved. Release engineering was
+completed on 2026-08-11 with annotated tag `v0.2.0` and a private GitHub Release.
 
 ## Highlights
 
@@ -55,7 +57,10 @@ decision in `05_Research/Projects/PRJ-002/Pilot_Gate.md`.
 - Limitations: `00_System/Known_Limitations_v0.2.md`
 - Human review sequence: `05_Research/Reviews/v0.2_Human_Review_Runbook.md`
 
-## Pending before final tag
+## Release artifacts
 
-- Complete two real Weekly cycles and one Monthly review.
-- Record the human release decision and rerun `research-os release check`.
+- Python wheel: `ai_research_os-0.2.0-py3-none-any.whl`.
+- Source distribution: `ai_research_os-0.2.0.tar.gz`.
+- SHA-256 manifest: `SHA256SUMS`.
+- GitHub automatically generated source archives remain supplemental; the attached
+  manifest covers the two built Python artifacts.

@@ -16,9 +16,18 @@ AI Research OS 是一套面向 AI 产业研究的个人研究操作系统。
 
 ## 当前阶段
 
-阶段 0～6 已完成首轮建设，产品化 M0～M5 与 10-Source 真实人审 Gate 已通过；
-当前正在执行 v0.2 的 M6 第二项目真实试点与发布准备，并推进已批准的 v0.3
-工程工作包。Markdown 仍是唯一研究事实源。
+阶段 0～6 已完成首轮建设，产品化 M0～M6 与 10-Source 真实人审 Gate 已通过。
+v0.2 的 18/18 Release Gate 和具名人工发布决定已于 2026-08-08 完成，v0.2.0
+于 2026-08-11 以 `v0.2.0` Git tag 和 GitHub Release 发布。v0.3 工程主体与
+operational-hardening MVP 已合并，但 F-023 当前仅 12/21 checks 通过，仍未获准
+发布。Markdown 仍是唯一研究事实源。
+
+当前状态读取顺序：
+
+1. `research-os release check` / `--version 0.3`：机器可验证的发布 Gate。
+2. 具名、带日期的人审文件：人工决定。
+3. `00_System/v0.3_AI_Industry_Intelligence_OS/09_Master_Backlog.md`：执行状态。
+4. README 与阶段路线图：摘要；带日期的 Audit/Acceptance 是时间点证据，不覆盖当前态。
 
 当前研究主题：
 
@@ -120,9 +129,11 @@ research-os release check
 research-os release check --version 0.3 --format json
 ```
 
-默认命令保持 v0.2 的 18 Gate；显式 `--version 0.3` 运行 F-023 机器检查。
-两者都只读。v0.3 当前仍由 WP-530、WP-620 和 F-024 独立阻断，自动化不能代填
-真实 Source、Forecast outcome、Weekly/Monthly 运行或最终发布决定。
+默认命令保持 v0.2 的 18 Gate，当前结果为 18/18 Ready；显式 `--version 0.3`
+运行 F-023 机器检查，当前结果为 12/21。两者都只读。v0.3 的不可绕过主阻断项
+仍包括 WP-530、WP-620 和 F-024；当前另有 6 个证据/契约检查未通过，具体状态以
+命令输出为准。自动化不能代填真实 Source、Forecast outcome、Weekly/Monthly 运行
+或最终发布决定。
 
 加密 durable backup 先 dry-run，再显式 apply：
 

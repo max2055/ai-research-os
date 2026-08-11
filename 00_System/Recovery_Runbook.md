@@ -217,4 +217,8 @@ matching identity 做 disposable restore。告警只能在新 verified receipt �
 - Default branch: `main`
 - Durable backend: private GitHub prerelease `research-os-durable-backups-v1`
 - Backup payload: Candidate snapshot + Source assets；Git/secrets/launchd 分开恢复
-- v0.3 release: BLOCKED by WP-530, WP-620, and F-024
+- v0.2 release: 18/18 Ready, human-approved and published as `v0.2.0` with attached
+  wheel, sdist and SHA-256 manifest
+- v0.3 release: BLOCKED at 12/21 F-023 checks; WP-530, WP-620, and F-024 are the
+  non-bypassable time/human blockers, while current additional failures remain
+  visible in `research-os release check --version 0.3 --format json`

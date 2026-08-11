@@ -507,12 +507,12 @@ M0 不等待所有 Source 或 Company 审核完成；这些工作进入产品化
 - 系统未自动批准任何研究判断。
 - 用户能在不修改代码的情况下完成全闭环。
 
-实施状态：`engineering_ready / human_field_gate_pending`（2026-07-29）。
-PRJ-002 Charter、pending Thesis、Actions、12 个真实 Source、9 个 anchored pending
-Event、独立索引、性能基准、发布文档草案、`research-os release check` 与 Git +
-encrypted assets 的 clean-clone 恢复已完成。Source/Event 人审、首篇 reviewed
-Report、M4 人审、两次 Weekly、一次 Monthly、研究质量 Actions 和最终人类发布
-决定仍为阻断项，见 `00_System/M6_Recovery_Drill.md`。
+实施状态：`completed / v0.2.0 released`（2026-08-11）。
+PRJ-002 的 12 个 Source、9 个 Event、首篇 Report、M4 人审、两次 Weekly、一次
+Monthly、研究质量 Actions、性能与恢复 Gate 均已完成。v0.2 release check 为
+18/18 Ready，max 于 2026-08-08 批准发布。release engineering 于 2026-08-11
+完成：包版本 `0.2.0`、annotated tag `v0.2.0`、private GitHub Release、wheel、
+sdist 与 SHA-256 manifest。
 
 ## 8. 并行研究质量流
 
@@ -689,15 +689,17 @@ M6 PRJ-002 Pilot + v0.2
 
 ## 16. 最终验收清单
 
-- [ ] M0～M6 Gate 全部通过。
-- [ ] PRJ-001 完整回归通过。
-- [ ] PRJ-002 完成真实闭环。
-- [ ] 通用审核覆盖全部对象类型。
-- [ ] 原始 Source 可长期复核。
-- [ ] Event 和 Report 自动化不再只生成 TODO。
-- [ ] Dashboard、Actions、Metrics、Review cadence 连成日常工作流。
-- [ ] Git、CI、迁移和恢复演练通过。
-- [ ] 没有自动批准研究判断。
-- [ ] Markdown 仍为唯一事实源。
-- [ ] 当前规模下没有无必要的常驻数据库或图数据库。
-- [ ] v0.2 Release notes、Known limitations 和下一阶段决策完成。
+- [x] M0～M6 Gate 全部通过。
+- [x] PRJ-001 完整回归通过。
+- [x] PRJ-002 完成真实闭环。
+- [x] 通用审核覆盖全部对象类型。
+- [x] 原始 Source 可长期复核。
+- [x] Event 和 Report 自动化不再只生成 TODO。
+- [x] Dashboard、Actions、Metrics、Review cadence 连成日常工作流。
+- [x] Git、CI、迁移和恢复演练通过。
+- [x] 没有自动批准研究判断。
+- [x] Markdown 仍为唯一事实源。
+- [x] 当前规模下没有无必要的常驻数据库或图数据库。
+- [x] v0.2 Release notes、Known limitations 和下一阶段决策完成。
+
+上述清单与 `v0.2.0` 发布均已完成；v0.3 仍使用独立 Release Gate。

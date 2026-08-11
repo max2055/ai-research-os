@@ -48,6 +48,10 @@ AI Industry Universe
 - Dashboard、Job Run、Project scope、Metrics、JSONL/SQLite Ontology 导出已实现；
 - v0.2 真实 Weekly/Monthly cadence 与最终发布决定仍待完成。
 
+以上为 2026-08-04 规划基线，不是当前状态。v0.2 release Gate 已完成：18/18
+Ready，max 于 2026-08-08 批准发布，并于 2026-08-11 以 `v0.2.0` tag 和 private
+GitHub Release 完成 release engineering。
+
 必须继承：
 
 1. Fact、Inference、Judgment 分离。
@@ -88,7 +92,12 @@ Candidate 数据量预计远大于正式研究对象，因此不能把每条候�
 | 3 | Impact Assertion 与跨板块传导 | 4–6 周 | 20 个真实事件的人工影响路径 Gate | 阶段 1–2 | ✅ 完成（2026-08-08，C-018 approved + 多跳激活）|
 | 4 | Analysis Mode Framework | 4–6 周 | 6 个模式、同证据可复现、差异可解释 | 阶段 3 | ✅ 完成（2026-08-09，D-019 10-case Gate PASS + D-020 acceptance）|
 | 5 | Forecast、Valuation 与 Recommendation Draft | 5–7 周 | 可解析预测、三情景、人工建议 Gate | 阶段 4 | ⬜ in_progress（WP-500～520 完成；仅剩 WP-530 自然到期解析，未来日期依赖）|
-| 6 | Dashboard、规模化、运行与发布 | 5–8 周 | 30 天 pilot、恢复、性能、治理和发布 Gate | 阶段 2–5；RCP-v03-010 | ⬜ ready（RCP-v03-010 已批准 2026-08-09；工程可先行，发布等 WP-530 自然到期）|
+| 6 | Dashboard、规模化、运行与发布 | 5–8 周 | 30 天 pilot、恢复、性能、治理和发布 Gate | 阶段 2–5；RCP-v03-010 | ⬜ in_progress / release blocked（WP-600～612 工程完成；F-023 当前 12/21；等待真实 Pilot、自然到期结果与人工发布 Gate）|
+
+状态解释：Phase 3 依据 2026-08-08 的具名人工决定，以 14 个 in-scope 事件完成
+C-018；F-023 发布契约仍要求 20 个结构化判断，因此
+`impact_analysis.impact_field_gate` 当前未通过。两者属于不同 Gate，不将 14/20
+静默改写为 20/20。
 
 单 Agent 串行估算约 27–41 周。多个 Agent 可以并行处理 Adapter、UI、Schema 测试和
 Universe 数据，但 Schema、Taxonomy、同一对象和最终报告不得无人协调并行修改。

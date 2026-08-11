@@ -1,6 +1,6 @@
 # Phase 6：Dashboard、持续运行、规模化与 v0.3 发布
 
-状态：`proposed`  
+状态：`in_progress / release blocked`（WP-600～612 工程完成；F-023 当前 12/21）
 建议周期：5–8 周 + 30 天真实 Pilot  
 前置：Phase 2–5 工程 Gate  
 
@@ -266,37 +266,40 @@ Health 必须覆盖：
 
 ## 11. v0.3 Release Gate
 
+以下 checklist 与 2026-08-11 的 F-023 输出同步。工程实现记录不替代 F-023 对
+证据路径、真实运行和人工决定的检查。
+
 ### Evidence/Universe
 
-- [ ] Pilot Universe 达标且抽检通过。
-- [ ] 所有 authoritative 对象引用可解析。
-- [ ] 0 validation error；0 unexplained warning。
+- [x] Pilot Universe 达标且抽检通过。
+- [x] 所有 authoritative 对象引用可解析。
+- [x] 0 validation error；0 unexplained warning。
 
 ### Ingestion
 
 - [ ] 14 天 Candidate Gate 和 30 天 Pilot 完成。
 - [ ] 无静默漏跑、无越权抓取。
-- [ ] enabled Channel license 全部 reviewed。
+- [x] enabled Channel license 全部 reviewed。
 
 ### Impact/Analysis
 
 - [ ] 20-event Impact Field Gate 通过。
-- [ ] 10-case Mode Field Gate 通过。
-- [ ] 反面路径和不同模式分歧可见。
+- [x] 10-case Mode Field Gate 通过。
+- [x] 反面路径和不同模式分歧可见。
 
 ### Decision
 
-- [ ] 10 个人工批准 Forecast。
+- [x] 10 个人工批准 Forecast。
 - [ ] 至少一批自然到期并真实 Resolution。
-- [ ] 3 家公司 Recommendation Draft Pilot。
-- [ ] 无自动 buy/sell/position/execution。
+- [x] 3 家公司 Recommendation Draft Pilot。
+- [x] 无自动 buy/sell/position/execution。
 
 ### Engineering
 
 - [ ] tests/coverage/ruff/mypy 全绿。
-- [ ] 性能 SLO 通过或限制明确。
-- [ ] migration/rollback/recovery 通过。
-- [ ] Candidate DB、assets、Git、secrets 恢复边界明确。
+- [x] 性能 SLO 通过或限制明确。
+- [x] migration/rollback/recovery 通过。
+- [x] Candidate DB、assets、Git、secrets 恢复边界明确。
 - [ ] Dashboard smoke 和安全检查通过。
 
 ### Human
@@ -314,4 +317,3 @@ Health 必须覆盖：
 - 新分析模式先 sandbox 和 field gate；
 - PostgreSQL、图数据库、向量索引只按实际瓶颈触发；
 - Recommendation 若扩展到 buy/sell/position，另起 v0.4 治理项目。
-

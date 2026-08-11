@@ -20,8 +20,8 @@ Decision date: 2026-08-08
 - Final human-approved Reports: 1/1
   (`RPT-20260730-ai-coding-agent-value-chain-v0-1`,
   `REV-20260730-064`).
-- Completed Weekly reviews: 1/2（WK-20260806，max 2026-08-06）。
-- Completed Monthly reviews: 0/1。
+- Completed Weekly reviews: 2/2（WK-20260806、WK-20260808；max）。
+- Completed Monthly reviews: 1/1（MO-20260808；max）。
 - M4 field accuracy Gate: passed — 10/10 Sources and 23/23 Fact anchors.
 - Encrypted Source-asset clean-clone recovery: passed for 12 Sources / 48 files.
 
@@ -42,5 +42,8 @@ count.
 
 ## Decision notes
 
-Evidence and Report gates passed on 2026-07-30. Real elapsed Weekly/Monthly operation
-and the final post-cycle release decision remain pending.
+Evidence and Report gates passed on 2026-07-30. The required Weekly/Monthly cadence,
+Action closure and final post-cycle release decision were completed on 2026-08-08;
+the current machine check is 18/18 Ready. Release engineering subsequently published
+version `0.2.0` under annotated tag `v0.2.0` on 2026-08-11. This operational release
+record does not change the human decision date or its research-governance scope.
