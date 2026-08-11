@@ -1,0 +1,3267 @@
+{
+  "schema_version": 1,
+  "audit_id": "impact-assertion-agent-audit-2026-08-11",
+  "audit_date": "2026-08-11",
+  "baseline_commit": "1e4718cf19a105dbdc8afce948bca400d9b1fc62",
+  "scope": {
+    "assertion_count": 22,
+    "pending_assertion_paths": [
+      "05_Research/Assertions/IMP-20260807-001.md",
+      "05_Research/Assertions/IMP-20260807-002.md",
+      "05_Research/Assertions/IMP-20260807-003.md",
+      "05_Research/Assertions/IMP-20260807-004.md",
+      "05_Research/Assertions/IMP-20260807-005.md",
+      "05_Research/Assertions/IMP-20260807-006.md",
+      "05_Research/Assertions/IMP-20260807-007.md",
+      "05_Research/Assertions/IMP-20260807-008.md",
+      "05_Research/Assertions/IMP-20260807-009.md",
+      "05_Research/Assertions/IMP-20260808-010.md",
+      "05_Research/Assertions/IMP-20260808-011.md",
+      "05_Research/Assertions/IMP-20260808-012.md",
+      "05_Research/Assertions/IMP-20260808-013.md",
+      "05_Research/Assertions/IMP-20260808-014.md",
+      "05_Research/Assertions/IMP-20260808-015.md",
+      "05_Research/Assertions/IMP-20260808-016.md",
+      "05_Research/Assertions/IMP-20260808-017.md",
+      "05_Research/Assertions/IMP-20260808-018.md",
+      "05_Research/Assertions/IMP-20260809-001.md",
+      "05_Research/Assertions/IMP-20260809-002.md",
+      "05_Research/Assertions/IMP-20260809-003.md",
+      "05_Research/Assertions/IMP-20260809-004.md"
+    ]
+  },
+  "guardrails": [
+    "All 22 Impact Assertions remain review_status: pending.",
+    "This packet records agent recommendations only; it contains no reviewer, decision, or reviewed_at field.",
+    "No Review Decision or Thesis confidence change is created by this audit.",
+    "Human review remains required before any Assertion becomes authoritative."
+  ],
+  "summary": {
+    "total": 22,
+    "ready_for_human_review": 16,
+    "edit_required": 2,
+    "reject_recommended": 4
+  },
+  "assertions": [
+    {
+      "assertion_id": "IMP-20260807-001",
+      "path": "05_Research/Assertions/IMP-20260807-001.md",
+      "before_sha256": "cefc9b9f6086aa1e7a9f3c5b7dea6a06bb5e41ffbdfb95891814dbd259abf250",
+      "after_sha256": "aa1cda7ab4ceaecea5d4f14ac0105a55f350cc328b5d731dfebf6fa0b310b36c",
+      "recommendation": "reject_recommended",
+      "rationale": "The evidence chain contains a material unresolved defect; rejection is recommended, but only a human may decide.",
+      "event": {
+        "id": "EVT-20260225-034",
+        "path": "04_Evidence/Events/EVT-20260225-034-asml-euv-platforms.md",
+        "title": "ASML 20-F describes EUV 0.33/0.55 NA lithography platforms",
+        "event_date": "2026-02-25",
+        "review_status": "reviewed",
+        "confidence": 0.7,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260805-042"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37046",
+            "quote": "A lithography technology that uses extreme ultraviolet (EUV) light with a wavelength of 13.5 nm –",
+            "quote_sha256": "805d3ccc18ecf5c08dd58b0557d1eeb8339e733a35b8413c77023a93dd2179a0"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37055",
+            "quote": "ASML’s second TWINSCAN platform for EUV lithography, also referred to as EUV 0.55 NA or",
+            "quote_sha256": "cccabeabd994198244866eba6e595e411476be9ddd2b7ee5b16afd28f710925e"
+          },
+          {
+            "fact_id": "F3",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37346",
+            "quote": "ASML’s first TWINSCAN platform for EUV lithography with a numerical aperture of 0.33 that",
+            "quote_sha256": "a919f92a6d9e62e3af8e54109c02eed4363c43723958d6f84abcb87174f76181"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260805-042",
+          "path": "01_Inbox/Earnings/SRC-20260805-042-asml-20f-2025.md",
+          "title": "ASML 20-F annual report 2025 (filed 2026-02-25)",
+          "publisher": "ASML HOLDING NV (SEC EDGAR)",
+          "published_at": "2026-02-25",
+          "accessed_at": "2026-08-05",
+          "url": "https://www.sec.gov/Archives/edgar/data/937966/000162828026011378/asml-20251231.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.metadata.json",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extraction.json"
+          ],
+          "content_sha256": "865382553cf9871c78bcf144818b6e2d425af3bdc3013ab6c1bf83c85d8ed358",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37046",
+              "quote": "A lithography technology that uses extreme ultraviolet (EUV) light with a wavelength of 13.5 nm –",
+              "quote_sha256": "805d3ccc18ecf5c08dd58b0557d1eeb8339e733a35b8413c77023a93dd2179a0"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37055",
+              "quote": "ASML’s second TWINSCAN platform for EUV lithography, also referred to as EUV 0.55 NA or",
+              "quote_sha256": "cccabeabd994198244866eba6e595e411476be9ddd2b7ee5b16afd28f710925e"
+            },
+            {
+              "fact_id": "F3",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37346",
+              "quote": "ASML’s first TWINSCAN platform for EUV lithography with a numerical aperture of 0.33 that",
+              "quote_sha256": "a919f92a6d9e62e3af8e54109c02eed4363c43723958d6f84abcb87174f76181"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260225-034",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-asml",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "REL-20260805-002",
+        "path": "05_Research/Assertions/REL-20260805-002.md",
+        "subject_id": "COM-asml",
+        "predicate": "SUPPLIES",
+        "object_id": "COM-tsmc",
+        "evidence_ids": "EVT-20260225-034",
+        "review_status": "reviewed",
+        "confidence": "0.3"
+      },
+      "relevant_relations": [
+        {
+          "id": "REL-20260805-002",
+          "path": "05_Research/Assertions/REL-20260805-002.md",
+          "subject_id": "COM-asml",
+          "predicate": "SUPPLIES",
+          "object_id": "COM-tsmc",
+          "evidence_ids": "EVT-20260225-034",
+          "review_status": "reviewed",
+          "confidence": "0.3"
+        }
+      ],
+      "rule_check": {
+        "predicate": "SUPPLIES",
+        "impact_type": "supply",
+        "allowed": true,
+        "default_direction": "mixed",
+        "conditional": false,
+        "weakest_link_confidence": 0.3
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "pass",
+        "relevant_relations": "pass",
+        "rule_map": "pass",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The Event describes ASML platform specifications but does not establish a supply impact on ASML itself."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260225-034"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.3,
+          "evidence_basis": [
+            "EVT-20260225-034",
+            "REL-20260805-002"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260807-002",
+      "path": "05_Research/Assertions/IMP-20260807-002.md",
+      "before_sha256": "773b1cf304984425ef39eb622924bd543d12b00bc3f735f36a1ad1270f94973d",
+      "after_sha256": "e4312ab87a96886829381a37e765cf26a83dce4f3c0ece81c9b6a5294fdfc9ca",
+      "recommendation": "edit_required",
+      "rationale": "The evidence is indirect and the mechanism needs human revision before any approval decision.",
+      "event": {
+        "id": "EVT-20260225-034",
+        "path": "04_Evidence/Events/EVT-20260225-034-asml-euv-platforms.md",
+        "title": "ASML 20-F describes EUV 0.33/0.55 NA lithography platforms",
+        "event_date": "2026-02-25",
+        "review_status": "reviewed",
+        "confidence": 0.7,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260805-042"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37046",
+            "quote": "A lithography technology that uses extreme ultraviolet (EUV) light with a wavelength of 13.5 nm –",
+            "quote_sha256": "805d3ccc18ecf5c08dd58b0557d1eeb8339e733a35b8413c77023a93dd2179a0"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37055",
+            "quote": "ASML’s second TWINSCAN platform for EUV lithography, also referred to as EUV 0.55 NA or",
+            "quote_sha256": "cccabeabd994198244866eba6e595e411476be9ddd2b7ee5b16afd28f710925e"
+          },
+          {
+            "fact_id": "F3",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37346",
+            "quote": "ASML’s first TWINSCAN platform for EUV lithography with a numerical aperture of 0.33 that",
+            "quote_sha256": "a919f92a6d9e62e3af8e54109c02eed4363c43723958d6f84abcb87174f76181"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260805-042",
+          "path": "01_Inbox/Earnings/SRC-20260805-042-asml-20f-2025.md",
+          "title": "ASML 20-F annual report 2025 (filed 2026-02-25)",
+          "publisher": "ASML HOLDING NV (SEC EDGAR)",
+          "published_at": "2026-02-25",
+          "accessed_at": "2026-08-05",
+          "url": "https://www.sec.gov/Archives/edgar/data/937966/000162828026011378/asml-20251231.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.metadata.json",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extraction.json"
+          ],
+          "content_sha256": "865382553cf9871c78bcf144818b6e2d425af3bdc3013ab6c1bf83c85d8ed358",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37046",
+              "quote": "A lithography technology that uses extreme ultraviolet (EUV) light with a wavelength of 13.5 nm –",
+              "quote_sha256": "805d3ccc18ecf5c08dd58b0557d1eeb8339e733a35b8413c77023a93dd2179a0"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37055",
+              "quote": "ASML’s second TWINSCAN platform for EUV lithography, also referred to as EUV 0.55 NA or",
+              "quote_sha256": "cccabeabd994198244866eba6e595e411476be9ddd2b7ee5b16afd28f710925e"
+            },
+            {
+              "fact_id": "F3",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37346",
+              "quote": "ASML’s first TWINSCAN platform for EUV lithography with a numerical aperture of 0.33 that",
+              "quote_sha256": "a919f92a6d9e62e3af8e54109c02eed4363c43723958d6f84abcb87174f76181"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260225-034",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-tsmc",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "REL-20260805-002",
+        "path": "05_Research/Assertions/REL-20260805-002.md",
+        "subject_id": "COM-asml",
+        "predicate": "SUPPLIES",
+        "object_id": "COM-tsmc",
+        "evidence_ids": "EVT-20260225-034",
+        "review_status": "reviewed",
+        "confidence": "0.3"
+      },
+      "relevant_relations": [
+        {
+          "id": "REL-20260805-002",
+          "path": "05_Research/Assertions/REL-20260805-002.md",
+          "subject_id": "COM-asml",
+          "predicate": "SUPPLIES",
+          "object_id": "COM-tsmc",
+          "evidence_ids": "EVT-20260225-034",
+          "review_status": "reviewed",
+          "confidence": "0.3"
+        }
+      ],
+      "rule_check": {
+        "predicate": "SUPPLIES",
+        "impact_type": "supply",
+        "allowed": true,
+        "default_direction": "mixed",
+        "conditional": false,
+        "weakest_link_confidence": 0.3
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "pass",
+        "relevant_relations": "pass",
+        "rule_map": "pass",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The cited Source does not name TSMC; the supply link remains an indirect reviewed inference and the mechanism requires human revision."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260225-034"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.3,
+          "evidence_basis": [
+            "EVT-20260225-034",
+            "REL-20260805-002"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260807-003",
+      "path": "05_Research/Assertions/IMP-20260807-003.md",
+      "before_sha256": "1b01d49eb8b9331cadf0b5288ec7dd15c544fab01ca4e890e44c4d2b596a920e",
+      "after_sha256": "f35b8395626402d35557bda7273c47afe276de686b239614f53d477d18520eb8",
+      "recommendation": "reject_recommended",
+      "rationale": "The evidence chain contains a material unresolved defect; rejection is recommended, but only a human may decide.",
+      "event": {
+        "id": "EVT-20260225-034",
+        "path": "04_Evidence/Events/EVT-20260225-034-asml-euv-platforms.md",
+        "title": "ASML 20-F describes EUV 0.33/0.55 NA lithography platforms",
+        "event_date": "2026-02-25",
+        "review_status": "reviewed",
+        "confidence": 0.7,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260805-042"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37046",
+            "quote": "A lithography technology that uses extreme ultraviolet (EUV) light with a wavelength of 13.5 nm –",
+            "quote_sha256": "805d3ccc18ecf5c08dd58b0557d1eeb8339e733a35b8413c77023a93dd2179a0"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37055",
+            "quote": "ASML’s second TWINSCAN platform for EUV lithography, also referred to as EUV 0.55 NA or",
+            "quote_sha256": "cccabeabd994198244866eba6e595e411476be9ddd2b7ee5b16afd28f710925e"
+          },
+          {
+            "fact_id": "F3",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37346",
+            "quote": "ASML’s first TWINSCAN platform for EUV lithography with a numerical aperture of 0.33 that",
+            "quote_sha256": "a919f92a6d9e62e3af8e54109c02eed4363c43723958d6f84abcb87174f76181"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260805-042",
+          "path": "01_Inbox/Earnings/SRC-20260805-042-asml-20f-2025.md",
+          "title": "ASML 20-F annual report 2025 (filed 2026-02-25)",
+          "publisher": "ASML HOLDING NV (SEC EDGAR)",
+          "published_at": "2026-02-25",
+          "accessed_at": "2026-08-05",
+          "url": "https://www.sec.gov/Archives/edgar/data/937966/000162828026011378/asml-20251231.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.metadata.json",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extraction.json"
+          ],
+          "content_sha256": "865382553cf9871c78bcf144818b6e2d425af3bdc3013ab6c1bf83c85d8ed358",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37046",
+              "quote": "A lithography technology that uses extreme ultraviolet (EUV) light with a wavelength of 13.5 nm –",
+              "quote_sha256": "805d3ccc18ecf5c08dd58b0557d1eeb8339e733a35b8413c77023a93dd2179a0"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37055",
+              "quote": "ASML’s second TWINSCAN platform for EUV lithography, also referred to as EUV 0.55 NA or",
+              "quote_sha256": "cccabeabd994198244866eba6e595e411476be9ddd2b7ee5b16afd28f710925e"
+            },
+            {
+              "fact_id": "F3",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37346",
+              "quote": "ASML’s first TWINSCAN platform for EUV lithography with a numerical aperture of 0.33 that",
+              "quote_sha256": "a919f92a6d9e62e3af8e54109c02eed4363c43723958d6f84abcb87174f76181"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260225-034",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-asml",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "REL-20260805-229",
+        "path": "05_Research/Assertions/REL-20260805-229.md",
+        "subject_id": "COM-asml",
+        "predicate": "ENABLES",
+        "object_id": "COM-tsmc",
+        "evidence_ids": "EVT-20260225-034",
+        "review_status": "reviewed",
+        "confidence": "0.5"
+      },
+      "relevant_relations": [
+        {
+          "id": "REL-20260805-229",
+          "path": "05_Research/Assertions/REL-20260805-229.md",
+          "subject_id": "COM-asml",
+          "predicate": "ENABLES",
+          "object_id": "COM-tsmc",
+          "evidence_ids": "EVT-20260225-034",
+          "review_status": "reviewed",
+          "confidence": "0.5"
+        }
+      ],
+      "rule_check": {
+        "predicate": "ENABLES",
+        "impact_type": "technology",
+        "allowed": true,
+        "default_direction": "positive",
+        "conditional": false,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "pass",
+        "relevant_relations": "pass",
+        "rule_map": "pass",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The Event describes ASML platform specifications but does not establish a technology impact on ASML itself."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260225-034"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260225-034",
+            "REL-20260805-229"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260807-004",
+      "path": "05_Research/Assertions/IMP-20260807-004.md",
+      "before_sha256": "6c0a0327d8fe8f689d510eefd427d1a151a27a99d69e0760a668f9f3e2b1608c",
+      "after_sha256": "dfcfd5cb2320911438a89b16e28f3642361a32e944496338a5613ba9eb6974a3",
+      "recommendation": "edit_required",
+      "rationale": "The evidence is indirect and the mechanism needs human revision before any approval decision.",
+      "event": {
+        "id": "EVT-20260225-034",
+        "path": "04_Evidence/Events/EVT-20260225-034-asml-euv-platforms.md",
+        "title": "ASML 20-F describes EUV 0.33/0.55 NA lithography platforms",
+        "event_date": "2026-02-25",
+        "review_status": "reviewed",
+        "confidence": 0.7,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260805-042"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37046",
+            "quote": "A lithography technology that uses extreme ultraviolet (EUV) light with a wavelength of 13.5 nm –",
+            "quote_sha256": "805d3ccc18ecf5c08dd58b0557d1eeb8339e733a35b8413c77023a93dd2179a0"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37055",
+            "quote": "ASML’s second TWINSCAN platform for EUV lithography, also referred to as EUV 0.55 NA or",
+            "quote_sha256": "cccabeabd994198244866eba6e595e411476be9ddd2b7ee5b16afd28f710925e"
+          },
+          {
+            "fact_id": "F3",
+            "source_id": "SRC-20260805-042",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "locator": "L37346",
+            "quote": "ASML’s first TWINSCAN platform for EUV lithography with a numerical aperture of 0.33 that",
+            "quote_sha256": "a919f92a6d9e62e3af8e54109c02eed4363c43723958d6f84abcb87174f76181"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260805-042",
+          "path": "01_Inbox/Earnings/SRC-20260805-042-asml-20f-2025.md",
+          "title": "ASML 20-F annual report 2025 (filed 2026-02-25)",
+          "publisher": "ASML HOLDING NV (SEC EDGAR)",
+          "published_at": "2026-02-25",
+          "accessed_at": "2026-08-05",
+          "url": "https://www.sec.gov/Archives/edgar/data/937966/000162828026011378/asml-20251231.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.metadata.json",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extraction.json"
+          ],
+          "content_sha256": "865382553cf9871c78bcf144818b6e2d425af3bdc3013ab6c1bf83c85d8ed358",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37046",
+              "quote": "A lithography technology that uses extreme ultraviolet (EUV) light with a wavelength of 13.5 nm –",
+              "quote_sha256": "805d3ccc18ecf5c08dd58b0557d1eeb8339e733a35b8413c77023a93dd2179a0"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37055",
+              "quote": "ASML’s second TWINSCAN platform for EUV lithography, also referred to as EUV 0.55 NA or",
+              "quote_sha256": "cccabeabd994198244866eba6e595e411476be9ddd2b7ee5b16afd28f710925e"
+            },
+            {
+              "fact_id": "F3",
+              "source_id": "SRC-20260805-042",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-042/20260805121415-865382553cf9.html.extracted.txt",
+              "locator": "L37346",
+              "quote": "ASML’s first TWINSCAN platform for EUV lithography with a numerical aperture of 0.33 that",
+              "quote_sha256": "a919f92a6d9e62e3af8e54109c02eed4363c43723958d6f84abcb87174f76181"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260225-034",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-tsmc",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "REL-20260805-229",
+        "path": "05_Research/Assertions/REL-20260805-229.md",
+        "subject_id": "COM-asml",
+        "predicate": "ENABLES",
+        "object_id": "COM-tsmc",
+        "evidence_ids": "EVT-20260225-034",
+        "review_status": "reviewed",
+        "confidence": "0.5"
+      },
+      "relevant_relations": [
+        {
+          "id": "REL-20260805-229",
+          "path": "05_Research/Assertions/REL-20260805-229.md",
+          "subject_id": "COM-asml",
+          "predicate": "ENABLES",
+          "object_id": "COM-tsmc",
+          "evidence_ids": "EVT-20260225-034",
+          "review_status": "reviewed",
+          "confidence": "0.5"
+        }
+      ],
+      "rule_check": {
+        "predicate": "ENABLES",
+        "impact_type": "technology",
+        "allowed": true,
+        "default_direction": "positive",
+        "conditional": false,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "pass",
+        "relevant_relations": "pass",
+        "rule_map": "pass",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The cited Source does not name TSMC; the enablement link remains an indirect reviewed inference and the mechanism requires human revision."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260225-034"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260225-034",
+            "REL-20260805-229"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260807-005",
+      "path": "05_Research/Assertions/IMP-20260807-005.md",
+      "before_sha256": "dd56364c1e42d09b94bcfc834fc38e18a23e40be7515bb03280e35eaba2c237d",
+      "after_sha256": "5f7fc56d3092ac68411da5410ba4382f85b35d2ae22eabc147f2711e88b5f032",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260601-044",
+        "path": "04_Evidence/Events/EVT-20260601-044-trendforce-1q26-dram-market-share.md",
+        "title": "TrendForce 1Q26 DRAM: Samsung 38.5%, SK hynix 28.8%, Micron 22.4% market share; SK hynix highest HBM bit shipment ratio",
+        "event_date": "2026-06-01",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-054"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L146",
+            "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+            "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L147",
+            "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+            "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-054",
+          "path": "01_Inbox/Articles/SRC-20260806-054-trendforce-1q26-dram-revenue.md",
+          "title": "TrendForce: contract prices rise rapidly, 1Q26 DRAM industry revenue up 81% QoQ",
+          "publisher": "TrendForce",
+          "published_at": "2026-06-01",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.trendforce.com.tw/presscenter/news/20260601-13069.html",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extraction.json"
+          ],
+          "content_sha256": "76df2409471da7a0a968d52b6932bee54cade43860ac23b4e79df348afa0dd1e",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L146",
+              "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+              "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L147",
+              "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+              "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260601-044",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-samsung-electronics",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "price",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260807-006",
+      "path": "05_Research/Assertions/IMP-20260807-006.md",
+      "before_sha256": "fe058c7e09c897c76a98088cce59211098cbc0922d2ba9e23fe35b606f1847c4",
+      "after_sha256": "25fa019ca3bb5a897a0377e7f2f6849fbbdad2b10c2fd2f72e8270264567d11f",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260601-044",
+        "path": "04_Evidence/Events/EVT-20260601-044-trendforce-1q26-dram-market-share.md",
+        "title": "TrendForce 1Q26 DRAM: Samsung 38.5%, SK hynix 28.8%, Micron 22.4% market share; SK hynix highest HBM bit shipment ratio",
+        "event_date": "2026-06-01",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-054"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L146",
+            "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+            "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L147",
+            "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+            "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-054",
+          "path": "01_Inbox/Articles/SRC-20260806-054-trendforce-1q26-dram-revenue.md",
+          "title": "TrendForce: contract prices rise rapidly, 1Q26 DRAM industry revenue up 81% QoQ",
+          "publisher": "TrendForce",
+          "published_at": "2026-06-01",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.trendforce.com.tw/presscenter/news/20260601-13069.html",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extraction.json"
+          ],
+          "content_sha256": "76df2409471da7a0a968d52b6932bee54cade43860ac23b4e79df348afa0dd1e",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L146",
+              "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+              "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L147",
+              "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+              "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260601-044",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-sk-hynix",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "price",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260807-007",
+      "path": "05_Research/Assertions/IMP-20260807-007.md",
+      "before_sha256": "9914a25005aadfcc5218528d194ec86780dbeb8dcfdbda4e49f7889038eab1cc",
+      "after_sha256": "88e2ecb665394e52c78359430af3a4ca153642c226bdd59ec9ed71f471d80fac",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260520-038",
+        "path": "04_Evidence/Events/EVT-20260520-038-nvidia-fy27-q1-data-center.md",
+        "title": "NVIDIA FY27 Q1: record Data Center revenue $75.2B, $119B supply commitments",
+        "event_date": "2026-05-20",
+        "review_status": "reviewed",
+        "confidence": 0.8,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260805-048"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260805-048",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-048/20260805135918-08d93b6aa1c2.html.extracted.txt",
+            "locator": "L23",
+            "quote": "Data Center revenue for the first quarter was a record $75.2 billion, up 92% from a year ago and up 21% sequentially, driven by the ramp of our Blackwell 300 products and demand for our InfiniBand, Spectrum-X™ Ethernet, and NVLink™ solutions. Hyperscale revenue increased sequentially and remained at approximately 50% of Data Center revenue, while the remaining 50% came from a continued diversification of customers, including AI Clouds, industrial, enterprise, and sovereign customers. No shipments of Data Center Hopper products to China occurred during the quarter, compared with $4.6 billion in the first quarter of fiscal year 2026.",
+            "quote_sha256": "74d70511a12896972de1f60f141ef79a21b21404a72b658edacf4a3a59fa71f5"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260805-048",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-048/20260805135918-08d93b6aa1c2.html.extracted.txt",
+            "locator": "L37",
+            "quote": "Inventory was $25.8 billion, up from $21.4 billion sequentially, and total supply-related commitments were $119.0 billion. We have strategically secured inventory and capacity to meet demand beyond the next several quarters.",
+            "quote_sha256": "d74f1a2d6b962d1827c2104dda035be414f13a1ebb8305a32ca45b7e37857476"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260805-048",
+          "path": "01_Inbox/Earnings/SRC-20260805-048-nvidia-fy27-q1-cfo-commentary.md",
+          "title": "NVIDIA FY27 Q1 CFO Commentary",
+          "publisher": "NVIDIA CORP (SEC EDGAR exhibit)",
+          "published_at": "2026-05-20",
+          "accessed_at": "2026-08-05",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/q1fy27cfocommentary.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260805-048/20260805135918-08d93b6aa1c2.html",
+            "01_Inbox/_assets/SRC-20260805-048/20260805135918-08d93b6aa1c2.metadata.json",
+            "01_Inbox/_assets/SRC-20260805-048/20260805135918-08d93b6aa1c2.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260805-048/20260805135918-08d93b6aa1c2.html.extraction.json"
+          ],
+          "content_sha256": "08d93b6aa1c22dfdfb8ad2ad1f95dff0608ae5adb98b7a686e4b07a1b88a0276",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260805-048",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-048/20260805135918-08d93b6aa1c2.html.extracted.txt",
+              "locator": "L23",
+              "quote": "Data Center revenue for the first quarter was a record $75.2 billion, up 92% from a year ago and up 21% sequentially, driven by the ramp of our Blackwell 300 products and demand for our InfiniBand, Spectrum-X™ Ethernet, and NVLink™ solutions. Hyperscale revenue increased sequentially and remained at approximately 50% of Data Center revenue, while the remaining 50% came from a continued diversification of customers, including AI Clouds, industrial, enterprise, and sovereign customers. No shipments of Data Center Hopper products to China occurred during the quarter, compared with $4.6 billion in the first quarter of fiscal year 2026.",
+              "quote_sha256": "74d70511a12896972de1f60f141ef79a21b21404a72b658edacf4a3a59fa71f5"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260805-048",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-048/20260805135918-08d93b6aa1c2.html.extracted.txt",
+              "locator": "L37",
+              "quote": "Inventory was $25.8 billion, up from $21.4 billion sequentially, and total supply-related commitments were $119.0 billion. We have strategically secured inventory and capacity to meet demand beyond the next several quarters.",
+              "quote_sha256": "d74f1a2d6b962d1827c2104dda035be414f13a1ebb8305a32ca45b7e37857476"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260520-038",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-nvidia",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "revenue",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.8
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260520-038"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260520-038"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260807-008",
+      "path": "05_Research/Assertions/IMP-20260807-008.md",
+      "before_sha256": "30a2d5e47e1578140b8c7db7b34d41e6a4e286c6786337d249f044abc932d006",
+      "after_sha256": "e9a2f5b95a0d698550e6098e1362df2bbbe07fe241a2f7c4d36b9be65362f5e9",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260610-007",
+        "path": "04_Evidence/Events/EVT-20260610-007-oracle-ai-infrastructure-growth-and-capex.md",
+        "title": "Oracle AI 基础设施增长伴随高资本开支，云应用增速较低",
+        "event_date": "2026-06-10",
+        "review_status": "reviewed",
+        "confidence": 0.9,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260610-017"
+        ],
+        "citation_anchors": null
+      },
+      "sources": [
+        {
+          "id": "SRC-20260610-017",
+          "path": "01_Inbox/Earnings/SRC-20260610-017-oracle-fy26-q4-results.md",
+          "title": "Oracle Q4 and FY 2026 Results",
+          "publisher": "Oracle Investor Relations",
+          "published_at": "2026-06-10",
+          "accessed_at": "2026-07-29",
+          "url": "https://investor.oracle.com/investor-news/news-details/2026/Oracle-Announces-Record-Q4-and-FY-2026-Results-Driven-by-Cloud-Infrastructure--Cloud-Applications/",
+          "local_path": null,
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260610-017/20260729162642-f9da5b5c82c0.html",
+            "01_Inbox/_assets/SRC-20260610-017/20260729162642-f9da5b5c82c0.metadata.json",
+            "01_Inbox/_assets/SRC-20260610-017/20260729162642-f9da5b5c82c0.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260610-017/20260729162642-f9da5b5c82c0.html.extraction.json"
+          ],
+          "content_sha256": "f9da5b5c82c08a59bb450a440a0770f296207a7131e9686566ddb2ccaf6de750",
+          "citation_anchors": []
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260610-007",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-oracle",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "capex",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.9
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "fail",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The Event does not provide a complete verifiable citation anchor for every Source."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260610-007"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260610-007"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260807-009",
+      "path": "05_Research/Assertions/IMP-20260807-009.md",
+      "before_sha256": "c675bd8457c6e5d37feb0b63bbd184f47e5c4969ea486af75cffc543d9500216",
+      "after_sha256": "75ad219e952e8111612cdbf880c9912c93606db852ba9462bbb00e233720d32d",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260728-036",
+        "path": "04_Evidence/Events/EVT-20260728-036-skhynix-q2-2026-hbm4.md",
+        "title": "SK hynix reports record 2Q26 on AI memory demand; HBM4 mass shipments begin",
+        "event_date": "2026-07-28",
+        "review_status": "reviewed",
+        "confidence": 0.8,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260805-044"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260805-044",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-044/20260805133747-7fa6ad3af8ae.html.extracted.txt",
+            "locator": "L59",
+            "quote": "HBM4 has demonstrated its differentiated technological edge by achieving customer-required operating speeds while delivering industry-leading power efficiency and cost competitiveness. The company began mass shipments of HBM4 in the second quarter and will ramp up production in the second half of the year. For HBM4E, which completed sample shipments in the first half, the company applied optimal processes featuring technology maturity and mass-production stability.",
+            "quote_sha256": "2ca67e43a3ba53747e0aad935e263a60a40837fb882ba81c4ce5c8fdeeaac360"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260805-044",
+            "asset_path": "01_Inbox/_assets/SRC-20260805-044/20260805133747-7fa6ad3af8ae.html.extracted.txt",
+            "locator": "L60",
+            "quote": "SK hynix plans to continue its leadership in the HBM sector based on its comprehensive strength, including superior quality, stable supply capabilities based on high yield, cost competitiveness, and industry-leading performance.",
+            "quote_sha256": "81cf958163a7ff4fe99c9f1c48bdc1dc6ddf54a20b96667b8ef72ec9b7b3a76c"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260805-044",
+          "path": "01_Inbox/Earnings/SRC-20260805-044-skhynix-q2-2026-results.md",
+          "title": "SK hynix Announces 2Q26 Financial Results",
+          "publisher": "SK hynix IR",
+          "published_at": "2026-07-28",
+          "accessed_at": "2026-08-05",
+          "url": "https://news.skhynix.com/en/q2-2026-business-results/",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260805-044/20260805133747-7fa6ad3af8ae.html",
+            "01_Inbox/_assets/SRC-20260805-044/20260805133747-7fa6ad3af8ae.metadata.json",
+            "01_Inbox/_assets/SRC-20260805-044/20260805133747-7fa6ad3af8ae.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260805-044/20260805133747-7fa6ad3af8ae.html.extraction.json"
+          ],
+          "content_sha256": "7fa6ad3af8ae6cc18a29ba57cad227543b823d1e206685f061bd1de691b7aa69",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260805-044",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-044/20260805133747-7fa6ad3af8ae.html.extracted.txt",
+              "locator": "L59",
+              "quote": "HBM4 has demonstrated its differentiated technological edge by achieving customer-required operating speeds while delivering industry-leading power efficiency and cost competitiveness. The company began mass shipments of HBM4 in the second quarter and will ramp up production in the second half of the year. For HBM4E, which completed sample shipments in the first half, the company applied optimal processes featuring technology maturity and mass-production stability.",
+              "quote_sha256": "2ca67e43a3ba53747e0aad935e263a60a40837fb882ba81c4ce5c8fdeeaac360"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260805-044",
+              "asset_path": "01_Inbox/_assets/SRC-20260805-044/20260805133747-7fa6ad3af8ae.html.extracted.txt",
+              "locator": "L60",
+              "quote": "SK hynix plans to continue its leadership in the HBM sector based on its comprehensive strength, including superior quality, stable supply capabilities based on high yield, cost competitiveness, and industry-leading performance.",
+              "quote_sha256": "81cf958163a7ff4fe99c9f1c48bdc1dc6ddf54a20b96667b8ef72ec9b7b3a76c"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260728-036",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-sk-hynix",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "capacity",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.8
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-07",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260728-036"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260728-036"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-010",
+      "path": "05_Research/Assertions/IMP-20260808-010.md",
+      "before_sha256": "bbbfaee7e85d3358568e25cac7509e612f485210d3eb362eadad45588ce034ca",
+      "after_sha256": "f267391a8ceefe201178ff1a83af51d0e5ce2d32f40b574821a1536a02b659fd",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260302-047",
+        "path": "04_Evidence/Events/EVT-20260302-047-coreweave-10k-cloud-competitors.md",
+        "title": "CoreWeave 10-K: names AWS, Google Cloud, Microsoft Azure, Oracle as key cloud competitors",
+        "event_date": "2026-03-02",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-051"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-051",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+            "locator": "L479",
+            "quote": "Many of our competitors have greater financial, technical, marketing, sales, and other resources, greater name recognition, longer operating histories, and a larger base of customers than we do. Key competitors that offer general purpose cloud computing services as part of a broader, diversified product portfolio include Amazon (AWS), Google (Google Cloud Platform), Microsoft (Azure), and Oracle, a number of which are also our current customers. Our competitors may be able to devote significantly greater resources to the development, promotion, and sale of their solutions and services than we can, and they may offer lower pricing than we do or bundle certain competing solutions and services at lower prices. Our competitors may also have greater resources for research and development of new technologies, customer support, and to pursue acquisitions, and they have other financial, technical, or other resource advantages. Our competitors may engage in business practices that make our products and services more difficult to transition to or more expensive (for example, by charging data egress fees). Our larger competitors have substantially broader and more diverse solution and service offerings and more mature distribution and go-to-market strategies, which allows them to leverage their existing customer relationships and any distributor relationships to gain business in a manner that discourages potential customers from purchasing our platform. Further, our current and future competitors may include our customers and suppliers. If any of these customers or suppliers were to cease purchasing services from us or supplying us with components. our business, operating results, financial condition, and prospects would be adversely affected.",
+            "quote_sha256": "9546e922c885618b7e57858cea37e9dcd041cf6b56e6496dbd1bf9b8de3d07bb"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-051",
+          "path": "01_Inbox/Earnings/SRC-20260806-051-crwv-10k-fy2025.md",
+          "title": "CoreWeave FY2025 10-K filing (annual report)",
+          "publisher": "CoreWeave Inc (SEC EDGAR)",
+          "published_at": "2026-03-02",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.sec.gov/Archives/edgar/data/1769628/000176962826000104/crwv-20251231.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extraction.json"
+          ],
+          "content_sha256": "c796cf3da3deaf213561a54b731af74526ff72fc854fde005591b0b1880ed1fc",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-051",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+              "locator": "L479",
+              "quote": "Many of our competitors have greater financial, technical, marketing, sales, and other resources, greater name recognition, longer operating histories, and a larger base of customers than we do. Key competitors that offer general purpose cloud computing services as part of a broader, diversified product portfolio include Amazon (AWS), Google (Google Cloud Platform), Microsoft (Azure), and Oracle, a number of which are also our current customers. Our competitors may be able to devote significantly greater resources to the development, promotion, and sale of their solutions and services than we can, and they may offer lower pricing than we do or bundle certain competing solutions and services at lower prices. Our competitors may also have greater resources for research and development of new technologies, customer support, and to pursue acquisitions, and they have other financial, technical, or other resource advantages. Our competitors may engage in business practices that make our products and services more difficult to transition to or more expensive (for example, by charging data egress fees). Our larger competitors have substantially broader and more diverse solution and service offerings and more mature distribution and go-to-market strategies, which allows them to leverage their existing customer relationships and any distributor relationships to gain business in a manner that discourages potential customers from purchasing our platform. Further, our current and future competitors may include our customers and suppliers. If any of these customers or suppliers were to cease purchasing services from us or supplying us with components. our business, operating results, financial condition, and prospects would be adversely affected.",
+              "quote_sha256": "9546e922c885618b7e57858cea37e9dcd041cf6b56e6496dbd1bf9b8de3d07bb"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260302-047",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-aws",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "competition",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-011",
+      "path": "05_Research/Assertions/IMP-20260808-011.md",
+      "before_sha256": "27504e5686bca8f62f6836ddf670f5d27db393c6a637d15b77adb04d9eb91060",
+      "after_sha256": "46e1ccdb5823f69982044957e614803bf9f55e79c06a806114b969ee853f0f72",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260302-047",
+        "path": "04_Evidence/Events/EVT-20260302-047-coreweave-10k-cloud-competitors.md",
+        "title": "CoreWeave 10-K: names AWS, Google Cloud, Microsoft Azure, Oracle as key cloud competitors",
+        "event_date": "2026-03-02",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-051"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-051",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+            "locator": "L479",
+            "quote": "Many of our competitors have greater financial, technical, marketing, sales, and other resources, greater name recognition, longer operating histories, and a larger base of customers than we do. Key competitors that offer general purpose cloud computing services as part of a broader, diversified product portfolio include Amazon (AWS), Google (Google Cloud Platform), Microsoft (Azure), and Oracle, a number of which are also our current customers. Our competitors may be able to devote significantly greater resources to the development, promotion, and sale of their solutions and services than we can, and they may offer lower pricing than we do or bundle certain competing solutions and services at lower prices. Our competitors may also have greater resources for research and development of new technologies, customer support, and to pursue acquisitions, and they have other financial, technical, or other resource advantages. Our competitors may engage in business practices that make our products and services more difficult to transition to or more expensive (for example, by charging data egress fees). Our larger competitors have substantially broader and more diverse solution and service offerings and more mature distribution and go-to-market strategies, which allows them to leverage their existing customer relationships and any distributor relationships to gain business in a manner that discourages potential customers from purchasing our platform. Further, our current and future competitors may include our customers and suppliers. If any of these customers or suppliers were to cease purchasing services from us or supplying us with components. our business, operating results, financial condition, and prospects would be adversely affected.",
+            "quote_sha256": "9546e922c885618b7e57858cea37e9dcd041cf6b56e6496dbd1bf9b8de3d07bb"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-051",
+          "path": "01_Inbox/Earnings/SRC-20260806-051-crwv-10k-fy2025.md",
+          "title": "CoreWeave FY2025 10-K filing (annual report)",
+          "publisher": "CoreWeave Inc (SEC EDGAR)",
+          "published_at": "2026-03-02",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.sec.gov/Archives/edgar/data/1769628/000176962826000104/crwv-20251231.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extraction.json"
+          ],
+          "content_sha256": "c796cf3da3deaf213561a54b731af74526ff72fc854fde005591b0b1880ed1fc",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-051",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+              "locator": "L479",
+              "quote": "Many of our competitors have greater financial, technical, marketing, sales, and other resources, greater name recognition, longer operating histories, and a larger base of customers than we do. Key competitors that offer general purpose cloud computing services as part of a broader, diversified product portfolio include Amazon (AWS), Google (Google Cloud Platform), Microsoft (Azure), and Oracle, a number of which are also our current customers. Our competitors may be able to devote significantly greater resources to the development, promotion, and sale of their solutions and services than we can, and they may offer lower pricing than we do or bundle certain competing solutions and services at lower prices. Our competitors may also have greater resources for research and development of new technologies, customer support, and to pursue acquisitions, and they have other financial, technical, or other resource advantages. Our competitors may engage in business practices that make our products and services more difficult to transition to or more expensive (for example, by charging data egress fees). Our larger competitors have substantially broader and more diverse solution and service offerings and more mature distribution and go-to-market strategies, which allows them to leverage their existing customer relationships and any distributor relationships to gain business in a manner that discourages potential customers from purchasing our platform. Further, our current and future competitors may include our customers and suppliers. If any of these customers or suppliers were to cease purchasing services from us or supplying us with components. our business, operating results, financial condition, and prospects would be adversely affected.",
+              "quote_sha256": "9546e922c885618b7e57858cea37e9dcd041cf6b56e6496dbd1bf9b8de3d07bb"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260302-047",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-google-cloud",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "competition",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-012",
+      "path": "05_Research/Assertions/IMP-20260808-012.md",
+      "before_sha256": "c341e7b143e24df589789bdfd515c7a01b0acdb9f5115faa47e6ad3f30c2cb5e",
+      "after_sha256": "1cd5380db9651653cf4f839cba3a2d71f45e3c6c53a0c3a50e37e068ef39d308",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260302-047",
+        "path": "04_Evidence/Events/EVT-20260302-047-coreweave-10k-cloud-competitors.md",
+        "title": "CoreWeave 10-K: names AWS, Google Cloud, Microsoft Azure, Oracle as key cloud competitors",
+        "event_date": "2026-03-02",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-051"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-051",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+            "locator": "L479",
+            "quote": "Many of our competitors have greater financial, technical, marketing, sales, and other resources, greater name recognition, longer operating histories, and a larger base of customers than we do. Key competitors that offer general purpose cloud computing services as part of a broader, diversified product portfolio include Amazon (AWS), Google (Google Cloud Platform), Microsoft (Azure), and Oracle, a number of which are also our current customers. Our competitors may be able to devote significantly greater resources to the development, promotion, and sale of their solutions and services than we can, and they may offer lower pricing than we do or bundle certain competing solutions and services at lower prices. Our competitors may also have greater resources for research and development of new technologies, customer support, and to pursue acquisitions, and they have other financial, technical, or other resource advantages. Our competitors may engage in business practices that make our products and services more difficult to transition to or more expensive (for example, by charging data egress fees). Our larger competitors have substantially broader and more diverse solution and service offerings and more mature distribution and go-to-market strategies, which allows them to leverage their existing customer relationships and any distributor relationships to gain business in a manner that discourages potential customers from purchasing our platform. Further, our current and future competitors may include our customers and suppliers. If any of these customers or suppliers were to cease purchasing services from us or supplying us with components. our business, operating results, financial condition, and prospects would be adversely affected.",
+            "quote_sha256": "9546e922c885618b7e57858cea37e9dcd041cf6b56e6496dbd1bf9b8de3d07bb"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-051",
+          "path": "01_Inbox/Earnings/SRC-20260806-051-crwv-10k-fy2025.md",
+          "title": "CoreWeave FY2025 10-K filing (annual report)",
+          "publisher": "CoreWeave Inc (SEC EDGAR)",
+          "published_at": "2026-03-02",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.sec.gov/Archives/edgar/data/1769628/000176962826000104/crwv-20251231.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extraction.json"
+          ],
+          "content_sha256": "c796cf3da3deaf213561a54b731af74526ff72fc854fde005591b0b1880ed1fc",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-051",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-051/20260805233758-c796cf3da3de.html.extracted.txt",
+              "locator": "L479",
+              "quote": "Many of our competitors have greater financial, technical, marketing, sales, and other resources, greater name recognition, longer operating histories, and a larger base of customers than we do. Key competitors that offer general purpose cloud computing services as part of a broader, diversified product portfolio include Amazon (AWS), Google (Google Cloud Platform), Microsoft (Azure), and Oracle, a number of which are also our current customers. Our competitors may be able to devote significantly greater resources to the development, promotion, and sale of their solutions and services than we can, and they may offer lower pricing than we do or bundle certain competing solutions and services at lower prices. Our competitors may also have greater resources for research and development of new technologies, customer support, and to pursue acquisitions, and they have other financial, technical, or other resource advantages. Our competitors may engage in business practices that make our products and services more difficult to transition to or more expensive (for example, by charging data egress fees). Our larger competitors have substantially broader and more diverse solution and service offerings and more mature distribution and go-to-market strategies, which allows them to leverage their existing customer relationships and any distributor relationships to gain business in a manner that discourages potential customers from purchasing our platform. Further, our current and future competitors may include our customers and suppliers. If any of these customers or suppliers were to cease purchasing services from us or supplying us with components. our business, operating results, financial condition, and prospects would be adversely affected.",
+              "quote_sha256": "9546e922c885618b7e57858cea37e9dcd041cf6b56e6496dbd1bf9b8de3d07bb"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260302-047",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-microsoft",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "competition",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260302-047"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-013",
+      "path": "05_Research/Assertions/IMP-20260808-013.md",
+      "before_sha256": "07615ff24a4c41b90d2a2e0a56bf80414a9e295b2cdea1c033d449c24990de98",
+      "after_sha256": "def80f4390f24d2e5f2694101033c9b183325fab115d8e5abb1e8249e467607c",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260601-044",
+        "path": "04_Evidence/Events/EVT-20260601-044-trendforce-1q26-dram-market-share.md",
+        "title": "TrendForce 1Q26 DRAM: Samsung 38.5%, SK hynix 28.8%, Micron 22.4% market share; SK hynix highest HBM bit shipment ratio",
+        "event_date": "2026-06-01",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-054"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L146",
+            "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+            "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L147",
+            "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+            "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-054",
+          "path": "01_Inbox/Articles/SRC-20260806-054-trendforce-1q26-dram-revenue.md",
+          "title": "TrendForce: contract prices rise rapidly, 1Q26 DRAM industry revenue up 81% QoQ",
+          "publisher": "TrendForce",
+          "published_at": "2026-06-01",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.trendforce.com.tw/presscenter/news/20260601-13069.html",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extraction.json"
+          ],
+          "content_sha256": "76df2409471da7a0a968d52b6932bee54cade43860ac23b4e79df348afa0dd1e",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L146",
+              "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+              "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L147",
+              "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+              "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260601-044",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-samsung-electronics",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "revenue",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-014",
+      "path": "05_Research/Assertions/IMP-20260808-014.md",
+      "before_sha256": "cd0dd450b5df4bd1d450582607b1b58912d19d3ee7498408cd45cf24f7105fa0",
+      "after_sha256": "80dd163ca83596ef42726bb74953973349f0c4dd55f81fa8c122d20fe5ebde6f",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260601-044",
+        "path": "04_Evidence/Events/EVT-20260601-044-trendforce-1q26-dram-market-share.md",
+        "title": "TrendForce 1Q26 DRAM: Samsung 38.5%, SK hynix 28.8%, Micron 22.4% market share; SK hynix highest HBM bit shipment ratio",
+        "event_date": "2026-06-01",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-054"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L146",
+            "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+            "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L147",
+            "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+            "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-054",
+          "path": "01_Inbox/Articles/SRC-20260806-054-trendforce-1q26-dram-revenue.md",
+          "title": "TrendForce: contract prices rise rapidly, 1Q26 DRAM industry revenue up 81% QoQ",
+          "publisher": "TrendForce",
+          "published_at": "2026-06-01",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.trendforce.com.tw/presscenter/news/20260601-13069.html",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extraction.json"
+          ],
+          "content_sha256": "76df2409471da7a0a968d52b6932bee54cade43860ac23b4e79df348afa0dd1e",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L146",
+              "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+              "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L147",
+              "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+              "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260601-044",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-sk-hynix",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "revenue",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-015",
+      "path": "05_Research/Assertions/IMP-20260808-015.md",
+      "before_sha256": "e0611b045d0ce0d81ac1f5a179ebecfdf1b768c8501986eaf8271fc7d9aa2dc1",
+      "after_sha256": "bc7ef0fc0c4a1dde23f158352532473ab8046caf385e8be463e53c42c99aa805",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260601-044",
+        "path": "04_Evidence/Events/EVT-20260601-044-trendforce-1q26-dram-market-share.md",
+        "title": "TrendForce 1Q26 DRAM: Samsung 38.5%, SK hynix 28.8%, Micron 22.4% market share; SK hynix highest HBM bit shipment ratio",
+        "event_date": "2026-06-01",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-054"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L146",
+            "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+            "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L147",
+            "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+            "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-054",
+          "path": "01_Inbox/Articles/SRC-20260806-054-trendforce-1q26-dram-revenue.md",
+          "title": "TrendForce: contract prices rise rapidly, 1Q26 DRAM industry revenue up 81% QoQ",
+          "publisher": "TrendForce",
+          "published_at": "2026-06-01",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.trendforce.com.tw/presscenter/news/20260601-13069.html",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extraction.json"
+          ],
+          "content_sha256": "76df2409471da7a0a968d52b6932bee54cade43860ac23b4e79df348afa0dd1e",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L146",
+              "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+              "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L147",
+              "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+              "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260601-044",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-micron",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "revenue",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-016",
+      "path": "05_Research/Assertions/IMP-20260808-016.md",
+      "before_sha256": "9509ebca0f21f4ad82ea0c37606ec66d6e46a21b6bca16d4c139f11f46540b03",
+      "after_sha256": "b5a9a3cec708bb10b44d8d360ea21e4e22de520b4e8c0a385dab94c902772b48",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260601-044",
+        "path": "04_Evidence/Events/EVT-20260601-044-trendforce-1q26-dram-market-share.md",
+        "title": "TrendForce 1Q26 DRAM: Samsung 38.5%, SK hynix 28.8%, Micron 22.4% market share; SK hynix highest HBM bit shipment ratio",
+        "event_date": "2026-06-01",
+        "review_status": "reviewed",
+        "confidence": 0.5,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-054"
+        ],
+        "citation_anchors": [
+          {
+            "fact_id": "F1",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L146",
+            "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+            "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+          },
+          {
+            "fact_id": "F2",
+            "source_id": "SRC-20260806-054",
+            "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "locator": "L147",
+            "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+            "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-054",
+          "path": "01_Inbox/Articles/SRC-20260806-054-trendforce-1q26-dram-revenue.md",
+          "title": "TrendForce: contract prices rise rapidly, 1Q26 DRAM industry revenue up 81% QoQ",
+          "publisher": "TrendForce",
+          "published_at": "2026-06-01",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.trendforce.com.tw/presscenter/news/20260601-13069.html",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.metadata.json",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+            "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extraction.json"
+          ],
+          "content_sha256": "76df2409471da7a0a968d52b6932bee54cade43860ac23b4e79df348afa0dd1e",
+          "citation_anchors": [
+            {
+              "fact_id": "F1",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L146",
+              "quote": "分析第一季主要DRAM供應商營收表現，第一名Samsung產品的平均銷售單價(ASP)大幅成長、居三大原廠之首，且server DRAM營收占比也是最高，推升其第一季營收季增高達93.4%，為373.2億美元，市占上升至38.5%。",
+              "quote_sha256": "32a8f35b440c9866d8f9a5a002cade16ee9764d470ddc8b5f03699a0ee5a84b1"
+            },
+            {
+              "fact_id": "F2",
+              "source_id": "SRC-20260806-054",
+              "asset_path": "01_Inbox/_assets/SRC-20260806-054/20260805233835-76df2409471d.html.extracted.txt",
+              "locator": "L147",
+              "quote": "SK hynix的HBM位元出貨比重為三大原廠最高，然2026年HBM合約價下滑，抑制其整體產品售價漲幅，第一季營收達279.8億美元，季增62.5%，排名第二，市占率調整至28.8%。第三名Micron營收季增達81.6%，上升至217.5億美元，市占率22.4%持平前一季。",
+              "quote_sha256": "52058fbc96a076d36049e7c8fffdba7626748a34e3e6a2b4f83726cb662c352d"
+            }
+          ]
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260601-044",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-micron",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "price",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.5
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "pass",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "confidence",
+          "before": 0.7,
+          "after": 0.5,
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260601-044"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-017",
+      "path": "05_Research/Assertions/IMP-20260808-017.md",
+      "before_sha256": "a216b4c0bf48451c6540d9e37b9664ac1d6a6b00319a429869c7aa23c9f9df60",
+      "after_sha256": "f387408790f5aac279910e08bade853403aaf4a32299aa2d5c67740d52869773",
+      "recommendation": "reject_recommended",
+      "rationale": "The evidence chain contains a material unresolved defect; rejection is recommended, but only a human may decide.",
+      "event": {
+        "id": "EVT-20260531-049",
+        "path": "04_Evidence/Events/EVT-20260531-049-bis-advanced-computing-license.md",
+        "title": "BIS requires export license for advanced computing items to Country Group D:5 / Macau (May 2026)",
+        "event_date": "2026-05-31",
+        "review_status": "reviewed",
+        "confidence": 0.8,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260808-153"
+        ],
+        "citation_anchors": null
+      },
+      "sources": [
+        {
+          "id": "SRC-20260808-153",
+          "path": "01_Inbox/Articles/SRC-20260808-153-bis-advanced-computing-guidance.md",
+          "title": "BIS Advanced Computing Items Export License Requirement (May 2026)",
+          "publisher": "U.S. Bureau of Industry and Security",
+          "published_at": "2026-05-31",
+          "accessed_at": "2026-08-08",
+          "url": "https://www.bis.gov/media/documents/bis-guidance-may-31-2026.pdf",
+          "local_path": "",
+          "asset_paths": [],
+          "content_sha256": null,
+          "citation_anchors": []
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260531-049",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-nvidia",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "regulation",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.8
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "fail",
+        "source_provenance": "pass",
+        "source_asset": "fail",
+        "citation_anchor": "fail",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The reviewed Event still contains unresolved TODO placeholders in Facts, Inferences, and Research judgment.",
+        "One or more declared Source assets cannot be hash-verified.",
+        "The Event does not provide a complete verifiable citation anchor for every Source."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260531-049"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260531-049"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260808-018",
+      "path": "05_Research/Assertions/IMP-20260808-018.md",
+      "before_sha256": "40d70c835fa1f772e1e4ce7402efeb8a6200766a5f9f72b9ceed7de47fa3537c",
+      "after_sha256": "5f937d0325c663ae80f494daa2456a881fda290342d820f08bf7d3522fb8ba6b",
+      "recommendation": "reject_recommended",
+      "rationale": "The evidence chain contains a material unresolved defect; rejection is recommended, but only a human may decide.",
+      "event": {
+        "id": "EVT-20260407-050",
+        "path": "04_Evidence/Events/EVT-20260407-050-bis-ic-designer-extension.md",
+        "title": "BIS extends Authorized IC Designer application deadline to Dec 31, 2026 (April 2026)",
+        "event_date": "2026-04-07",
+        "review_status": "reviewed",
+        "confidence": 0.8,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260808-154"
+        ],
+        "citation_anchors": null
+      },
+      "sources": [
+        {
+          "id": "SRC-20260808-154",
+          "path": "01_Inbox/Articles/SRC-20260808-154-bis-ic-designer-timeline.md",
+          "title": "BIS extends Authorized IC Designer application deadline to Dec 31 2026 (April 2026)",
+          "publisher": "U.S. Federal Register / BIS",
+          "published_at": "2026-04-07",
+          "accessed_at": "2026-08-08",
+          "url": "https://www.federalregister.gov/agencies/industry-and-security-bureau",
+          "local_path": "",
+          "asset_paths": [],
+          "content_sha256": null,
+          "citation_anchors": []
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260407-050",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-nvidia",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "regulation",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.8
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "fail",
+        "source_provenance": "pass",
+        "source_asset": "fail",
+        "citation_anchor": "fail",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The reviewed Event still contains unresolved TODO placeholders in Facts, Inferences, and Research judgment.",
+        "One or more declared Source assets cannot be hash-verified.",
+        "The Event does not provide a complete verifiable citation anchor for every Source."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-08",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260407-050"
+          ]
+        },
+        {
+          "field": "notes",
+          "before": "Generated via an empty relation placeholder.",
+          "after": "No ontology relation is declared.",
+          "evidence_basis": [
+            "EVT-20260407-050"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260809-001",
+      "path": "05_Research/Assertions/IMP-20260809-001.md",
+      "before_sha256": "89ced705bcb2cf28eebaf86027f904433e7fac744af942dadd30f1096345f616",
+      "after_sha256": "b1d43f093791b20fa17f4a6601e2fe279597e0c0586ce16732c3f1c2887b19b9",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260430-001",
+        "path": "04_Evidence/Events/EVT-20260430-001-amazon-q1-2026-capex-aws.md",
+        "title": "Amazon Q1 2026 现金资本开支翻倍至 432 亿美元，主要投向 AWS 技术基础设施",
+        "event_date": "2026-04-30",
+        "review_status": "reviewed",
+        "confidence": 0.95,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-057"
+        ],
+        "citation_anchors": null
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-057",
+          "path": "01_Inbox/Articles/SRC-20260806-057-10-q-filing-2026-04-30.md",
+          "title": "10-Q filing 2026-04-30",
+          "publisher": "AMAZON COM INC",
+          "published_at": "2026-04-30",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000014/amzn-20260331.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-057/20260806142321-bfc025c92bd7.html",
+            "01_Inbox/_assets/SRC-20260806-057/20260806142321-bfc025c92bd7.metadata.json"
+          ],
+          "content_sha256": "bfc025c92bd7ed07daac4210020764854242103002ac7bb59ccb28bf058f04e3",
+          "citation_anchors": []
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260430-001",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-aws",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "capex",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.95
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "fail",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The Event does not provide a complete verifiable citation anchor for every Source."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-09",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260430-001"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260809-002",
+      "path": "05_Research/Assertions/IMP-20260809-002.md",
+      "before_sha256": "f0107c1b3cdc98e8d7c27fcaca1055e4c2694b82f098ce1c08bc0716b67fbbb1",
+      "after_sha256": "82015546e3dba84829bea21ea7d55f32bef002eb0157d732fdb843e8c7e27025",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20251003-001",
+        "path": "04_Evidence/Events/EVT-20251003-001-micron-10k-dram-asp-volatility.md",
+        "title": "Micron 10-K 披露 DRAM 平均售价(ASP)过去五年年变动幅度在 +40% 至 -40% 区间",
+        "event_date": "2025-10-03",
+        "review_status": "reviewed",
+        "confidence": 0.9,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-070"
+        ],
+        "citation_anchors": null
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-070",
+          "path": "01_Inbox/Articles/SRC-20260806-070-10-k-filing-2025-10-03.md",
+          "title": "10-K filing 2025-10-03",
+          "publisher": "MICRON TECHNOLOGY INC",
+          "published_at": "2025-10-03",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.sec.gov/Archives/edgar/data/723125/000072312525000028/mu-20250828.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-070/20260806142422-7deb81957a1f.html",
+            "01_Inbox/_assets/SRC-20260806-070/20260806142422-7deb81957a1f.metadata.json"
+          ],
+          "content_sha256": "7deb81957a1fa7ecc94cc478df53516b1936b25b54c741903780871e2f0046fb",
+          "citation_anchors": []
+        }
+      ],
+      "subject": {
+        "id": "EVT-20251003-001",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-micron",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "price",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.9
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "fail",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The Event does not provide a complete verifiable citation anchor for every Source."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-09",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20251003-001"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260809-003",
+      "path": "05_Research/Assertions/IMP-20260809-003.md",
+      "before_sha256": "1e7cece59e5b4a712885adfe649784426130c7d6deb5411c26525286c2835ce1",
+      "after_sha256": "8dba79f9fad87e2255edf32f3ca364f0c9b898424af78a628633dd38927e9a47",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260225-035",
+        "path": "04_Evidence/Events/EVT-20260225-035-nvidia-10k-asp-actions.md",
+        "title": "NVIDIA 10-K 披露曾因渠道定价计划下调平均售价、并因供应商提价而上调部分产品价格",
+        "event_date": "2026-02-25",
+        "review_status": "reviewed",
+        "confidence": 0.9,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-079"
+        ],
+        "citation_anchors": null
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-079",
+          "path": "01_Inbox/Articles/SRC-20260806-079-10-k-filing-2026-02-25.md",
+          "title": "10-K filing 2026-02-25",
+          "publisher": "NVIDIA CORP",
+          "published_at": "2026-02-25",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-079/20260806142534-73d81f5a111a.html",
+            "01_Inbox/_assets/SRC-20260806-079/20260806142534-73d81f5a111a.metadata.json"
+          ],
+          "content_sha256": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b",
+          "citation_anchors": []
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260225-035",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-nvidia",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "price",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.9
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "fail",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The Event does not provide a complete verifiable citation anchor for every Source."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-09",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260225-035"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    },
+    {
+      "assertion_id": "IMP-20260809-004",
+      "path": "05_Research/Assertions/IMP-20260809-004.md",
+      "before_sha256": "3da9b5b6066d2086be6fe5ad3a48151cb280ac7819895e81b89f40167467e0b2",
+      "after_sha256": "7d420c8c52fb2a6a8049327297b46b3f74baad508baf8995266bdfcdf3c72b00",
+      "recommendation": "ready_for_human_review",
+      "rationale": "Repository-backed checks and recorded gaps are ready for human review; no approval is implied.",
+      "event": {
+        "id": "EVT-20260625-001",
+        "path": "04_Evidence/Events/EVT-20260625-001-micron-10q-hbm-demand.md",
+        "title": "Micron 10-Q 披露生成式 AI 带动 HBM 与先进内存需求增长",
+        "event_date": "2026-06-25",
+        "review_status": "reviewed",
+        "confidence": 0.85,
+        "project_ids": [
+          "PRJ-001"
+        ],
+        "source_ids": [
+          "SRC-20260806-067"
+        ],
+        "citation_anchors": null
+      },
+      "sources": [
+        {
+          "id": "SRC-20260806-067",
+          "path": "01_Inbox/Articles/SRC-20260806-067-10-q-filing-2026-06-25.md",
+          "title": "10-Q filing 2026-06-25",
+          "publisher": "MICRON TECHNOLOGY INC",
+          "published_at": "2026-06-25",
+          "accessed_at": "2026-08-06",
+          "url": "https://www.sec.gov/Archives/edgar/data/723125/000072312526000015/mu-20260528.htm",
+          "local_path": "",
+          "asset_paths": [
+            "01_Inbox/_assets/SRC-20260806-067/20260806142407-bf4c3fb18332.html",
+            "01_Inbox/_assets/SRC-20260806-067/20260806142407-bf4c3fb18332.metadata.json"
+          ],
+          "content_sha256": "bf4c3fb1833243d1c41c0426c4e0332d3a2f61a2b44e534fe8ff13648f205e20",
+          "citation_anchors": []
+        }
+      ],
+      "subject": {
+        "id": "EVT-20260625-001",
+        "type": "event"
+      },
+      "target": {
+        "id": "COM-micron",
+        "type": "company"
+      },
+      "declared_relation": {
+        "id": "",
+        "predicate": ""
+      },
+      "relevant_relations": [],
+      "rule_check": {
+        "predicate": "",
+        "impact_type": "demand",
+        "allowed": false,
+        "default_direction": null,
+        "conditional": null,
+        "weakest_link_confidence": 0.85
+      },
+      "checks": {
+        "assertion_path": "pass",
+        "assertion_identity": "pass",
+        "schema_valid": "pass",
+        "review_pending": "pass",
+        "project_scope": "pass",
+        "before_hash": "pass",
+        "after_hash": "pass",
+        "trigger_event": "pass",
+        "event_reviewed": "pass",
+        "event_substantive": "pass",
+        "source_provenance": "pass",
+        "source_asset": "pass",
+        "citation_anchor": "fail",
+        "subject_valid": "pass",
+        "target_valid": "pass",
+        "declared_relation": "not_applicable",
+        "relevant_relations": "not_applicable",
+        "rule_map": "not_applicable",
+        "weakest_link_confidence": "pass",
+        "notes_preserved": "pass"
+      },
+      "issues": [
+        "The Event does not provide a complete verifiable citation anchor for every Source."
+      ],
+      "changes": [
+        {
+          "field": "updated_at",
+          "before": "2026-08-09",
+          "after": "2026-08-11",
+          "evidence_basis": []
+        },
+        {
+          "field": "project_ids",
+          "before": [],
+          "after": [
+            "PRJ-001"
+          ],
+          "evidence_basis": [
+            "EVT-20260625-001"
+          ]
+        }
+      ],
+      "preserved_note_fragments": [
+        "Mechanism is a deterministic, evidence-anchored draft; refine at review."
+      ],
+      "human_review_required": true
+    }
+  ]
+}
