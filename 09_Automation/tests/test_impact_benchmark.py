@@ -5,6 +5,7 @@ complete within the target. Uses lightweight fake objects (no Pydantic) so the
 graph builds fast; asserts structural validity rather than a brittle wall-clock
 so the test stays green on slow CI.
 """
+
 from __future__ import annotations
 
 import time
@@ -14,8 +15,9 @@ from research_os.services.impact_path import expand_impact_paths
 
 
 class _Fake:
-    def __init__(self, object_id: str, object_type: str, metadata: dict,
-                 body: str = "") -> None:
+    def __init__(
+        self, object_id: str, object_type: str, metadata: dict, body: str = ""
+    ) -> None:
         self.object_id = object_id
         self.object_type = object_type
         self.metadata = metadata
@@ -28,11 +30,17 @@ def _build_50k_graph(num_entities: int = 5000, edges_per: int = 10) -> list[_Fak
     for i in range(num_entities):
         objects.append(_Fake(f"COM-{i}", "company", {"title": f"Company {i}"}))
     event = _Fake(
-        "EVT-bench", "event",
+        "EVT-bench",
+        "event",
         {
-            "id": "EVT-bench", "type": "event", "title": "Synthetic ramp",
-            "review_status": "reviewed", "companies": ["COM-0", "COM-1"],
-            "technologies": [], "products": [], "confidence": 0.7,
+            "id": "EVT-bench",
+            "type": "event",
+            "title": "Synthetic ramp",
+            "review_status": "reviewed",
+            "companies": ["COM-0", "COM-1"],
+            "technologies": [],
+            "products": [],
+            "confidence": 0.7,
             "event_date": "2026-08-08",
         },
     )
@@ -45,13 +53,19 @@ def _build_50k_graph(num_entities: int = 5000, edges_per: int = 10) -> list[_Fak
             rel_id += 1
             objects.append(
                 _Fake(
-                    f"REL-{rel_id:05d}", "ontology_assertion",
+                    f"REL-{rel_id:05d}",
+                    "ontology_assertion",
                     {
-                        "id": f"REL-{rel_id:05d}", "type": "ontology_assertion",
-                        "subject_id": f"COM-{i}", "predicate": "SUPPLIES",
-                        "object_id": f"COM-{nxt}", "evidence_ids": evidence,
-                        "review_status": "reviewed", "valid_from": "2026-01-01",
-                        "valid_to": None, "confidence": 0.6,
+                        "id": f"REL-{rel_id:05d}",
+                        "type": "ontology_assertion",
+                        "subject_id": f"COM-{i}",
+                        "predicate": "SUPPLIES",
+                        "object_id": f"COM-{nxt}",
+                        "evidence_ids": evidence,
+                        "review_status": "reviewed",
+                        "valid_from": "2026-01-01",
+                        "valid_to": None,
+                        "confidence": 0.6,
                     },
                 )
             )

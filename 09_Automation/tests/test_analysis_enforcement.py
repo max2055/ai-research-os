@@ -231,10 +231,12 @@ class RedTeamEnforcementTests(unittest.TestCase):
         }
 
     def test_boilerplate_counter_evidence_rejected(self) -> None:
-        run = self._red_team_run(POSITIVE_BODY.replace(
-            "## Judgments\n改善确定，正面。\n",
-            "## Counter-evidence\nNone found.\n## Judgments\n改善确定，正面。\n",
-        ))
+        run = self._red_team_run(
+            POSITIVE_BODY.replace(
+                "## Judgments\n改善确定，正面。\n",
+                "## Counter-evidence\nNone found.\n## Judgments\n改善确定，正面。\n",
+            )
+        )
         findings: list[Finding] = []
         validate_red_team_enforcement(run, self._by_id(run), findings)
         self.assertIn("RT001", [f.code for f in findings])

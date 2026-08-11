@@ -40,9 +40,7 @@ class SectorIndex:
             definition = meta.get("definition")
             if definition:
                 keywords += [
-                    part.strip()
-                    for part in str(definition).split(",")
-                    if part.strip()
+                    part.strip() for part in str(definition).split(",") if part.strip()
                 ]
             for keyword in keywords:
                 normalized = _normalize(keyword)

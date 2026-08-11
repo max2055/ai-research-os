@@ -137,7 +137,7 @@ def evaluate_run(objects: list[ResearchObject], run_id: str) -> EvaluationScorec
             "无来源外事实",
             _outside_facts_score(body, by_id, run),
             GATE["outside_facts"],
-            "所有被引证据对象均为声明输入" ,
+            "所有被引证据对象均为声明输入",
         ),
         _dimension(
             "sections",
@@ -189,9 +189,7 @@ def evaluator_metrics(scorecards: list[EvaluationScorecard]) -> dict[str, Any]:
             if dimension is not None:
                 dims.append(dimension)
         result[f"{key}.pass"] = sum(1 for d in dims if d.passed)
-        result[f"{key}.mean"] = (
-            sum(d.score for d in dims) / len(dims) if dims else 0.0
-        )
+        result[f"{key}.mean"] = sum(d.score for d in dims) / len(dims) if dims else 0.0
     result["gate_pass"] = sum(1 for card in scorecards if card.gate_pass)
     result["overall"] = sum(card.overall for card in scorecards) / total
     return result
@@ -208,14 +206,12 @@ def render_evaluation_packet(
         f"{'✓' if dimension.passed else '✗'} | {dimension.detail} |"
         for dimension in card.dimensions
     )
-    human_rows = "\n".join(
-        f"| {label} | ⬜ |" for label in _HUMAN_DIMENSIONS
-    )
+    human_rows = "\n".join(f"| {label} | ⬜ |" for label in _HUMAN_DIMENSIONS)
     return f"""# D-017 Evaluation Packet — {card.run_id}
 
 状态：`in_progress`（人工判定；阈值见 Phase 4 §11）
 模式：{card.mode_id}（{card.mode_slug}）
-整体：{_fmt(card.overall)} — 确定性 Gate {'PASS' if card.gate_pass else 'FAIL'}
+整体：{_fmt(card.overall)} — 确定性 Gate {"PASS" if card.gate_pass else "FAIL"}
 
 ## 确定性评分
 
@@ -301,11 +297,7 @@ def _citation_score(body: str, by_id: dict[str, ResearchObject]) -> float:
 
 def _citation_detail(body: str, by_id: dict[str, ResearchObject]) -> str:
     cited = sorted(
-        {
-            token
-            for token in _ID_TOKEN_RE.findall(body)
-            if _matches_pattern(token)
-        }
+        {token for token in _ID_TOKEN_RE.findall(body) if _matches_pattern(token)}
     )
     unresolved = [token for token in cited if token not in by_id]
     return (

@@ -33,7 +33,15 @@
 
 ```python
 result = benchmark_dashboard(root, repeats=5, impact_edges=50_000)
-for operation in ("home", "candidate_queue", "company", "sector", "impact_3_hop", "validate", "index_rebuild"):
+for operation in (
+    "home",
+    "candidate_queue",
+    "company",
+    "sector",
+    "impact_3_hop",
+    "validate",
+    "index_rebuild",
+):
     self.assertIn(operation, result.measurements)
     self.assertGreaterEqual(result.measurements[operation].samples, 5)
     self.assertGreaterEqual(result.measurements[operation].p95_seconds, 0)
@@ -127,9 +135,13 @@ Assert `create_candidate_snapshot` uses a live SQLite backup, refuses overwrite,
 Create:
 
 ```python
-def create_candidate_snapshot(root: Path, destination: Path, *, now: str | None = None) -> dict[str, Any]: ...
+def create_candidate_snapshot(
+    root: Path, destination: Path, *, now: str | None = None
+) -> dict[str, Any]: ...
 def verify_candidate_snapshot(snapshot: Path, manifest: Path) -> dict[str, Any]: ...
-def backup_age_status(manifest: Path, *, now: str | None = None, max_age_hours: int = 24) -> dict[str, Any]: ...
+def backup_age_status(
+    manifest: Path, *, now: str | None = None, max_age_hours: int = 24
+) -> dict[str, Any]: ...
 ```
 
 Write to a sibling temporary file, fsync, verify, then atomically rename. The manifest contains no Candidate content, URL, or secret.

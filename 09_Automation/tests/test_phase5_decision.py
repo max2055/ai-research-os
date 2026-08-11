@@ -13,6 +13,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 try:
     from fastapi.testclient import TestClient
 
@@ -179,9 +181,7 @@ class E018DecisionAlertsTests(unittest.TestCase):
             self.assertEqual(2, report["active_recommendations"])
             self.assertTrue(any("REC-STALE" in a for a in report["alerts"]))
             self.assertFalse(any("REC-FRESH 已过期" in a for a in report["alerts"]))
-            self.assertTrue(
-                any("REC-FRESH 催化剂" in a for a in report["alerts"])
-            )
+            self.assertTrue(any("REC-FRESH 催化剂" in a for a in report["alerts"]))
 
     def test_no_alerts_when_clean(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -203,6 +203,7 @@ class E018DecisionAlertsTests(unittest.TestCase):
 class E017DecisionDashboardTests(unittest.TestCase):
     """E-017: /decision page renders read-only (real repo, empty Phase 5 data)."""
 
+    @pytest.mark.local_integration
     def test_decision_route_returns_200(self) -> None:
         client = TestClient(create_app(ROOT))
         response = client.get("/decision")

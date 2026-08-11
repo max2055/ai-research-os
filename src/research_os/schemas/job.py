@@ -27,6 +27,7 @@ class JobSchema(ManagedObjectSchema):
         "daily-brief",
         "forecast-alerts",
         "backup-candidate",
+        "backup-durable",
     ]
     started_at: DateTimeString
     finished_at: DateTimeString

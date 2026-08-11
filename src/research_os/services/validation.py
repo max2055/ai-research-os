@@ -6,6 +6,7 @@ import hashlib
 import re
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Literal
 
 from pydantic import ValidationError
 
@@ -23,6 +24,8 @@ from research_os.repositories.markdown import MarkdownDocument, object_paths
 from research_os.services.analysis_contract import validate_run_contract
 from research_os.services.discovery_sandbox import validate_discovery_sandbox
 from research_os.services.red_team_enforcement import validate_red_team_enforcement
+
+ValidationMode = Literal["strict", "metadata-only"]
 
 
 def add(
@@ -728,9 +731,10 @@ def validate_valuation_rec_semantics(
             )
     elif obj.object_type == "recommendation":
         _check_supersession(obj, by_id, findings, "REC003")
-        if obj.metadata.get("status") == "active" and obj.metadata.get(
-            "review_status"
-        ) != "reviewed":
+        if (
+            obj.metadata.get("status") == "active"
+            and obj.metadata.get("review_status") != "reviewed"
+        ):
             add(
                 findings,
                 "error",
@@ -787,6 +791,8 @@ def validate_source_assets(
     root: Path,
     objects: list[ResearchObject],
     findings: list[Finding],
+    *,
+    mode: ValidationMode = "strict",
 ) -> None:
     for obj in objects:
         if obj.object_type != "source":
@@ -802,7 +808,7 @@ def validate_source_assets(
                     obj,
                     f"asset path escapes repository: {value}",
                 )
-            elif not target.is_file():
+            elif not target.is_file() and mode == "strict":
                 add(
                     findings,
                     "warning",
@@ -825,6 +831,8 @@ def validate_generated_event(
     obj: ResearchObject,
     by_id: dict[str, ResearchObject],
     findings: list[Finding],
+    *,
+    mode: ValidationMode = "strict",
 ) -> None:
     if (
         obj.object_type != "event"
@@ -869,18 +877,32 @@ def validate_generated_event(
             continue
         target = root / asset
         if not target.is_file():
-            add(
-                findings,
-                "error",
-                "EVT009",
-                obj,
-                f"citation asset is unavailable: {asset}",
-            )
+            if mode == "strict":
+                add(
+                    findings,
+                    "error",
+                    "EVT009",
+                    obj,
+                    f"citation asset is unavailable: {asset}",
+                )
+            else:
+                quote = str(anchor.get("quote", ""))
+                actual_hash = hashlib.sha256(quote.encode("utf-8")).hexdigest()
+                if actual_hash != anchor.get("quote_sha256"):
+                    add(
+                        findings,
+                        "error",
+                        "EVT010",
+                        obj,
+                        "citation quote hash mismatch",
+                    )
             continue
         quote = str(anchor.get("quote", ""))
         actual_hash = hashlib.sha256(quote.encode("utf-8")).hexdigest()
         if actual_hash != anchor.get("quote_sha256"):
             add(findings, "error", "EVT010", obj, "citation quote hash mismatch")
+        if mode == "metadata-only":
+            continue
         locator = str(anchor.get("locator", ""))
         match = re.fullmatch(r"L(\d+)(?:-L?(\d+))?", locator)
         if not match:
@@ -1110,6 +1132,8 @@ def validate_source_processing(
 
 def validate_repository(
     root: Path,
+    *,
+    mode: ValidationMode = "strict",
 ) -> tuple[list[ResearchObject], list[Finding]]:
     root = root.resolve()
     objects, findings = load_objects(root)
@@ -1137,7 +1161,7 @@ def validate_repository(
         validate_taxonomy(obj, codes, findings)
         validate_refs(obj, by_id, findings)
         validate_review_invariants(obj, by_id, findings)
-        validate_generated_event(root, obj, by_id, findings)
+        validate_generated_event(root, obj, by_id, findings, mode=mode)
         validate_generated_report(obj, by_id, findings)
         validate_report_supersession(obj, by_id, findings)
         validate_reviewed_assertion_evidence(obj, by_id, findings)
@@ -1149,7 +1173,7 @@ def validate_repository(
         validate_red_team_enforcement(obj, by_id, findings)
         validate_discovery_sandbox(obj, by_id, findings)
     validate_source_processing(objects, by_id, findings)
-    validate_source_assets(root, objects, findings)
+    validate_source_assets(root, objects, findings, mode=mode)
     validate_generation_fingerprints(objects, findings)
     findings.sort(
         key=lambda item: (str(item.path), item.level, item.code, item.message)

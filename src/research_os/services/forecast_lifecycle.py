@@ -37,17 +37,13 @@ def prepare_open_forecast(
         raise ValueError("actor is required")
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before opening a forecast"
-        )
+        raise ValueError("repository validation must pass before opening a forecast")
     by_id = {obj.object_id: obj for obj in objects}
     forecast = by_id.get(forecast_id)
     if forecast is None or forecast.object_type != "forecast":
         raise ValueError(f"unknown Forecast {forecast_id}")
     if forecast.metadata.get("review_status") != "reviewed":
-        raise ValueError(
-            f"cannot open {forecast_id}: review_status must be reviewed"
-        )
+        raise ValueError(f"cannot open {forecast_id}: review_status must be reviewed")
     status = str(forecast.metadata.get("status"))
     if status not in _OPENABLE_STATUSES:
         raise ValueError(f"cannot open {forecast_id} from status {status!r}")

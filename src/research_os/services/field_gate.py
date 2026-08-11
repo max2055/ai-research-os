@@ -159,9 +159,7 @@ def render_field_gate_packet(
     )
     lines.append("|---|---|---|---|---|---|---|---|---|---|")
     for case_id in sorted(packet["cases"]):
-        for mode_slug, card in sorted(
-            packet["cases"][case_id]["scorecards"].items()
-        ):
+        for mode_slug, card in sorted(packet["cases"][case_id]["scorecards"].items()):
             cells = " | ".join("⬜" for _ in _HUMAN_DIMENSIONS)
             lines.append(f"| {case_id} | {card.run_id}（{mode_slug}） | {cells} |")
     lines.append("")
@@ -182,9 +180,11 @@ def render_field_gate_scorecards(
 ) -> str:
     """Plain-text per-run scorecards (CLI)."""
     packet = field_gate_packet(objects, matrix)
-    parts = [f"# D-019 scorecards — {packet['runs']} runs, "
-             f"gate {packet['gate_pass']}/{packet['runs']}, "
-             f"overall {packet['overall']:.3f}"]
+    parts = [
+        f"# D-019 scorecards — {packet['runs']} runs, "
+        f"gate {packet['gate_pass']}/{packet['runs']}, "
+        f"overall {packet['overall']:.3f}"
+    ]
     for case_id in sorted(packet["cases"]):
         for _, card in sorted(packet["cases"][case_id]["scorecards"].items()):
             parts.append("\n" + render_scorecard(card))

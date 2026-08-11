@@ -289,8 +289,7 @@ def render_promote_plan(plan: PromotePlan) -> str:
     capture = plan.capture
     duplicates = capture.duplicate_matches
     duplicate_text = (
-        ", ".join(f"{match.source_id}:{match.reason}" for match in duplicates)
-        or "none"
+        ", ".join(f"{match.source_id}:{match.reason}" for match in duplicates) or "none"
     )
     lines = [
         "# Candidate promote (dry-run)",

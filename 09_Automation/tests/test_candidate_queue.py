@@ -6,6 +6,7 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from research_os.services import candidate_db
@@ -17,6 +18,7 @@ from research_os.services.candidate_queue import (
     render_candidate_list,
     render_enrichment,
 )
+from test_cli import run_cli
 
 AUTOMATION = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(AUTOMATION))
@@ -176,15 +178,11 @@ class CandidateQueueTests(unittest.TestCase):
                 "publisher": "Test",
                 "content_fingerprint": f"fp-{index}",
                 "language": None,
-                "duplicate_cluster_id": (
-                    cluster_ids[index] if cluster_ids else None
-                ),
+                "duplicate_cluster_id": (cluster_ids[index] if cluster_ids else None),
             }
             for index, title in enumerate(titles)
         ]
-        candidate_db.insert_candidates(
-            db_path, candidates, "CHN-test", discovered_at
-        )
+        candidate_db.insert_candidates(db_path, candidates, "CHN-test", discovered_at)
 
     def _priority(self, root: Path, candidate_id: str) -> float | None:
         connection = sqlite3.connect(candidate_db.candidate_db_path(root))
@@ -353,6 +351,129 @@ class CandidateQueueTests(unittest.TestCase):
             self.assertEqual(1, len(rows))
             self.assertEqual("SRC-20260729-001", rows[0]["existing_source_id"])
             self.assertTrue(rows[0]["already_sourced"])
+
+    def test_queue_order_is_stable_across_pages(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(
+                root,
+                [f"Candidate {index}" for index in range(7)],
+                cluster_ids=[None, "CLU-x", "CLU-x", None, None, None, None],
+            )
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                base = datetime(2026, 8, 6, tzinfo=UTC)
+                priorities = [None, 0.8, 0.9, 0.9, 0.9, 0.4, 0.9]
+                for index, priority in enumerate(priorities):
+                    discovered = (base + timedelta(minutes=index)).isoformat()
+                    connection.execute(
+                        "UPDATE candidates SET priority_score = ?, discovered_at = ? "
+                        "WHERE candidate_id = ?",
+                        (priority, discovered, f"CND-{index:04d}"),
+                    )
+                # Exercise the final candidate_id tie-breaker.
+                connection.execute(
+                    "UPDATE candidates SET discovered_at = ? "
+                    "WHERE candidate_id IN ('CND-0003', 'CND-0004')",
+                    ((base + timedelta(minutes=4)).isoformat(),),
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            expected = [
+                "CND-0006",
+                "CND-0003",
+                "CND-0004",
+                "CND-0002",
+                "CND-0005",
+                "CND-0000",
+            ]
+            first = queue_rows(root, limit=2, offset=0)
+            second = queue_rows(root, limit=2, offset=2)
+            third = queue_rows(root, limit=2, offset=4)
+            actual = [row["candidate_id"] for row in [*first, *second, *third]]
+            self.assertEqual(expected, actual)
+            self.assertEqual(len(actual), len(set(actual)))
+
+    def test_queue_applies_filters_and_collapse_before_offset(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(
+                root,
+                [f"Candidate {index}" for index in range(6)],
+                cluster_ids=["CLU-a", "CLU-a", None, None, None, None],
+            )
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                proposal = '{"status":"matched","entity_id":"COM-test"}'
+                connection.execute(
+                    "UPDATE candidates SET priority_score = 0.8, "
+                    "entity_proposals_json = ?",
+                    (proposal,),
+                )
+                connection.execute(
+                    "UPDATE candidates SET status = 'dismissed' "
+                    "WHERE candidate_id = 'CND-0005'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            page = queue_rows(
+                root,
+                entity_id="COM-test",
+                tier="core",
+                min_priority=0.5,
+                limit=2,
+                offset=2,
+            )
+            self.assertEqual(
+                ["CND-0003", "CND-0004"],
+                [row["candidate_id"] for row in page],
+            )
+            expanded = queue_rows(root, limit=2, offset=2, show_dups=True)
+            self.assertEqual(
+                ["CND-0002", "CND-0003"],
+                [row["candidate_id"] for row in expanded],
+            )
+
+    def test_queue_rejects_invalid_page_boundaries(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            for limit in (0, -1):
+                with (
+                    self.subTest(limit=limit),
+                    self.assertRaisesRegex(ValueError, "limit must be positive"),
+                ):
+                    queue_rows(root, limit=limit)
+            with self.assertRaisesRegex(ValueError, "offset must be non-negative"):
+                queue_rows(root, offset=-1)
+
+    def test_candidate_list_cli_plumbs_offset(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(root, ["First", "Second", "Third"])
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                connection.execute("UPDATE candidates SET priority_score = 0.5")
+                connection.commit()
+            finally:
+                connection.close()
+
+            result = run_cli(
+                root,
+                "candidates",
+                "list",
+                "--limit",
+                "1",
+                "--offset",
+                "1",
+            )
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("Second", result.stdout)
+            self.assertNotIn("First", result.stdout)
+            self.assertNotIn("Third", result.stdout)
 
 
 if __name__ == "__main__":

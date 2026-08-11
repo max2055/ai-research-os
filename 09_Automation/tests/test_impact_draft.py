@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 try:
     from research_os.repositories.markdown import MarkdownDocument
     from research_os.schemas import validate_metadata
@@ -29,6 +31,7 @@ def _real_proposal() -> dict:
     return proposals[0]
 
 
+@pytest.mark.local_integration
 class PrepareImpactDraftTests(unittest.TestCase):
     """C-011: proposal dict -> schema-valid pending IMP Markdown (read-only)."""
 
@@ -47,6 +50,7 @@ class PrepareImpactDraftTests(unittest.TestCase):
             obj = validate_metadata(doc.metadata)
             self.assertEqual("impact_assertion", obj.type)
             self.assertEqual("pending", obj.review_status)
+            self.assertEqual(proposal["project_ids"], doc.metadata["project_ids"])
             # extra traceability fields survive round-trip
             self.assertEqual(proposal["relation_id"], doc.metadata["relation_id"])
             self.assertEqual(proposal["predicate"], doc.metadata["predicate"])
@@ -58,6 +62,14 @@ class PrepareImpactDraftTests(unittest.TestCase):
         self.assertIn("review_status: pending", content)
         self.assertIn("generation_method: direct-proposal", content)
         self.assertIn("# Impact Assertion", content)
+
+    def test_draft_preserves_proposal_project_scope(self) -> None:
+        proposal = dict(_real_proposal())
+        proposal["project_ids"] = ["PRJ-001"]
+        _, content = prepare_impact_draft(
+            ROOT, proposal=proposal, created_at="2026-08-07"
+        )
+        self.assertIn("project_ids: [PRJ-001]", content)
 
     def test_rejects_bad_date(self) -> None:
         with self.assertRaises(ValueError):
@@ -72,6 +84,7 @@ class PrepareImpactDraftTests(unittest.TestCase):
             prepare_impact_draft(ROOT, proposal=proposal, created_at="2026-08-07")
 
 
+@pytest.mark.local_integration
 class PrepareImpactBatchTests(unittest.TestCase):
     """C-014: propose + draft (dry-run) / materialize (apply)."""
 

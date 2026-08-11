@@ -94,14 +94,47 @@ research-os ui
 
 默认地址为 `http://127.0.0.1:8765`，v1 只允许 loopback，不提供 Web 写入。
 
-查看 M6 与 v0.2 发布阻断项：
+本地完整校验必须使用 strict 模式；它会读取 Git 外的真实 Source assets：
+
+```bash
+research-os validate --strict
+research-os index --check
+research-os index --check --project PRJ-001
+research-os index --check --project PRJ-002
+```
+
+私有 GitHub CI 因不接触 raw assets、Candidate DB 或 secrets，只运行显式的
+metadata-only 子集：
+
+```bash
+research-os validate --metadata-only
+research-os index --check --metadata-only
+```
+
+metadata-only 不能替代上述 strict local Gate。
+
+查看发布状态：
 
 ```bash
 research-os release check
+research-os release check --version 0.3 --format json
 ```
 
-该命令只读；真实 Source、人工审核、Weekly/Monthly 运行和最终发布决定不能由
-自动化代填。
+默认命令保持 v0.2 的 18 Gate；显式 `--version 0.3` 运行 F-023 机器检查。
+两者都只读。v0.3 当前仍由 WP-530、WP-620 和 F-024 独立阻断，自动化不能代填
+真实 Source、Forecast outcome、Weekly/Monthly 运行或最终发布决定。
+
+加密 durable backup 先 dry-run，再显式 apply：
+
+```bash
+BACKUP_CONFIG=09_Automation/operational/backup.local.json
+research-os backup durable create --config "$BACKUP_CONFIG"
+research-os backup durable create --config "$BACKUP_CONFIG" --apply
+```
+
+该命令将 Candidate SQLite snapshot 与 Source assets 分成两组，经 `age` 加密后上传到
+配置的 private GitHub backup prerelease。密钥配置、24 小时 RPO、remote verify 与
+disposable restore 步骤见 `00_System/Recovery_Runbook.md`。
 
 激活产品环境后，旧的 `python3 09_Automation/research_os.py ...` 入口
 至少保留一个版本周期；兼容入口不再包含独立的无依赖业务内核。

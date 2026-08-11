@@ -115,7 +115,18 @@ Create controlled fixtures/env state and assert:
 
 ```python
 snapshot = health_snapshot(root, now="2026-08-09T12:00:00+08:00")
-for key in ("validation", "indexes", "assets", "candidate_db", "channels", "failed_runs", "backup", "host", "config", "model_cost"):
+for key in (
+    "validation",
+    "indexes",
+    "assets",
+    "candidate_db",
+    "channels",
+    "failed_runs",
+    "backup",
+    "host",
+    "config",
+    "model_cost",
+):
     self.assertIn(key, snapshot)
 self.assertIn(snapshot["host"]["timezone"], ("Asia/Shanghai", "UTC"))
 self.assertIn("free_bytes", snapshot["host"]["disk"])

@@ -156,18 +156,22 @@ permissions.
 The workflow installs the supported Python environment from the lockable project
 metadata and runs:
 
-- repository validation;
-- global, PRJ-001, and PRJ-002 index checks;
-- the complete pytest suite;
+- explicit metadata-only repository validation that suppresses only unavailable raw
+  asset bytes while retaining schema, reference, governance, and index checks;
+- metadata-only global, PRJ-001, and PRJ-002 index checks;
+- the complete asset-independent pytest suite; tests that intentionally exercise the
+  real ignored asset store remain an explicit local-integration marker;
 - Ruff lint and format checks;
 - mypy over `src/research_os`;
-- loopback Dashboard route smoke;
+- fixture-backed loopback Dashboard route smoke;
 - v0.3 release check assertion that the command evaluates successfully and returns
   the currently expected blocked status.
 
-CI does not require provider keys, decrypt backups, access raw ignored Source assets,
-or treat unavailable secrets as a product failure. Dependency caches cannot contain
-repository secrets. Logs and uploaded diagnostics are screened for sensitive values.
+Metadata-only validation is an explicit CLI mode; strict validation remains the
+default and still fails when required raw asset bytes are unavailable. CI does not
+require provider keys, decrypt backups, access raw ignored Source assets, or treat
+unavailable secrets as a product failure. Dependency caches cannot contain repository
+secrets. Logs and uploaded diagnostics are screened for sensitive values.
 
 The implementation is not considered remotely verified until the branch is pushed
 and the matching GitHub Actions run completes successfully.

@@ -143,12 +143,8 @@ class ResolutionSchemaTests(unittest.TestCase):
         self.assertTrue(
             ID_PATTERNS["forecast_resolution"].fullmatch("RES-20260809-001")
         )
-        self.assertTrue(
-            ID_PATTERNS["valuation_snapshot"].fullmatch("VAL-20260809-001")
-        )
-        self.assertTrue(
-            ID_PATTERNS["recommendation"].fullmatch("REC-20260809-001")
-        )
+        self.assertTrue(ID_PATTERNS["valuation_snapshot"].fullmatch("VAL-20260809-001"))
+        self.assertTrue(ID_PATTERNS["recommendation"].fullmatch("REC-20260809-001"))
 
 
 class ValuationRecommendationSchemaTests(unittest.TestCase):

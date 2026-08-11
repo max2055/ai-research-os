@@ -30,12 +30,21 @@ class DedupTests(unittest.TestCase):
 
     def test_exact_url_shares_cluster(self) -> None:
         candidates = [
-            {"title": "Alpha", "canonical_url": "https://a.example/x",
-             "content_fingerprint": "fp1"},
-            {"title": "Alpha", "canonical_url": "https://a.example/x",
-             "content_fingerprint": "fp2"},
-            {"title": "Beta", "canonical_url": "https://b.example/y",
-             "content_fingerprint": "fp3"},
+            {
+                "title": "Alpha",
+                "canonical_url": "https://a.example/x",
+                "content_fingerprint": "fp1",
+            },
+            {
+                "title": "Alpha",
+                "canonical_url": "https://a.example/x",
+                "content_fingerprint": "fp2",
+            },
+            {
+                "title": "Beta",
+                "canonical_url": "https://b.example/y",
+                "content_fingerprint": "fp3",
+            },
         ]
         result = assign_clusters(candidates)
         clusters = [c["duplicate_cluster_id"] for c in result]
@@ -44,10 +53,16 @@ class DedupTests(unittest.TestCase):
 
     def test_exact_fingerprint_shares_cluster(self) -> None:
         candidates = [
-            {"title": "One", "canonical_url": "https://a/1",
-             "content_fingerprint": "same"},
-            {"title": "Two", "canonical_url": "https://a/2",
-             "content_fingerprint": "same"},
+            {
+                "title": "One",
+                "canonical_url": "https://a/1",
+                "content_fingerprint": "same",
+            },
+            {
+                "title": "Two",
+                "canonical_url": "https://a/2",
+                "content_fingerprint": "same",
+            },
         ]
         result = assign_clusters(candidates)
         self.assertEqual(
@@ -57,12 +72,21 @@ class DedupTests(unittest.TestCase):
 
     def test_near_title_variants_cluster_together(self) -> None:
         candidates = [
-            {"title": "SK hynix Q2 2026 Results",
-             "canonical_url": "https://a/1", "content_fingerprint": "f1"},
-            {"title": "SK hynix Q2 2026 Results -01",
-             "canonical_url": "https://a/1-01", "content_fingerprint": "f2"},
-            {"title": "SK hynix Q2 2026 Results -02",
-             "canonical_url": "https://a/1-02", "content_fingerprint": "f3"},
+            {
+                "title": "SK hynix Q2 2026 Results",
+                "canonical_url": "https://a/1",
+                "content_fingerprint": "f1",
+            },
+            {
+                "title": "SK hynix Q2 2026 Results -01",
+                "canonical_url": "https://a/1-01",
+                "content_fingerprint": "f2",
+            },
+            {
+                "title": "SK hynix Q2 2026 Results -02",
+                "canonical_url": "https://a/1-02",
+                "content_fingerprint": "f3",
+            },
         ]
         result = assign_clusters(candidates)
         clusters = {c["duplicate_cluster_id"] for c in result}
@@ -70,14 +94,24 @@ class DedupTests(unittest.TestCase):
 
     def test_cross_run_existing_cluster_is_extended(self) -> None:
         run1 = assign_clusters(
-            [{"title": "SK hynix HBF FMS 2026", "canonical_url": "https://a/hbf",
-              "content_fingerprint": "f1"}]
+            [
+                {
+                    "title": "SK hynix HBF FMS 2026",
+                    "canonical_url": "https://a/hbf",
+                    "content_fingerprint": "f1",
+                }
+            ]
         )
         cluster1 = run1[0]["duplicate_cluster_id"]
         existing = {normalize_title("SK hynix HBF FMS 2026"): cluster1}
         run2 = assign_clusters(
-            [{"title": "SK hynix HBF FMS 2026 -01",
-              "canonical_url": "https://a/hbf-01", "content_fingerprint": "f2"}],
+            [
+                {
+                    "title": "SK hynix HBF FMS 2026 -01",
+                    "canonical_url": "https://a/hbf-01",
+                    "content_fingerprint": "f2",
+                }
+            ],
             existing=existing,
         )
         self.assertEqual(cluster1, run2[0]["duplicate_cluster_id"])

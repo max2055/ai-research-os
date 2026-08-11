@@ -188,30 +188,38 @@ class E007ForecastDraftTests(unittest.TestCase):
 
     def test_rejects_resolution_date_not_after_as_of(self) -> None:
         spec = dict(_SPEC, resolution_date="2026-08-01")
-        with tempfile.TemporaryDirectory() as tmp, _patch(
-            Path(tmp), "forecast_draft", [_project(), _event()]
-        ), self.assertRaises(ValueError):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            _patch(Path(tmp), "forecast_draft", [_project(), _event()]),
+            self.assertRaises(ValueError),
+        ):
             prepare_forecast_draft(Path(tmp), spec=spec, created_at="2026-08-09")
 
     def test_rejects_numeric_range_without_range_or_unit(self) -> None:
         spec = dict(_SPEC, outcome_type="numeric_range")
-        with tempfile.TemporaryDirectory() as tmp, _patch(
-            Path(tmp), "forecast_draft", [_project(), _event()]
-        ), self.assertRaises(ValueError):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            _patch(Path(tmp), "forecast_draft", [_project(), _event()]),
+            self.assertRaises(ValueError),
+        ):
             prepare_forecast_draft(Path(tmp), spec=spec, created_at="2026-08-09")
 
     def test_rejects_missing_question(self) -> None:
         spec = dict(_SPEC, question="  ")
-        with tempfile.TemporaryDirectory() as tmp, _patch(
-            Path(tmp), "forecast_draft", [_project(), _event()]
-        ), self.assertRaises(ValueError):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            _patch(Path(tmp), "forecast_draft", [_project(), _event()]),
+            self.assertRaises(ValueError),
+        ):
             prepare_forecast_draft(Path(tmp), spec=spec, created_at="2026-08-09")
 
     def test_rejects_unknown_evidence_ref(self) -> None:
         spec = dict(_SPEC, evidence_ids=["EVT-does-not-exist"])
-        with tempfile.TemporaryDirectory() as tmp, _patch(
-            Path(tmp), "forecast_draft", [_project(), _event()]
-        ), self.assertRaises(ValueError):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            _patch(Path(tmp), "forecast_draft", [_project(), _event()]),
+            self.assertRaises(ValueError),
+        ):
             prepare_forecast_draft(Path(tmp), spec=spec, created_at="2026-08-09")
 
     def test_apply_writes_then_refuses_overwrite(self) -> None:
@@ -232,15 +240,16 @@ class E008OpenTransitionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             forecast = _write_forecast(root, review_status="pending")
-            with _patch(
-                root, "forecast_lifecycle", [forecast]
-            ), self.assertRaises(ValueError) as ctx:
-                    prepare_open_forecast(
-                        root,
-                        forecast_id="FCT-20260809-001",
-                        actor="max",
-                        as_of="2026-08-10",
-                    )
+            with (
+                _patch(root, "forecast_lifecycle", [forecast]),
+                self.assertRaises(ValueError) as ctx,
+            ):
+                prepare_open_forecast(
+                    root,
+                    forecast_id="FCT-20260809-001",
+                    actor="max",
+                    as_of="2026-08-10",
+                )
             self.assertIn("reviewed", str(ctx.exception))
 
     def test_refuses_non_draft_status(self) -> None:
@@ -249,15 +258,16 @@ class E008OpenTransitionTests(unittest.TestCase):
             forecast = _write_forecast(
                 root, status="resolved", review_status="reviewed"
             )
-            with _patch(
-                root, "forecast_lifecycle", [forecast]
-            ), self.assertRaises(ValueError) as ctx:
-                    prepare_open_forecast(
-                        root,
-                        forecast_id="FCT-20260809-001",
-                        actor="max",
-                        as_of="2026-08-10",
-                    )
+            with (
+                _patch(root, "forecast_lifecycle", [forecast]),
+                self.assertRaises(ValueError) as ctx,
+            ):
+                prepare_open_forecast(
+                    root,
+                    forecast_id="FCT-20260809-001",
+                    actor="max",
+                    as_of="2026-08-10",
+                )
             self.assertIn("resolved", str(ctx.exception))
 
     def test_prepare_opens_reviewed_forecast(self) -> None:
@@ -291,9 +301,7 @@ class E008OpenTransitionTests(unittest.TestCase):
             self.assertEqual("2026-08-10", str(doc.metadata["opened_at"]))
             # original resolution criteria untouched
             self.assertEqual("2027-01-31", str(doc.metadata["resolution_date"]))
-            self.assertEqual(
-                "Will X ramp by end of year?", doc.metadata["question"]
-            )
+            self.assertEqual("Will X ramp by end of year?", doc.metadata["question"])
 
 
 class E009DueStaleTests(unittest.TestCase):
@@ -324,9 +332,7 @@ class E009DueStaleTests(unittest.TestCase):
     def test_due_includes_on_or_before(self) -> None:
         due = due_forecasts(self._objs(), as_of="2026-08-09")
         ids = {obj.object_id for obj in due}
-        self.assertEqual(
-            {"FCT-20260801-002", "FCT-20260801-003"}, ids
-        )
+        self.assertEqual({"FCT-20260801-002", "FCT-20260801-003"}, ids)
 
     def test_overdue_is_strictly_past(self) -> None:
         overdue = overdue_forecasts(self._objs(), as_of="2026-08-09")
@@ -336,8 +342,12 @@ class E009DueStaleTests(unittest.TestCase):
         unresolved = unresolved_forecasts(self._objs(), as_of="2026-08-09")
         ids = {obj.object_id for obj in unresolved}
         self.assertEqual(
-            {"FCT-20260801-001", "FCT-20260801-002", "FCT-20260801-003",
-             "FCT-20260801-005"},
+            {
+                "FCT-20260801-001",
+                "FCT-20260801-002",
+                "FCT-20260801-003",
+                "FCT-20260801-005",
+            },
             ids,
         )
 
@@ -407,12 +417,13 @@ class E010ResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             forecast = _write_forecast(root, status="draft", review_status="reviewed")
-            with _patch(
-                root, "forecast_resolution", [forecast, _source()]
-            ), self.assertRaises(ValueError) as ctx:
-                    prepare_resolution_draft(
-                        root, spec=self._resolution_spec(), created_at="2027-02-02"
-                    )
+            with (
+                _patch(root, "forecast_resolution", [forecast, _source()]),
+                self.assertRaises(ValueError) as ctx,
+            ):
+                prepare_resolution_draft(
+                    root, spec=self._resolution_spec(), created_at="2027-02-02"
+                )
             self.assertIn("open", str(ctx.exception))
 
     def test_requires_source_ids(self) -> None:
@@ -420,27 +431,23 @@ class E010ResolutionTests(unittest.TestCase):
             root = Path(tmp)
             forecast = _write_forecast(root, status="open", review_status="reviewed")
             spec = self._resolution_spec(source_ids=[])
-            with _patch(
-                root, "forecast_resolution", [forecast, _source()]
-            ), self.assertRaises(ValueError) as ctx:
-                    prepare_resolution_draft(
-                        root, spec=spec, created_at="2027-02-02"
-                    )
+            with (
+                _patch(root, "forecast_resolution", [forecast, _source()]),
+                self.assertRaises(ValueError) as ctx,
+            ):
+                prepare_resolution_draft(root, spec=spec, created_at="2027-02-02")
             self.assertIn("source_id", str(ctx.exception))
 
     def test_ambiguous_requires_reason(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             forecast = _write_forecast(root, status="open", review_status="reviewed")
-            spec = self._resolution_spec(
-                decision="ambiguous", resolution_reason="  "
-            )
-            with _patch(
-                root, "forecast_resolution", [forecast, _source()]
-            ), self.assertRaises(ValueError) as ctx:
-                    prepare_resolution_draft(
-                        root, spec=spec, created_at="2027-02-02"
-                    )
+            spec = self._resolution_spec(decision="ambiguous", resolution_reason="  ")
+            with (
+                _patch(root, "forecast_resolution", [forecast, _source()]),
+                self.assertRaises(ValueError) as ctx,
+            ):
+                prepare_resolution_draft(root, spec=spec, created_at="2027-02-02")
             self.assertIn("reason", str(ctx.exception))
 
     def test_apply_resolves_forecast_without_editing_criteria(self) -> None:
@@ -458,9 +465,7 @@ class E010ResolutionTests(unittest.TestCase):
             self.assertEqual("resolved", doc.metadata["status"])
             self.assertEqual("2027-02-01", str(doc.metadata["resolved_at"]))
             # original question/criteria untouched
-            self.assertEqual(
-                "Will X ramp by end of year?", doc.metadata["question"]
-            )
+            self.assertEqual("Will X ramp by end of year?", doc.metadata["question"])
             self.assertEqual("2027-01-31", str(doc.metadata["resolution_date"]))
 
     def test_apply_void_decision_voids_forecast(self) -> None:

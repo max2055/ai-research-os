@@ -40,9 +40,7 @@ def http_request(
     propagated to logs or clients.
     """
     data = body.encode("utf-8") if isinstance(body, str) else body
-    request = Request(
-        url, data=data, headers=dict(headers or {}), method=method
-    )
+    request = Request(url, data=data, headers=dict(headers or {}), method=method)
     try:
         with urlopen(request, timeout=timeout) as response:  # noqa: S310
             return response.status, response.read()

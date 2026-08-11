@@ -6,13 +6,17 @@ import sqlite3
 import tempfile
 import unittest
 from datetime import UTC, date, datetime, timedelta
+from email.message import Message
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
 
+import pytest
 from fastapi.testclient import TestClient
 
 import test_research_os_core as fixtures
 from research_os.services import candidate_db
+from research_os.services.durable_backup import durable_latest_success_path
 from research_os.services.indexing import (
     apply_indexes,
     index_drift,
@@ -67,6 +71,66 @@ enabled: true
 
 Test.
 """
+
+JOB_RSS_PAYLOAD = b"""<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>job-item-1</id>
+    <title>Job retry item</title>
+    <link href="https://example.com/items/job-1" />
+    <published>2026-08-10T00:00:00Z</published>
+  </entry>
+</feed>"""
+
+
+class _JobBytesResponse:
+    def __init__(self, content: bytes) -> None:
+        self.content = content
+
+    def __enter__(self) -> _JobBytesResponse:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def read(self, size: int) -> bytes:
+        return self.content[:size]
+
+
+class _JobOutcomeOpener:
+    def __init__(self, outcome: _JobBytesResponse | Exception) -> None:
+        self.outcome = outcome
+
+    def open(self, request: object, timeout: float) -> _JobBytesResponse:
+        del request, timeout
+        if isinstance(self.outcome, Exception):
+            raise self.outcome
+        return self.outcome
+
+
+def _job_http_error(status: int, secret: str) -> HTTPError:
+    headers = Message()
+    headers["Retry-After"] = "0"
+    return HTTPError(
+        f"https://example.com/feed?token={secret}",
+        status,
+        f"response body {secret}",
+        headers,
+        None,
+    )
+
+
+def _job_opener_builder(
+    outcomes: list[_JobBytesResponse | Exception],
+):
+    openers = iter(_JobOutcomeOpener(outcome) for outcome in outcomes)
+
+    def build_opener(
+        allowed_hosts: frozenset[str], *, max_bytes: int
+    ) -> _JobOutcomeOpener:
+        del allowed_hosts, max_bytes
+        return next(openers)
+
+    return build_opener
 
 
 def prepared_root(temp: str):
@@ -275,9 +339,7 @@ class DashboardTests(unittest.TestCase):
             promoted_detail = client.get("/pipeline/queue/CAND-pro-001")
             self.assertEqual(200, promoted_detail.status_code)
             self.assertIn("promote", promoted_detail.text)
-            self.assertEqual(
-                404, client.get("/pipeline/queue/CAND-nope").status_code
-            )
+            self.assertEqual(404, client.get("/pipeline/queue/CAND-nope").status_code)
 
             channels = client.get("/pipeline/channels")
             self.assertEqual(200, channels.status_code)
@@ -377,6 +439,7 @@ class DashboardTests(unittest.TestCase):
             self.assertNotIn("B-023", operations.text)
 
 
+@pytest.mark.local_integration
 class ResearchWorkspaceSnapshotTests(unittest.TestCase):
     @property
     def root(self) -> Path:
@@ -501,6 +564,48 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
     def root(self) -> Path:
         return Path(__file__).resolve().parents[2]
 
+    def write_durable_receipt(
+        self,
+        root: Path,
+        *,
+        status: str = "verified",
+        created_at: str = "2026-08-10T00:00:00Z",
+    ) -> Path:
+        path = durable_latest_success_path(root)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        backup_id = "BKP-20260810T000000Z-aaaaaaaaaaaa"
+        sets = []
+        for backup_set in ("candidate", "source_assets"):
+            name = f"{backup_id}-{backup_set}.tar.age"
+            sets.append(
+                {
+                    "backup_set": backup_set,
+                    "name": name,
+                    "sha256": "a" * 64,
+                    "size_bytes": 1,
+                    "remote": {
+                        "name": name,
+                        "asset_id": f"asset-{backup_set}",
+                        "size_bytes": 1,
+                    },
+                }
+            )
+        path.write_text(
+            json.dumps(
+                {
+                    "backup_id": backup_id,
+                    "created_at": created_at,
+                    "status": status,
+                    "sets": sets,
+                    "remote_repository": "owner/private-repo",
+                    "remote_release": "research-os-durable-backups-v1",
+                }
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    @pytest.mark.local_integration
     def test_operations_unifies_all_due_work(self) -> None:
         snapshot = operations_snapshot(self.root, as_of="2026-08-09")
         for key in (
@@ -538,6 +643,152 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
         self.assertIn("free_bytes", snapshot["host"]["disk"])
         self.assertTrue(snapshot["host"]["timezone"])
 
+    def test_health_preserves_local_backup_fields_and_alerts_when_durable_missing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+
+            snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+            page = TestClient(create_app(root)).get("/health")
+
+        self.assertTrue({"status", "age_hours", "manifest"} <= set(snapshot["backup"]))
+        self.assertEqual("missing", snapshot["backup"]["durable"]["status"])
+        self.assertEqual(
+            [("BKP_DURABLE_MISSING", "P1")],
+            [(item["code"], item["priority"]) for item in snapshot["alerts"]],
+        )
+        self.assertIn("BKP_DURABLE_MISSING", page.text)
+        self.assertIn("Durable 状态", page.text)
+
+    def test_durable_health_uses_local_receipt_for_failed_invalid_stale_and_fresh(
+        self,
+    ) -> None:
+        cases = (
+            ("failed", "2026-08-10T00:00:00Z", "failed", "BKP_DURABLE_FAILED"),
+            ("verified", "not-a-date", "invalid", "BKP_DURABLE_INVALID"),
+            ("verified", "2026-08-08T00:00:00Z", "stale", "BKP_DURABLE_STALE"),
+            ("verified", "2026-08-10T00:00:00Z", "fresh", None),
+        )
+        for receipt_status, created_at, expected_status, expected_code in cases:
+            with (
+                self.subTest(expected_status=expected_status),
+                tempfile.TemporaryDirectory() as temp,
+            ):
+                root = prepared_root(temp)
+                self.write_durable_receipt(
+                    root,
+                    status=receipt_status,
+                    created_at=created_at,
+                )
+                with patch(
+                    "research_os.services.durable_backup.verify_durable_backup_remote",
+                    side_effect=AssertionError("Dashboard must not call remote backup"),
+                ) as remote_verify:
+                    snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+
+                self.assertEqual(
+                    expected_status,
+                    snapshot["backup"]["durable"]["status"],
+                )
+                self.assertEqual([], remote_verify.call_args_list)
+                codes = [item["code"] for item in snapshot["alerts"]]
+                if expected_code is None:
+                    self.assertEqual([], codes)
+                else:
+                    self.assertEqual([expected_code], codes)
+
+    def test_newer_failed_durable_job_overrides_then_newer_success_clears_alert(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            self.write_durable_receipt(root, created_at="2026-08-10T00:00:00Z")
+            failed = run_job(
+                root,
+                "backup-durable",
+                started_at=datetime(2026, 8, 10, 1, 0, tzinfo=UTC),
+            )
+            self.assertEqual("failed", failed.status)
+
+            failed_snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+            self.assertEqual("failed", failed_snapshot["backup"]["durable"]["status"])
+            self.assertEqual(
+                ["BKP_DURABLE_FAILED"],
+                [item["code"] for item in failed_snapshot["alerts"]],
+            )
+
+            self.write_durable_receipt(root, created_at="2026-08-10T02:00:00Z")
+            recovered_snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+            self.assertEqual("fresh", recovered_snapshot["backup"]["durable"]["status"])
+            self.assertEqual([], recovered_snapshot["alerts"])
+
+    def test_health_cost_uses_discovery_runs_and_never_exposes_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            db_path = candidate_db.candidate_db_path(root)
+            candidate_db.apply_migrations(db_path)
+            connection = sqlite3.connect(db_path)
+            try:
+                connection.execute(
+                    "INSERT INTO discovery_runs (run_id, channel_id, started_at, "
+                    "cost_estimate, status) VALUES "
+                    "('RUN-cost', 'CHN-test', '2026-08-10T00:00:00Z', "
+                    "'80', 'succeeded')"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            raw_budget = "100.000001"
+            with patch.dict(
+                os.environ,
+                {"RESEARCH_OS_MODEL_COST_BUDGET": raw_budget},
+                clear=False,
+            ):
+                snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+                page = TestClient(create_app(root)).get("/health")
+
+        cost = snapshot["model_cost"]
+        self.assertEqual("ok", cost["status"])
+        self.assertEqual("80", cost["known_total"])
+        self.assertEqual(1, cost["record_count"])
+        self.assertEqual(0, cost["unknown_record_count"])
+        self.assertNotIn("budget", {key for key in cost if key != "budget_configured"})
+        self.assertNotIn(raw_budget, repr(snapshot))
+        self.assertNotIn(raw_budget, page.text)
+        for label in ("已知成本", "未知记录", "无效记录", "利用率"):
+            self.assertIn(label, page.text)
+
+    def test_configured_cost_without_run_data_is_not_rendered_as_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            candidate_db.apply_migrations(candidate_db.candidate_db_path(root))
+            with patch.dict(
+                os.environ,
+                {"RESEARCH_OS_MODEL_COST_BUDGET": "100"},
+                clear=False,
+            ):
+                snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+
+        self.assertEqual("no_data", snapshot["model_cost"]["status"])
+        self.assertIsNone(snapshot["model_cost"]["known_total"])
+
+    def test_product_runtime_exports_cost_and_durable_backup_operations(self) -> None:
+        from research_os.runtime import product
+
+        for name in (
+            "create_durable_backup",
+            "durable_latest_success_path",
+            "load_durable_backup_receipt",
+            "monthly_cost_report",
+            "restore_durable_backup",
+            "verify_durable_backup_remote",
+        ):
+            with self.subTest(name=name):
+                self.assertIn(name, product.__all__)
+                self.assertTrue(callable(getattr(product, name)))
+
+    @pytest.mark.local_integration
     def test_operations_and_health_pages_render_all_sections(self) -> None:
         client = TestClient(create_app(self.root))
         operations = client.get("/operations")
@@ -678,6 +929,87 @@ class SchedulerJobTests(unittest.TestCase):
             )
             self.assertEqual("failed", missing.status)
             self.assertIn("requires --target", missing.message)
+
+    def test_failed_run_message_includes_run_id_safe_class_and_attempts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            fixtures.write(
+                root / "02_Knowledge" / "Channels" / "CHN-test.md",
+                CHANNEL_MD,
+            )
+            secret = "job-transport-secret"
+            before_jobs = len(
+                list((root / "05_Research" / "Operations" / "Jobs").glob("*.md"))
+            )
+            outcomes = [_job_http_error(503, secret) for _ in range(3)]
+            with patch(
+                "research_os.adapters.discovery._build_discovery_opener",
+                side_effect=_job_opener_builder(outcomes),
+            ):
+                result = run_job(
+                    root,
+                    "discover",
+                    target="CHN-test",
+                    started_at=datetime(2026, 8, 10, 10, 0, 0, tzinfo=UTC),
+                )
+
+            self.assertEqual("failed", result.status)
+            self.assertRegex(result.message, r"RUN-[0-9a-f]{16}")
+            self.assertIn("http_503", result.message)
+            self.assertIn("3 attempts", result.message)
+            self.assertNotIn(secret, result.message)
+            self.assertNotIn("token=", result.message)
+            self.assertEqual(
+                before_jobs + 1,
+                len(list((root / "05_Research" / "Operations" / "Jobs").glob("*.md"))),
+            )
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                row = connection.execute(
+                    "SELECT status, retries, http_errors FROM discovery_runs"
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(("failed", 2, 3), row)
+
+    def test_discover_job_with_internal_retry_writes_one_success_job(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            fixtures.write(
+                root / "02_Knowledge" / "Channels" / "CHN-test.md",
+                CHANNEL_MD,
+            )
+            jobs_dir = root / "05_Research" / "Operations" / "Jobs"
+            before_jobs = len(list(jobs_dir.glob("*.md")))
+            outcomes = [
+                _job_http_error(429, "retry-success-secret"),
+                _JobBytesResponse(JOB_RSS_PAYLOAD),
+            ]
+            with patch(
+                "research_os.adapters.discovery._build_discovery_opener",
+                side_effect=_job_opener_builder(outcomes),
+            ):
+                result = run_job(
+                    root,
+                    "discover",
+                    target="CHN-test",
+                    started_at=datetime(2026, 8, 10, 10, 0, 1, tzinfo=UTC),
+                )
+
+            self.assertEqual("success", result.status)
+            self.assertEqual(before_jobs + 1, len(list(jobs_dir.glob("*.md"))))
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                run_rows = connection.execute(
+                    "SELECT status, retries, http_errors FROM discovery_runs"
+                ).fetchall()
+                candidate_count = connection.execute(
+                    "SELECT COUNT(*) FROM candidates"
+                ).fetchone()[0]
+            finally:
+                connection.close()
+            self.assertEqual([("succeeded", 1, 1)], run_rows)
+            self.assertEqual(1, candidate_count)
 
     def test_refresh_job_and_cli_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -1283,9 +1615,7 @@ class IndustryHomeTests(unittest.TestCase):
                     - {"GET"}
                 }
             )
-            self.assertEqual(
-                ["/llm/config", "/llm/models", "/llm/test"], write_routes
-            )
+            self.assertEqual(["/llm/config", "/llm/models", "/llm/test"], write_routes)
 
 
 def _write_home_security(root: Path) -> str:
@@ -1432,3 +1762,44 @@ class CandidateDetailTests(unittest.TestCase):
             self.assertEqual(200, page.status_code)
             self.assertIn("发现时间", page.text)
             self.assertIn("CAND-new-001", page.text)
+
+    def test_candidate_queue_navigation_preserves_encoded_filters(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            client = TestClient(create_app(root))
+            page = client.get(
+                "/pipeline/queue",
+                params={
+                    "status": "new",
+                    "channel": "CHN-test & special",
+                    "entity": "COM-test/value",
+                    "tier": "core",
+                    "min_priority": "0.25",
+                    "limit": "1",
+                    "offset": "1",
+                    "show_dups": "true",
+                },
+            )
+
+            self.assertEqual(200, page.status_code)
+            self.assertIn(
+                "status=new&amp;channel=CHN-test+%26+special"
+                "&amp;entity=COM-test%2Fvalue&amp;tier=core"
+                "&amp;min_priority=0.25&amp;limit=1&amp;offset=0"
+                "&amp;show_dups=true",
+                page.text,
+            )
+
+    def test_candidate_queue_empty_page_uses_zero_range(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            _seed_home_candidates(root)
+            page = TestClient(create_app(root)).get(
+                "/pipeline/queue",
+                params={"limit": "1", "offset": "200"},
+            )
+
+            self.assertEqual(200, page.status_code)
+            self.assertIn('data-page-range="true">0</span>', page.text)
+            self.assertNotIn("201–200", page.text)

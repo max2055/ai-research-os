@@ -311,9 +311,7 @@ def pipeline_metrics_from_objects(
     store_rate = (
         round(non_representative / discovered_total, 4) if discovered_total else 0.0
     )
-    duplicate_rate = (
-        round(inbound_dups / inbound_total, 4) if inbound_total else 0.0
-    )
+    duplicate_rate = round(inbound_dups / inbound_total, 4) if inbound_total else 0.0
 
     runs = len(run_rows)
     succeeded = sum(1 for row in run_rows if row["status"] == "succeeded")
@@ -328,9 +326,7 @@ def pipeline_metrics_from_objects(
     http_errors = sum(int(row["http_errors"] or 0) for row in run_rows)
     parse_errors = sum(int(row["parse_errors"] or 0) for row in run_rows)
     retries = sum(int(row["retries"] or 0) for row in run_rows)
-    costs = [
-        float(row["cost_estimate"]) for row in run_rows if row["cost_estimate"]
-    ]
+    costs = [float(row["cost_estimate"]) for row in run_rows if row["cost_estimate"]]
     cost_estimate = round(sum(costs), 6) if costs else None
 
     tier_by_entity = {
@@ -339,9 +335,7 @@ def pipeline_metrics_from_objects(
         if obj.object_type == "company"
     }
     core_matched = sum(
-        1
-        for entity_id in core_entity_ids
-        if tier_by_entity.get(entity_id) == "core"
+        1 for entity_id in core_entity_ids if tier_by_entity.get(entity_id) == "core"
     )
 
     # Triage counts come from the append-only action audit, which survives the
@@ -358,8 +352,7 @@ def pipeline_metrics_from_objects(
     )[:5]
 
     core_covered = {
-        str(row["candidate_id"]): str(row["acted_at"])
-        for row in promote_rows
+        str(row["candidate_id"]): str(row["acted_at"]) for row in promote_rows
     }
     conversion_hours = []
     if db_path.exists():
@@ -456,15 +449,11 @@ def render_pipeline_metrics(metrics: dict[str, Any]) -> str:
     latency_text = f"{latency}s" if latency is not None else "—"
     cost = discovery["cost_estimate"]
     cost_text = str(cost) if cost is not None else "—"
-    token_text = (
-        "not tracked" if discovery["tokens"] is None else discovery["tokens"]
-    )
+    token_text = "not tracked" if discovery["tokens"] is None else discovery["tokens"]
     conversion = triage["median_conversion_hours"]
     conversion_text = f"{conversion}h" if conversion is not None else "—"
     reasons = triage["top_dismiss_reasons"]
-    reasons_text = (
-        ", ".join(f"{reason}×{count}" for reason, count in reasons) or "—"
-    )
+    reasons_text = ", ".join(f"{reason}×{count}" for reason, count in reasons) or "—"
     stale_text = ", ".join(stale["stale"]) or "—"
     never_text = ", ".join(stale["never_run"]) or "—"
     lines = [
@@ -481,8 +470,7 @@ def render_pipeline_metrics(metrics: dict[str, Any]) -> str:
         f"- Cost estimate: {cost_text}; model tokens: {token_text}",
         "",
         "## Yield / noise",
-        f"- Discovered: {discovered['total']} total, "
-        f"{discovered['today']} today",
+        f"- Discovered: {discovered['total']} total, {discovered['today']} today",
         f"- Duplicate rate (inbound, {duplicate['window_days']}d window): "
         f"{duplicate['rate']:.2%} "
         f"({duplicate['inbound_dups']}/{duplicate['inbound_total']} "
@@ -496,10 +484,8 @@ def render_pipeline_metrics(metrics: dict[str, Any]) -> str:
         "",
         "## Triage",
         f"- Triaged: {triage['total']}",
-        f"- Promoted: {triage['promoted']} "
-        f"({triage['promoted_rate']:.2%})",
-        f"- Dismissed: {triage['dismissed']} "
-        f"({triage['dismissed_rate']:.2%})",
+        f"- Promoted: {triage['promoted']} ({triage['promoted_rate']:.2%})",
+        f"- Dismissed: {triage['dismissed']} ({triage['dismissed_rate']:.2%})",
         f"- Top dismiss reasons: {reasons_text}",
         f"- Median candidate→promote: {conversion_text}",
         "",
@@ -725,16 +711,24 @@ def universe_coverage_from_objects(
     companies = [obj for obj in objects if obj.object_type == "company"]
     company_ids = {obj.object_id for obj in companies}
 
-    reviewed_events = [obj for obj in objects if obj.object_type == "event"
-                       and obj.metadata.get("review_status") == "reviewed"]
+    reviewed_events = [
+        obj
+        for obj in objects
+        if obj.object_type == "event"
+        and obj.metadata.get("review_status") == "reviewed"
+    ]
     event_company_ids: set[str] = set()
     for event in reviewed_events:
         for company_id in event.metadata.get("companies", []):
             if company_id in company_ids:
                 event_company_ids.add(company_id)
 
-    reviewed_rels = [obj for obj in objects if obj.object_type == "ontology_assertion"
-                     and obj.metadata.get("review_status") == "reviewed"]
+    reviewed_rels = [
+        obj
+        for obj in objects
+        if obj.object_type == "ontology_assertion"
+        and obj.metadata.get("review_status") == "reviewed"
+    ]
     rel_endpoint_ids: set[str] = set()
     for rel in reviewed_rels:
         subject = rel.metadata.get("subject_id")
@@ -750,8 +744,11 @@ def universe_coverage_from_objects(
     per_company: list[dict[str, Any]] = []
     for company in companies:
         meta = company.metadata
-        identity = bool(meta.get("legal_name")) and bool(meta.get("headquarters")) \
+        identity = (
+            bool(meta.get("legal_name"))
+            and bool(meta.get("headquarters"))
             and bool(meta.get("region_primary"))
+        )
         sourced = company.object_id in event_company_ids
         related = company.object_id in rel_endpoint_ids
         if identity:
@@ -760,14 +757,17 @@ def universe_coverage_from_objects(
             source_complete.append(company.object_id)
         if related:
             relationship_complete.append(company.object_id)
-        per_company.append({
-            "company_id": company.object_id,
-            "identity_complete": identity,
-            "sourced": sourced,
-            "related": related,
-        })
+        per_company.append(
+            {
+                "company_id": company.object_id,
+                "identity_complete": identity,
+                "sourced": sourced,
+                "related": related,
+            }
+        )
 
     total = len(companies)
+
     def rate(complete: list[str]) -> float:
         return round(len(complete) / total, 4) if total else 0.0
 
@@ -808,12 +808,14 @@ def render_universe_coverage(coverage: dict[str, Any]) -> str:
         ("relationship_completeness", "Relationship (assertion endpoint)"),
     ):
         dim = coverage[key]
-        lines.append(
-            f"| {label} | {dim['complete']} | {dim['rate']:.1%} |"
-        )
-    lines += ["", "## Per-company", "",
-              "| Company | Identity | Source | Relationship |",
-              "|---|---:|---:|---:|"]
+        lines.append(f"| {label} | {dim['complete']} | {dim['rate']:.1%} |")
+    lines += [
+        "",
+        "## Per-company",
+        "",
+        "| Company | Identity | Source | Relationship |",
+        "|---|---:|---:|---:|",
+    ]
     for company in coverage["companies"]:
         cid = company["company_id"]
         idy = "Y" if company["identity_complete"] else "N"

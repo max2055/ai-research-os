@@ -43,6 +43,9 @@ research_os = ["ui/*.css"]
 [tool.pytest.ini_options]
 testpaths = ["09_Automation/tests", "tests"]
 addopts = "-q"
+markers = [
+  "local_integration: requires explicit local operational state via environment",
+]
 
 [tool.coverage.run]
 branch = true

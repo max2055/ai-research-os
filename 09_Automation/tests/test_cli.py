@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 import test_research_os_core as fixtures
+from research_os.services.indexing import render_project_indexes
 
 SCRIPT = Path(__file__).resolve().parents[1] / "research_os.py"
 
@@ -39,6 +40,43 @@ class CliPathTests(unittest.TestCase):
                 "PASS: repository validation succeeded\n",
                 result.stdout,
             )
+
+    def test_metadata_only_validate_and_index_keep_strict_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = fixtures.RepositoryValidationTests().make_root(temp)
+            fixtures.add_generated_event_with_asset(root)
+
+            strict = run_cli(root, "validate")
+            self.assertEqual(1, strict.returncode, strict.stdout)
+            self.assertIn("EVT009", strict.stdout)
+
+            metadata = run_cli(root, "validate", "--metadata-only")
+            self.assertEqual(0, metadata.returncode, metadata.stdout)
+            self.assertNotIn("AST002", metadata.stdout)
+            self.assertNotIn("EVT009", metadata.stdout)
+
+            drift = run_cli(root, "index", "--check", "--metadata-only")
+            self.assertEqual(1, drift.returncode, drift.stdout)
+            self.assertIn("index files differ", drift.stdout)
+            self.assertNotIn("repository validation failed", drift.stdout)
+
+            objects, findings = fixtures.validate_repository(
+                root,
+                mode="metadata-only",
+            )
+            self.assertEqual([], [item for item in findings if item.level == "error"])
+            fixtures.apply_indexes(root, fixtures.render_indexes(objects))
+            fixtures.apply_indexes(root, render_project_indexes(objects, "PRJ-001"))
+            for arguments in (
+                ("index", "--check", "--metadata-only"),
+                ("index", "--check", "--project", "PRJ-001", "--metadata-only"),
+            ):
+                checked = run_cli(root, *arguments)
+                self.assertEqual(0, checked.returncode, checked.stdout)
+
+            rejected = run_cli(root, "index", "--apply", "--metadata-only")
+            self.assertEqual(2, rejected.returncode, rejected.stdout)
+            self.assertIn("only valid with index --check", rejected.stdout)
 
     def test_source_event_report_dry_run_and_apply(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -466,7 +504,7 @@ mode_id: {mode_id}
 scope_ids: []
 as_of: 2026-08-08
 input_source_ids: []
-input_event_ids: [{', '.join(event_ids)}]
+input_event_ids: [{", ".join(event_ids)}]
 input_impact_ids: []
 input_thesis_ids: []
 input_snapshot_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -657,7 +695,9 @@ class AnalysisCliTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stdout)
             self.assertIn("CREATED: 05_Research/Analysis_Proposals/", result.stdout)
             proposal = (
-                root / "05_Research" / "Analysis_Proposals"
+                root
+                / "05_Research"
+                / "Analysis_Proposals"
                 / "Thesis_Proposal_ANL-20260808-001.md"
             )
             self.assertTrue(proposal.exists())

@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 try:
     from research_os.domain.lifecycle import (
         InvalidTransition,
@@ -100,6 +102,7 @@ class ProductValidationTests(unittest.TestCase):
             render_product_status(root),
         )
 
+    @pytest.mark.local_integration
     def test_draft_generators_match_legacy_golden_output(self) -> None:
         from research_os.legacy_core import (
             prepare_event_draft as legacy_event,
@@ -221,6 +224,7 @@ class ProductValidationTests(unittest.TestCase):
             product_comparison(product_baseline, product),
         )
 
+    @pytest.mark.local_integration
     def test_ontology_views_and_exports_match_legacy(self) -> None:
         import sqlite3
 

@@ -166,8 +166,13 @@ class PathExpansionTests(unittest.TestCase):
         objects = [
             _event(),
             _rel("REL-1"),
-            _rel("REL-4", subject_id="COM-b", predicate="SUPPLIES", object_id="COM-a",
-                 evidence_ids=[]),
+            _rel(
+                "REL-4",
+                subject_id="COM-b",
+                predicate="SUPPLIES",
+                object_id="COM-a",
+                evidence_ids=[],
+            ),
             *_entities(),
         ]
         paths, _ = expand_impact_paths(objects, event_id="EVT-1", max_depth=3)
@@ -181,14 +186,34 @@ class PathExpansionTests(unittest.TestCase):
         objects = [
             _event(),
             _rel("REL-1"),
-            _rel("REL-2", subject_id="COM-b", predicate="USES", object_id="TEC-x",
-                 evidence_ids=[]),
-            _rel("REL-5a", subject_id="COM-b", predicate="SUPPLIES", object_id="COM-d1",
-                 evidence_ids=[]),
-            _rel("REL-5b", subject_id="COM-b", predicate="SUPPLIES", object_id="COM-d2",
-                 evidence_ids=[]),
-            _rel("REL-5c", subject_id="COM-b", predicate="SUPPLIES", object_id="COM-d3",
-                 evidence_ids=[]),
+            _rel(
+                "REL-2",
+                subject_id="COM-b",
+                predicate="USES",
+                object_id="TEC-x",
+                evidence_ids=[],
+            ),
+            _rel(
+                "REL-5a",
+                subject_id="COM-b",
+                predicate="SUPPLIES",
+                object_id="COM-d1",
+                evidence_ids=[],
+            ),
+            _rel(
+                "REL-5b",
+                subject_id="COM-b",
+                predicate="SUPPLIES",
+                object_id="COM-d2",
+                evidence_ids=[],
+            ),
+            _rel(
+                "REL-5c",
+                subject_id="COM-b",
+                predicate="SUPPLIES",
+                object_id="COM-d3",
+                evidence_ids=[],
+            ),
             *_entities(),
             _Fake("COM-d1", "company", {"title": "D1"}),
             _Fake("COM-d2", "company", {"title": "D2"}),
@@ -199,7 +224,8 @@ class PathExpansionTests(unittest.TestCase):
         )
         # COM-b has 4 adjacency entries (USES + 3 SUPPLIES); fan_out=2 caps to 2.
         capped = [
-            p for p in paths
+            p
+            for p in paths
             if any(r["reason"] == "fan-out-capped" for r in p["pruned"])
         ]
         self.assertTrue(capped)
@@ -235,9 +261,7 @@ class PathExpansionTests(unittest.TestCase):
         paths, pruned = expand_impact_paths(objects, event_id="EVT-1")
         self.assertEqual([], paths)
         self.assertTrue(pruned)
-        self.assertTrue(
-            all(r["reason"] == "no-rule-map-predicate" for r in pruned)
-        )
+        self.assertTrue(all(r["reason"] == "no-rule-map-predicate" for r in pruned))
 
     def test_rejects_pending_event(self) -> None:
         objects = [_event(review_status="pending"), _rel("REL-1"), *_entities()]
@@ -264,10 +288,14 @@ class DedupTests(unittest.TestCase):
     """C-009: same entity sequence + same relation sequence folds."""
 
     def _paths(self) -> list[dict]:
-        a_to_b = {"entity_sequence": ["EVT-1", "COM-a", "COM-b"],
-                  "hops": [{"rel_id": "REL-1"}]}
-        b_to_tech = {"entity_sequence": ["EVT-1", "COM-b", "TEC-x"],
-                     "hops": [{"rel_id": "REL-2"}]}
+        a_to_b = {
+            "entity_sequence": ["EVT-1", "COM-a", "COM-b"],
+            "hops": [{"rel_id": "REL-1"}],
+        }
+        b_to_tech = {
+            "entity_sequence": ["EVT-1", "COM-b", "TEC-x"],
+            "hops": [{"rel_id": "REL-2"}],
+        }
         return [a_to_b, a_to_b, b_to_tech]
 
     def test_identical_path_folds_with_variant_count(self) -> None:

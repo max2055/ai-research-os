@@ -54,9 +54,7 @@ class ModeMetrics:
 def mode_metrics(objects: list[ResearchObject]) -> dict[str, Any]:
     """D-018: per-mode aggregates over completed runs (pure, read-only)."""
     by_id = {obj.object_id: obj for obj in objects}
-    runs = [
-        obj for obj in objects if obj.object_type == "analysis_run"
-    ]
+    runs = [obj for obj in objects if obj.object_type == "analysis_run"]
     # slug -> list of (run, signal, evidence set)
     per_mode: dict[str, list[tuple[ResearchObject, str, frozenset[str]]]] = {}
     for run in runs:
@@ -91,9 +89,9 @@ def mode_metrics(objects: list[ResearchObject]) -> dict[str, Any]:
         for i in range(len(bodies)):
             for j in range(i + 1, len(bodies)):
                 pairs += 1
-                distance_sum += 1.0 - SequenceMatcher(
-                    None, bodies[i], bodies[j]
-                ).ratio()
+                distance_sum += (
+                    1.0 - SequenceMatcher(None, bodies[i], bodies[j]).ratio()
+                )
         edit_distance = distance_sum / pairs if pairs else 0.0
 
         signal_counts: dict[str, int] = {}
@@ -116,16 +114,15 @@ def mode_metrics(objects: list[ResearchObject]) -> dict[str, Any]:
             "mode_id": slug,
             "run_count": len(entries),
             "reviewed_count": sum(
-                1 for run, _, _ in entries
+                1
+                for run, _, _ in entries
                 if run.metadata.get("review_status") == "reviewed"
             ),
             "edit_distance": round(edit_distance, 3),
             "pairs": pairs,
             "signal_counts": signal_counts,
             "agreement": (
-                round(agreement_sum / agreement_pairs, 3)
-                if agreement_pairs
-                else None
+                round(agreement_sum / agreement_pairs, 3) if agreement_pairs else None
             ),
             "agreement_pairs": agreement_pairs,
             "evidence_used": len(used),

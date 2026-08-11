@@ -16,7 +16,12 @@ from research_os.services.candidate_db import (
     candidate_db_health,
     candidate_db_path,
 )
+from research_os.services.cost_monitoring import monthly_cost_report
 from research_os.services.discovery import due_channels
+from research_os.services.durable_backup import (
+    durable_latest_success_path,
+    load_durable_backup_receipt,
+)
 from research_os.services.forecast_due import forecast_status_report
 from research_os.services.indexing import (
     index_drift,
@@ -186,6 +191,105 @@ def _backup_status(root: Path, now: datetime) -> dict[str, Any]:
         }
 
 
+def _timestamp(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return parsed.astimezone(UTC) if parsed.tzinfo is not None else None
+
+
+def _latest_durable_attempt(
+    objects: list[ResearchObject],
+) -> tuple[datetime, ResearchObject] | None:
+    attempts = []
+    for obj in objects:
+        if obj.object_type != "job" or obj.metadata.get("job_name") != "backup-durable":
+            continue
+        started_at = _timestamp(obj.metadata.get("started_at"))
+        if started_at is not None:
+            attempts.append((started_at, obj))
+    return max(attempts, key=lambda item: item[0]) if attempts else None
+
+
+def _durable_backup_status(
+    root: Path, now: datetime, objects: list[ResearchObject]
+) -> dict[str, Any]:
+    resolved_root = root.resolve()
+    receipt_path = durable_latest_success_path(resolved_root)
+    relative = str(receipt_path.relative_to(resolved_root))
+    if not receipt_path.is_file():
+        return {
+            "status": "missing",
+            "age_hours": None,
+            "receipt": None,
+            "backup_id": None,
+            "created_at": None,
+        }
+    try:
+        receipt = load_durable_backup_receipt(receipt_path)
+        created_at = _timestamp(receipt.created_at)
+        if created_at is None:
+            raise ValueError("durable receipt timestamp must include timezone")
+        age_hours = (
+            now.astimezone(UTC) - created_at.astimezone(UTC)
+        ).total_seconds() / 3600
+        backup_sets = [item.backup_set for item in receipt.sets]
+        if receipt.status == "failed":
+            status = "failed"
+        elif (
+            receipt.status != "verified"
+            or len(backup_sets) != 2
+            or set(backup_sets) != {"candidate", "source_assets"}
+        ):
+            status = "invalid"
+        else:
+            status = "fresh" if age_hours <= 24 else "stale"
+        latest_attempt = _latest_durable_attempt(objects)
+        if (
+            latest_attempt is not None
+            and latest_attempt[0] > created_at
+            and latest_attempt[1].metadata.get("status") == "failed"
+        ):
+            status = "failed"
+        return {
+            "status": status,
+            "age_hours": round(age_hours, 2),
+            "receipt": relative,
+            "backup_id": receipt.backup_id,
+            "created_at": receipt.created_at,
+        }
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return {
+            "status": "invalid",
+            "age_hours": None,
+            "receipt": relative,
+            "backup_id": None,
+            "created_at": None,
+        }
+
+
+def _durable_backup_alert(status: str) -> dict[str, str] | None:
+    codes = {
+        "missing": "BKP_DURABLE_MISSING",
+        "failed": "BKP_DURABLE_FAILED",
+        "invalid": "BKP_DURABLE_INVALID",
+        "stale": "BKP_DURABLE_STALE",
+    }
+    code = codes.get(status)
+    if code is None:
+        return None
+    return {
+        "code": code,
+        "priority": "P1",
+        "status": status,
+        "message": f"durable backup is {status}",
+    }
+
+
 def health_snapshot(
     root: Path,
     *,
@@ -246,11 +350,15 @@ def health_snapshot(
         key: "present" if bool(os.environ.get(key)) else "missing"
         for key in _SECRET_KEYS
     }
-    costs = [
-        str(obj.metadata.get("cost_estimate") or "")
-        for obj in objects
-        if obj.object_type == "job" and obj.metadata.get("cost_estimate")
-    ]
+    local_backup = _backup_status(root, now_dt)
+    durable_backup = _durable_backup_status(root, now_dt, objects)
+    durable_alert = _durable_backup_alert(str(durable_backup["status"]))
+    cost_budget = os.environ.get("RESEARCH_OS_MODEL_COST_BUDGET")
+    cost = monthly_cost_report(
+        candidate_db_path(root),
+        as_of=now_dt.date().isoformat(),
+        budget=cost_budget,
+    )
     return {
         "generated_at": now_dt.isoformat(),
         "validation": {
@@ -283,7 +391,8 @@ def health_snapshot(
         "candidate_db": candidate_db_health(candidate_db_path(root)),
         "channels": channels,
         "failed_runs": failed_runs,
-        "backup": _backup_status(root, now_dt),
+        "backup": {**local_backup, "durable": durable_backup},
+        "alerts": [durable_alert] if durable_alert is not None else [],
         "host": {
             "disk": {
                 "total_bytes": disk.total,
@@ -295,10 +404,20 @@ def health_snapshot(
         },
         "config": config,
         "model_cost": {
-            "status": "recorded" if costs else "unknown",
-            "records": len(costs),
-            "budget_configured": bool(
-                os.environ.get("RESEARCH_OS_MODEL_COST_BUDGET")
-            ),
+            "status": cost.status,
+            "period_start": cost.period_start,
+            "period_end": cost.period_end,
+            "currency": cost.currency,
+            "known_total": str(cost.known_total)
+            if cost.known_total is not None
+            else None,
+            "utilization": str(cost.utilization)
+            if cost.utilization is not None
+            else None,
+            "records": cost.record_count,
+            "record_count": cost.record_count,
+            "unknown_record_count": cost.unknown_record_count,
+            "invalid_record_count": cost.invalid_record_count,
+            "budget_configured": bool(cost_budget and cost_budget.strip()),
         },
     }

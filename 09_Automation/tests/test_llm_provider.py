@@ -127,9 +127,7 @@ class LlmAdapterTests(unittest.TestCase):
             params={"max_tokens": 4096},
             key="sk-key",
         )
-        self.assertEqual(
-            "https://api.deepseek.com/chat/completions", request["url"]
-        )
+        self.assertEqual("https://api.deepseek.com/chat/completions", request["url"])
         self.assertEqual("application/json", request["headers"]["Content-Type"])
         body = json.loads(request["body"])
         self.assertEqual("deepseek-chat", body["model"])
@@ -234,13 +232,9 @@ class LlmAdapterTests(unittest.TestCase):
     def test_test_connection_ok_with_empty_content(self) -> None:
         # content:null + reasoning_content is a SUCCESS for connectivity
         data = {
-            "choices": [
-                {"message": {"content": None, "reasoning_content": "trace"}}
-            ]
+            "choices": [{"message": {"content": None, "reasoning_content": "trace"}}]
         }
-        with mock.patch(
-            "research_os.llm._http.http_request", _http(200, data)
-        ):
+        with mock.patch("research_os.llm._http.http_request", _http(200, data)):
             result = llm_adapter.test_connection(
                 base_url="https://api.deepseek.com",
                 api_format="openai_chat",
@@ -328,9 +322,12 @@ class ModelFetchTests(unittest.TestCase):
             self.assertEqual("invalid_response", ctx.exception.error_type)
 
     def test_key_never_leaks_in_output_or_error(self) -> None:
-        with mock.patch(
-            "research_os.llm._http.http_request", _http(401, {"error": "x"})
-        ), self.assertRaises(model_fetch.LLMError) as ctx:
+        with (
+            mock.patch(
+                "research_os.llm._http.http_request", _http(401, {"error": "x"})
+            ),
+            self.assertRaises(model_fetch.LLMError) as ctx,
+        ):
             model_fetch.fetch_models(
                 base_url="https://api.deepseek.com", key="sk-topsecret", timeout=30
             )
@@ -371,12 +368,10 @@ class ModelAdapterProtocolTests(unittest.TestCase):
                 model="deepseek-chat",
             )
             data = {"choices": [{"message": {"content": "## Facts used\nok"}}]}
-            with mock.patch(
-                "research_os.llm._http.http_request", _http(200, data)
-            ), mock.patch(
-                "research_os.llm.provider_catalog.get_preset"
-            ), mock.patch.object(
-                llm_config, "CONFIG_PATH", config_path
+            with (
+                mock.patch("research_os.llm._http.http_request", _http(200, data)),
+                mock.patch("research_os.llm.provider_catalog.get_preset"),
+                mock.patch.object(llm_config, "CONFIG_PATH", config_path),
             ):
                 from research_os.adapters.model import DeepSeekAdapter
 
@@ -387,10 +382,11 @@ class ModelAdapterProtocolTests(unittest.TestCase):
     def test_deepseek_generate_without_key_raises_guidance(self) -> None:
         from research_os.adapters.model import DeepSeekAdapter
 
-        with mock.patch.object(
-            llm_config, "get_api_key", return_value=""
-        ), mock.patch.object(
-            llm_config, "CONFIG_PATH", Path("/nonexistent/llm.local.json")
+        with (
+            mock.patch.object(llm_config, "get_api_key", return_value=""),
+            mock.patch.object(
+                llm_config, "CONFIG_PATH", Path("/nonexistent/llm.local.json")
+            ),
         ):
             adapter = DeepSeekAdapter()
             with self.assertRaises(ValueError) as ctx:
@@ -426,9 +422,10 @@ class LlmDashboardTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            with mock.patch(
-                "research_os.llm._http.http_request", _http(200, data)
-            ), mock.patch.object(llm_config, "CONFIG_PATH", root / "llm.local.json"):
+            with (
+                mock.patch("research_os.llm._http.http_request", _http(200, data)),
+                mock.patch.object(llm_config, "CONFIG_PATH", root / "llm.local.json"),
+            ):
                 client = TestClient(create_app(root))
                 response = client.post(
                     "/llm/models",

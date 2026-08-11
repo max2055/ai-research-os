@@ -227,9 +227,7 @@ def expire_candidates(
         days = obj.metadata.get("retention_days")
         try:
             retention_by_channel[obj.object_id] = (
-                max(1, int(days))
-                if days is not None
-                else DEFAULT_RETENTION_DAYS
+                max(1, int(days)) if days is not None else DEFAULT_RETENTION_DAYS
             )
         except (TypeError, ValueError):
             retention_by_channel[obj.object_id] = DEFAULT_RETENTION_DAYS
@@ -278,17 +276,14 @@ def expire_candidates(
             connection.execute("BEGIN")
             for item in expired:
                 connection.execute(
-                    "UPDATE candidates SET status = 'expired' "
-                    "WHERE candidate_id = ?",
+                    "UPDATE candidates SET status = 'expired' WHERE candidate_id = ?",
                     (item["candidate_id"],),
                 )
                 _record_action(
                     connection,
                     candidate_id=item["candidate_id"],
                     action="expire",
-                    reason=(
-                        f"past retention ({item['retention_days']} days)"
-                    ),
+                    reason=(f"past retention ({item['retention_days']} days)"),
                     actor=_SYSTEM_ACTOR,
                     payload={
                         "discovered_at": item["discovered_at"],
@@ -340,8 +335,7 @@ def purge_candidates(
         if apply and purged:
             connection.execute("BEGIN")
             connection.execute(
-                "DELETE FROM candidates "
-                "WHERE status IN ('dismissed', 'expired')"
+                "DELETE FROM candidates WHERE status IN ('dismissed', 'expired')"
             )
             connection.commit()
         return {"purged": purged, "applied": apply}

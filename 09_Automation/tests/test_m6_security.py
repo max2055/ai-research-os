@@ -77,8 +77,7 @@ class DashboardSecurityTests(unittest.TestCase):
         write_routes = {
             route.path
             for route in app.routes
-            if (set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"})
-            - {"GET"}
+            if (set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}) - {"GET"}
         }
         self.assertEqual(
             {"/llm/config", "/llm/models", "/llm/test"},

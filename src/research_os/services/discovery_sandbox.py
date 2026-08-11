@@ -99,9 +99,7 @@ def extract_hypotheses(
     if _open_discovery_run(obj, by_id) is None:
         return []
     section = ""
-    for match in re.finditer(
-        r"(?ms)^## (.*?)\s*\n(.*?)(?=^## |\Z)", obj.body
-    ):
+    for match in re.finditer(r"(?ms)^## (.*?)\s*\n(.*?)(?=^## |\Z)", obj.body):
         if match.group(1).strip() == _HYPOTHESIS_SECTION:
             section = match.group(2)
             break

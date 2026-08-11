@@ -83,17 +83,6 @@ def existing_source_urls(objects: list[Any]) -> dict[str, str]:
     return urls
 
 
-def _queue_rank_key(row: dict[str, Any]) -> tuple[Any, ...]:
-    """Ascending sort key: non-NULL priority first, then higher, then newer."""
-    score = row.get("priority_score")
-    return (
-        score is None,
-        -(score or 0.0),
-        row.get("discovered_at") or "",
-        row.get("candidate_id") or "",
-    )
-
-
 def _is_representative(
     row: dict[str, Any],
     cluster_stats: dict[str, dict[str, Any]],
@@ -121,7 +110,9 @@ def _collapse_rows(
         groups.setdefault(row["_cluster_id"], []).append(row)
     collapsed: list[dict[str, Any]] = []
     for members in groups.values():
-        lead = min(members, key=_queue_rank_key)
+        # SQL already supplies the canonical queue order, so the first member
+        # is the cluster lead and dict insertion order keeps clusters stable.
+        lead = members[0]
         lead["dup_count"] = len(members) - 1
         lead["is_representative"] = _is_representative(lead, cluster_stats)
         sourced = [
@@ -133,7 +124,7 @@ def _collapse_rows(
         if sourced:
             lead["existing_source_id"] = sourced[0]
         collapsed.append(lead)
-    return sorted(collapsed, key=_queue_rank_key)
+    return collapsed
 
 
 def enrich_candidates(
@@ -197,9 +188,7 @@ def enrich_candidates(
             channel_meta = channels.get(str(row["channel_id"])) or {}
             score = score_candidate(
                 title=title,
-                source_grade=str(
-                    channel_meta.get("source_grade_proposal") or "B"
-                ),
+                source_grade=str(channel_meta.get("source_grade_proposal") or "B"),
                 entity_status=str(entity["status"]),
                 sector_count=len(sector["sector_ids"]),
                 is_duplicate_representative=is_representative,
@@ -236,9 +225,7 @@ def enrich_candidates(
         return enriched
     except sqlite3.Error as exc:
         connection.rollback()
-        raise TransactionError(
-            f"candidate enrichment failed: {exc}"
-        ) from exc
+        raise TransactionError(f"candidate enrichment failed: {exc}") from exc
     finally:
         connection.close()
 
@@ -253,6 +240,7 @@ def queue_rows(
     tier: str | None = None,
     min_priority: float | None = None,
     limit: int = 50,
+    offset: int = 0,
     show_dups: bool = False,
 ) -> list[dict[str, Any]]:
     """Read the review queue, highest priority first.
@@ -267,6 +255,10 @@ def queue_rows(
     candidate (or a collapsed member) whose canonical URL is already an
     authoritative Source.
     """
+    if limit <= 0:
+        raise ValueError("limit must be positive")
+    if offset < 0:
+        raise ValueError("offset must be non-negative")
     db_path = db_path or candidate_db.candidate_db_path(root)
     if not db_path.exists():
         return []
@@ -328,9 +320,7 @@ def queue_rows(
                 "entity_status": entity.get("status", "unknown"),
                 "entity_id": resolved_entity,
                 "sector_ids": sector.get("sector_ids", []),
-                "existing_source_id": source_urls.get(
-                    str(row["canonical_url"] or "")
-                ),
+                "existing_source_id": source_urls.get(str(row["canonical_url"] or "")),
                 "already_sourced": False,
                 "is_representative": False,
                 "dup_count": 0,
@@ -344,7 +334,7 @@ def queue_rows(
     else:
         for row in queue:
             row["is_representative"] = _is_representative(row, cluster_stats)
-    return queue[:limit]
+    return queue[offset : offset + limit]
 
 
 def queue_show(
@@ -374,12 +364,8 @@ def queue_show(
     finally:
         connection.close()
     detail = dict(zip(row.keys(), row, strict=True))
-    detail["entity_proposals"] = _load_json(
-        detail.pop("entity_proposals_json", None)
-    )
-    detail["sector_proposals"] = _load_json(
-        detail.pop("sector_proposals_json", None)
-    )
+    detail["entity_proposals"] = _load_json(detail.pop("entity_proposals_json", None))
+    detail["sector_proposals"] = _load_json(detail.pop("sector_proposals_json", None))
     detail["reason_codes"] = _load_json(detail.pop("reason_codes_json", None))
     detail["actions"] = [dict(action) for action in actions]
     objects, _ = validate_repository(root)

@@ -151,6 +151,9 @@ def propose_direct_impacts(
     by_id = {obj.object_id: obj for obj in objects}
     today = date.today().isoformat()
     event_entities = set(_entity_ids(event.metadata))
+    project_ids = sorted(
+        {str(value) for value in event.metadata.get("project_ids", []) if value}
+    )
     bridging = [
         rel
         for rel in objects
@@ -197,6 +200,7 @@ def propose_direct_impacts(
                         "countervailing_factors": countervailing,
                         "trigger_event_ids": [event_id],
                         "evidence_ids": [event_id],
+                        "project_ids": project_ids,
                         "relation_id": rel.object_id,
                         "predicate": predicate,
                         "confidence": float(event.metadata.get("confidence", 0.0)),

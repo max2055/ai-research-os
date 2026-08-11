@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import sys
@@ -128,6 +129,54 @@ tags: [EV-PRODUCT]
 ## Unknowns
 ## Follow-up indicators
 """
+
+
+def add_generated_event_with_asset(
+    root: Path,
+    *,
+    asset_path: str = ("01_Inbox/_assets/SRC-20260729-001/source.html.extracted.txt"),
+    source_asset_path: str | None = None,
+    quote: str = "Evidence line one",
+    quote_sha256: str | None = None,
+    write_asset: bool = False,
+) -> None:
+    source_asset_path = source_asset_path or asset_path
+    source_path = root / "01_Inbox" / "Articles" / "SRC-20260729-001-source.md"
+    source_text = source().replace(
+        "asset_paths: []",
+        f"asset_paths: [{source_asset_path}]",
+    )
+    write(source_path, source_text)
+
+    anchor_hash = quote_sha256 or hashlib.sha256(quote.encode("utf-8")).hexdigest()
+    event_text = event().replace(
+        "confidence: 0.5\n",
+        "confidence: 0.5\n"
+        "generation_method: structured\n"
+        "source_independence_groups:\n"
+        "- - SRC-20260729-001\n"
+        "citation_anchors:\n"
+        "- fact_id: F1\n"
+        "  source_id: SRC-20260729-001\n"
+        f"  asset_path: {asset_path}\n"
+        "  locator: L1\n"
+        f"  quote: {quote}\n"
+        f'  quote_sha256: "{anchor_hash}"\n',
+    )
+    event_text = event_text.replace(
+        "## Facts\n",
+        "## Facts\n\n- **F1** Evidence line one.\n",
+    ).replace(
+        "## Alternative explanations\n## Unknowns\n",
+        "## Alternative explanations\n\n- A limited sample.\n\n"
+        "## Unknowns\n\n- Broader adoption is unknown.\n",
+    )
+    write(
+        root / "04_Evidence" / "Events" / "EVT-20260729-001-event.md",
+        event_text,
+    )
+    if write_asset:
+        write(root / asset_path, "Different line contents")
 
 
 def report(event_status: str = "reviewed") -> str:
@@ -273,6 +322,54 @@ class RepositoryValidationTests(unittest.TestCase):
             _, findings = validate_repository(root)
             errors = [item for item in findings if item.level == "error"]
             self.assertEqual([], errors)
+
+    def test_metadata_only_suppresses_only_unavailable_asset_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.make_root(temp)
+            add_generated_event_with_asset(root)
+
+            _, strict_findings = validate_repository(root)
+            self.assertIn("AST002", {item.code for item in strict_findings})
+            self.assertIn("EVT009", {item.code for item in strict_findings})
+
+            _, metadata_findings = validate_repository(root, mode="metadata-only")
+            metadata_codes = {item.code for item in metadata_findings}
+            self.assertNotIn("AST002", metadata_codes)
+            self.assertNotIn("EVT009", metadata_codes)
+            self.assertNotIn("EVT011", metadata_codes)
+            self.assertEqual(
+                [],
+                [item for item in metadata_findings if item.level == "error"],
+            )
+
+    def test_metadata_only_keeps_metadata_and_path_safety_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.make_root(temp)
+            add_generated_event_with_asset(
+                root,
+                asset_path="01_Inbox/_assets/SRC-20260729-001/unowned.txt",
+                source_asset_path="../outside.txt",
+                quote_sha256="0" * 64,
+            )
+
+            _, findings = validate_repository(root, mode="metadata-only")
+            codes = {item.code for item in findings}
+            self.assertTrue({"AST001", "EVT008"} <= codes)
+
+            add_generated_event_with_asset(
+                root,
+                quote_sha256="0" * 64,
+                write_asset=True,
+            )
+            _, findings = validate_repository(root, mode="metadata-only")
+            codes = {item.code for item in findings}
+            self.assertIn("EVT010", codes)
+            self.assertNotIn("EVT011", codes)
+
+            event_path = root / "04_Evidence" / "Events" / "EVT-20260729-001-event.md"
+            write(event_path, event(source_id="SRC-20260729-999"))
+            _, findings = validate_repository(root, mode="metadata-only")
+            self.assertIn("REF001", {item.code for item in findings})
 
     def test_missing_reference_is_error(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -686,9 +783,7 @@ evidence_ids: []
             self.assertEqual(1, coverage["identity_completeness"]["complete"])
             # no reviewed event names it, no assertion endpoint -> 0
             self.assertEqual(0, coverage["source_completeness"]["complete"])
-            self.assertEqual(
-                0, coverage["relationship_completeness"]["complete"]
-            )
+            self.assertEqual(0, coverage["relationship_completeness"]["complete"])
             rendered = render_universe_coverage(coverage)
             self.assertIn("Total companies: 1", rendered)
             self.assertIn("| Identity (legal_name + HQ + region)", rendered)

@@ -22,16 +22,13 @@ def _open_forecasts(objects: list[ResearchObject]) -> list[ResearchObject]:
         (
             obj
             for obj in objects
-            if obj.object_type == "forecast"
-            and obj.metadata.get("status") == "open"
+            if obj.object_type == "forecast" and obj.metadata.get("status") == "open"
         ),
         key=lambda obj: obj.metadata.get("resolution_date", ""),
     )
 
 
-def due_forecasts(
-    objects: list[ResearchObject], *, as_of: str
-) -> list[ResearchObject]:
+def due_forecasts(objects: list[ResearchObject], *, as_of: str) -> list[ResearchObject]:
     """Open Forecasts whose resolution_date is on or before ``as_of``."""
     if not is_iso_date(as_of):
         raise ValueError("as_of must be YYYY-MM-DD")
@@ -77,9 +74,8 @@ def due_within(
     return [
         obj
         for obj in _open_forecasts(objects)
-        if as_of_date.toordinal() <= date.fromisoformat(
-            str(obj.metadata.get("resolution_date", ""))
-        ).toordinal()
+        if as_of_date.toordinal()
+        <= date.fromisoformat(str(obj.metadata.get("resolution_date", ""))).toordinal()
         <= horizon_date.toordinal()
     ]
 
@@ -179,9 +175,7 @@ def render_forecast_status(root: Path, *, as_of: str) -> str:
         "|---|---|---|",
     ]
     for row in report["due_rows"]:
-        lines.append(
-            f"| {row['id']} | {row['title']} | {row['resolution_date']} |"
-        )
+        lines.append(f"| {row['id']} | {row['title']} | {row['resolution_date']} |")
     if not report["due_rows"]:
         lines.append("| — | No forecasts due | — |")
     return "\n".join(lines) + "\n"

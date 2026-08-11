@@ -24,6 +24,24 @@ from research_os.adapters.url import UrlCaptureAdapter
 from research_os.llm import llm_config
 from research_os.repositories.transaction import TransactionError
 from research_os.runtime import product as runtime
+from research_os.services.candidate_db import candidate_db_path
+from research_os.services.durable_backup import durable_receipt_path
+from research_os.services.jobs import load_durable_backup_request
+from research_os.services.redaction import redact_secrets
+
+_DEFAULT_DURABLE_BACKUP_CONFIG = Path("09_Automation/operational/backup.local.json")
+_AUTHORITATIVE_RESTORE_TOP_LEVEL = frozenset(
+    {
+        "01_Inbox",
+        "02_Knowledge",
+        "03_Theses",
+        "04_Evidence",
+        "05_Research",
+        "06_Reports",
+        "07_Templates",
+        "08_Indexes",
+    }
+)
 
 
 def _load_json_spec(path: Path) -> dict[str, object]:
@@ -36,9 +54,52 @@ def _load_json_spec(path: Path) -> dict[str, object]:
     return payload
 
 
-def _resolved_model(
-    root: Path, provider_flag: str, model_flag: str
-) -> tuple[str, str]:
+def _root_relative_path(root: Path, value: Path) -> Path:
+    expanded = value.expanduser()
+    return expanded if expanded.is_absolute() else root.resolve() / expanded
+
+
+def _durable_restore_preflight(
+    root: Path,
+    *,
+    identity: Path,
+    destination: Path,
+) -> tuple[Path, Path]:
+    root = root.resolve()
+    identity_input = _root_relative_path(root, identity)
+    if identity_input.is_symlink() or not identity_input.is_file():
+        raise ValueError("age identity file is unavailable")
+    resolved_identity = identity_input.resolve()
+
+    destination_input = _root_relative_path(root, destination)
+    if destination_input.is_symlink():
+        raise ValueError("restore destination cannot be a symlink")
+    resolved_destination = destination_input.resolve()
+    try:
+        relative = resolved_destination.relative_to(root)
+    except ValueError:
+        relative = None
+    if relative is not None and (
+        not relative.parts or relative.parts[0] in _AUTHORITATIVE_RESTORE_TOP_LEVEL
+    ):
+        raise ValueError("restore destination cannot be an authoritative path")
+    if root.is_relative_to(resolved_destination):
+        raise ValueError("restore destination cannot contain the live repository")
+    live_assets = (root / "01_Inbox" / "_assets").resolve()
+    if resolved_destination == live_assets or resolved_destination.is_relative_to(
+        live_assets
+    ):
+        raise ValueError("restore destination cannot be an authoritative path")
+    if resolved_destination == candidate_db_path(root).resolve():
+        raise ValueError("restore destination cannot be the live Candidate DB")
+    if resolved_destination.exists() and (
+        not resolved_destination.is_dir() or any(resolved_destination.iterdir())
+    ):
+        raise ValueError("restore destination must be absent or empty")
+    return resolved_identity, resolved_destination
+
+
+def _resolved_model(root: Path, provider_flag: str, model_flag: str) -> tuple[str, str]:
     """Resolve provider/model from CLI flags, falling back to the repo-root llm
     config (provider) and finally echo. An explicit flag always wins. Reads the
     config from ``root`` so operating on a different repo never bleeds in the
@@ -49,9 +110,7 @@ def _resolved_model(
     model = model_flag
     if not model:
         model = (
-            str(config.get("model") or "")
-            if provider == configured_provider
-            else ""
+            str(config.get("model") or "") if provider == configured_provider else ""
         )
     return provider, model or "echo"
 
@@ -71,11 +130,21 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="treat warnings as validation failures",
     )
+    validate.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="skip checks that require unavailable ignored Source asset bytes",
+    )
     index = subparsers.add_parser("index", help="check or rebuild indexes")
     mode = index.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="check for index drift")
     mode.add_argument("--apply", action="store_true", help="write canonical indexes")
     index.add_argument("--project", help="scope indexes to one Project ID")
+    index.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="check indexes without requiring ignored Source asset bytes",
+    )
 
     def add_common_draft_arguments(command: argparse.ArgumentParser) -> None:
         command.add_argument("--title", required=True)
@@ -196,9 +265,7 @@ def parse_args() -> argparse.Namespace:
     pipeline = subparsers.add_parser(
         "pipeline", help="pipeline operational metrics (B-023)"
     )
-    pipeline_commands = pipeline.add_subparsers(
-        dest="pipeline_command", required=True
-    )
+    pipeline_commands = pipeline.add_subparsers(dest="pipeline_command", required=True)
     pipeline_metrics_parser = pipeline_commands.add_parser(
         "metrics", help="compute Candidate-pipeline metrics (freshness/yield/noise)"
     )
@@ -206,9 +273,7 @@ def parse_args() -> argparse.Namespace:
     pipeline_metrics_parser.add_argument(
         "--format", choices=("markdown", "json"), default="markdown"
     )
-    pilot = subparsers.add_parser(
-        "pilot", help="14-day Pilot status (B-025)"
-    )
+    pilot = subparsers.add_parser("pilot", help="14-day Pilot status (B-025)")
     pilot_commands = pilot.add_subparsers(dest="pilot_command", required=True)
     pilot_status_parser = pilot_commands.add_parser(
         "status", help="show Pilot Gate progress for the window"
@@ -217,20 +282,14 @@ def parse_args() -> argparse.Namespace:
     universe = subparsers.add_parser(
         "universe", help="inspect the Universe (A-014 registry CLI)"
     )
-    universe_commands = universe.add_subparsers(
-        dest="universe_command", required=True
-    )
+    universe_commands = universe.add_subparsers(dest="universe_command", required=True)
     universe_commands.add_parser("list", help="list companies (read-only)")
-    universe_commands.add_parser(
-        "coverage", help="Universe coverage metrics (A-018)"
-    )
+    universe_commands.add_parser("coverage", help="Universe coverage metrics (A-018)")
 
     channels = subparsers.add_parser(
         "channels", help="manage Source Channels (B-006 Registry CLI)"
     )
-    channels_commands = channels.add_subparsers(
-        dest="channel_command", required=True
-    )
+    channels_commands = channels.add_subparsers(dest="channel_command", required=True)
     channels_commands.add_parser("list", help="list channels (read-only)")
     channels_commands.add_parser(
         "check", help="show which channels are schedulable (reviewed + enabled)"
@@ -240,9 +299,7 @@ def parse_args() -> argparse.Namespace:
     )
     channel_enable.add_argument("--id", required=True)
     channel_enable.add_argument("--apply", action="store_true")
-    channel_disable = channels_commands.add_parser(
-        "disable", help="disable a channel"
-    )
+    channel_disable = channels_commands.add_parser("disable", help="disable a channel")
     channel_disable.add_argument("--id", required=True)
     channel_disable.add_argument("--apply", action="store_true")
 
@@ -263,9 +320,7 @@ def parse_args() -> argparse.Namespace:
         "due", help="list channels due for discovery"
     )
     discover_due.add_argument("--as-of", default="")
-    candidates = subparsers.add_parser(
-        "candidates", help="Candidate Queue (B-018)"
-    )
+    candidates = subparsers.add_parser("candidates", help="Candidate Queue (B-018)")
     candidates_commands = candidates.add_subparsers(
         dest="candidates_command", required=True
     )
@@ -284,6 +339,7 @@ def parse_args() -> argparse.Namespace:
         "--min-priority", type=float, help="only candidates at/above this score"
     )
     candidates_list.add_argument("--limit", type=int, default=50)
+    candidates_list.add_argument("--offset", type=int, default=0)
     candidates_list.add_argument(
         "--show-dups",
         action="store_true",
@@ -375,9 +431,7 @@ def parse_args() -> argparse.Namespace:
     forecast = subparsers.add_parser(
         "forecast", help="Forecast lifecycle (WP-501, E-007~010)"
     )
-    forecast_commands = forecast.add_subparsers(
-        dest="forecast_command", required=True
-    )
+    forecast_commands = forecast.add_subparsers(dest="forecast_command", required=True)
     forecast_draft = forecast_commands.add_parser(
         "draft", help="dry-run/apply a Forecast spec -> pending FCT object"
     )
@@ -451,16 +505,12 @@ def parse_args() -> argparse.Namespace:
     valuation_supersede.add_argument("--actor", default="max")
     valuation_supersede.add_argument("--date", default=date.today().isoformat())
     valuation_supersede.add_argument("--apply", action="store_true")
-    valuation_commands.add_parser(
-        "list", help="list Valuation Snapshots"
-    )
+    valuation_commands.add_parser("list", help="list Valuation Snapshots")
 
     scenario = subparsers.add_parser(
         "scenario", help="Scenario workflow (WP-510, E-012)"
     )
-    scenario_commands = scenario.add_subparsers(
-        dest="scenario_command", required=True
-    )
+    scenario_commands = scenario.add_subparsers(dest="scenario_command", required=True)
     scenario_extract = scenario_commands.add_parser(
         "extract", help="extract + validate the three-scenario set from a run"
     )
@@ -535,9 +585,7 @@ def parse_args() -> argparse.Namespace:
         "show", help="show one mode's versioned contract"
     )
     modes_show.add_argument("mode_id", help="MOD-ANL-<slug>-vN")
-    modes_commands.add_parser(
-        "check", help="check which modes may produce a new run"
-    )
+    modes_commands.add_parser("check", help="check which modes may produce a new run")
 
     analyze = subparsers.add_parser("analyze", help="Analysis Runs (D-014/D-016)")
     analyze_commands = analyze.add_subparsers(dest="analyze_command", required=True)
@@ -551,10 +599,14 @@ def parse_args() -> argparse.Namespace:
     analyze_run.add_argument("--event", default="", help="comma-separated EVT-* ids")
     analyze_run.add_argument("--impact", default="", help="comma-separated IMP-* ids")
     analyze_run.add_argument("--thesis", default="", help="comma-separated THS-* ids")
-    analyze_run.add_argument("--model-provider", default="",
-                             help="provider (deepseek); empty = saved config or echo")
-    analyze_run.add_argument("--model-id", default="",
-                             help="model id; empty = saved config or echo")
+    analyze_run.add_argument(
+        "--model-provider",
+        default="",
+        help="provider (deepseek); empty = saved config or echo",
+    )
+    analyze_run.add_argument(
+        "--model-id", default="", help="model id; empty = saved config or echo"
+    )
     analyze_run.add_argument("--timeout", type=float, default=0.0)
     analyze_run.add_argument("--apply", action="store_true")
     analyze_show = analyze_commands.add_parser("show", help="show one Analysis Run")
@@ -571,11 +623,13 @@ def parse_args() -> argparse.Namespace:
     )
     analyze_replay.add_argument("run_id", help="ANL-YYYYMMDD-NNN to replay")
     analyze_replay.add_argument(
-        "--model-provider", default="",
+        "--model-provider",
+        default="",
         help="provider; empty = saved config or echo",
     )
-    analyze_replay.add_argument("--model-id", default="",
-                                help="model id; empty = saved config or echo")
+    analyze_replay.add_argument(
+        "--model-id", default="", help="model id; empty = saved config or echo"
+    )
     analyze_replay.add_argument("--timeout", type=float, default=0.0)
     analyze_replay.add_argument("--apply", action="store_true")
     analyze_propose = analyze_commands.add_parser(
@@ -900,6 +954,43 @@ def parse_args() -> argparse.Namespace:
     backup_mode = backup_candidate.add_mutually_exclusive_group()
     backup_mode.add_argument("--dry-run", action="store_true")
     backup_mode.add_argument("--apply", action="store_true")
+    backup_durable = backup_commands.add_parser(
+        "durable",
+        help="create, verify or restore encrypted durable backups",
+    )
+    durable_commands = backup_durable.add_subparsers(
+        dest="durable_command",
+        required=True,
+    )
+    durable_create = durable_commands.add_parser(
+        "create",
+        help="preflight or create both encrypted durable backup sets",
+    )
+    durable_create.add_argument("--config", type=Path, required=True)
+    durable_create.add_argument("--apply", action="store_true")
+    durable_verify = durable_commands.add_parser(
+        "verify-remote",
+        help="download and verify one durable backup without decrypting it",
+    )
+    durable_verify.add_argument("--backup-id", required=True)
+    durable_verify.add_argument(
+        "--config",
+        type=Path,
+        default=_DEFAULT_DURABLE_BACKUP_CONFIG,
+    )
+    durable_restore = durable_commands.add_parser(
+        "restore",
+        help="preflight or restore into a disposable directory",
+    )
+    durable_restore.add_argument("--backup-id", required=True)
+    durable_restore.add_argument("--identity", type=Path, required=True)
+    durable_restore.add_argument("--destination", type=Path, required=True)
+    durable_restore.add_argument(
+        "--config",
+        type=Path,
+        default=_DEFAULT_DURABLE_BACKUP_CONFIG,
+    )
+    durable_restore.add_argument("--apply", action="store_true")
 
     benchmark = subparsers.add_parser(
         "benchmark",
@@ -908,6 +999,16 @@ def parse_args() -> argparse.Namespace:
     benchmark.add_argument("--sources", type=int, default=1000)
     benchmark.add_argument("--events", type=int, default=500)
     benchmark.add_argument("--max-seconds", type=float, default=10.0)
+    benchmark_candidates = subparsers.add_parser(
+        "benchmark-candidates",
+        help="benchmark stable Candidate Queue pagination with a disposable DB",
+    )
+    benchmark_candidates.add_argument("--rows", type=int, default=10_000)
+    benchmark_candidates.add_argument("--repeats", type=int, default=7)
+    benchmark_candidates.add_argument("--warmups", type=int, default=1)
+    benchmark_candidates.add_argument("--page-size", type=int, default=200)
+    benchmark_candidates.add_argument("--offset", type=int, default=200)
+    benchmark_candidates.add_argument("--max-seconds", type=float, default=2.0)
     release = subparsers.add_parser(
         "release",
         help="evaluate product release gates without changing the repository",
@@ -918,14 +1019,36 @@ def parse_args() -> argparse.Namespace:
     )
     release_check = release_commands.add_parser(
         "check",
-        help="show v0.2 release readiness and explicit blockers",
+        help="show versioned release readiness and explicit blockers",
     )
     release_check.add_argument("--project", default="PRJ-002")
+    release_check.add_argument(
+        "--version",
+        default="0.2",
+        help="release contract version (default: 0.2)",
+    )
+    release_check.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="output format (default: text)",
+    )
+    release_check.add_argument(
+        "--as-of",
+        help="evaluate dated evidence as of YYYY-MM-DD",
+    )
     return parser.parse_args()
 
 
-def command_validate(root: Path, strict: bool) -> int:
-    objects, findings = runtime.validate_repository(root)
+def command_validate(
+    root: Path,
+    strict: bool,
+    metadata_only: bool = False,
+) -> int:
+    validation_mode: runtime.ValidationMode = (
+        "metadata-only" if metadata_only else "strict"
+    )
+    objects, findings = runtime.validate_repository(root, mode=validation_mode)
     for finding in findings:
         print(finding.format(root.resolve()))
     counts = runtime.count_by_type(objects)
@@ -944,9 +1067,16 @@ def command_index(
     root: Path,
     apply: bool,
     project_id: str | None = None,
+    metadata_only: bool = False,
 ) -> int:
+    if apply and metadata_only:
+        print("ERROR: --metadata-only is only valid with index --check")
+        return 2
     root = root.resolve()
-    objects, findings = runtime.validate_repository(root)
+    validation_mode: runtime.ValidationMode = (
+        "metadata-only" if metadata_only else "strict"
+    )
+    objects, findings = runtime.validate_repository(root, mode=validation_mode)
     errors = [finding for finding in findings if finding.level == "error"]
     if errors:
         for finding in errors:
@@ -1046,9 +1176,14 @@ def main() -> int:
     if args.command == "doctor":
         return command_doctor(args.root)
     if args.command == "validate":
-        return command_validate(args.root, args.strict)
+        return command_validate(args.root, args.strict, args.metadata_only)
     if args.command == "index":
-        return command_index(args.root, args.apply, args.project)
+        return command_index(
+            args.root,
+            args.apply,
+            args.project,
+            args.metadata_only,
+        )
     if args.command == "status":
         print(
             runtime.render_status(args.root.resolve(), args.project),
@@ -1168,10 +1303,7 @@ def main() -> int:
                     path.write_text(document.render(), encoding="utf-8")
                     print(f"APPLIED: {path.relative_to(args.root.resolve())}")
                     return 0
-                print(
-                    f"DRY-RUN: would {verb} {args.id} "
-                    f"(rerun with --apply)"
-                )
+                print(f"DRY-RUN: would {verb} {args.id} (rerun with --apply)")
                 return 0
         except (ValueError, OSError) as exc:
             print(f"ERROR: {exc}")
@@ -1188,6 +1320,7 @@ def main() -> int:
                     tier=args.tier,
                     min_priority=args.min_priority,
                     limit=args.limit,
+                    offset=args.offset,
                     show_dups=args.show_dups,
                 )
                 print(runtime.render_candidate_list(queue), end="")
@@ -1272,9 +1405,7 @@ def main() -> int:
             return 0
         except (OSError, TransactionError, ValueError) as exc:
             if isinstance(exc, runtime.AlreadyPromoted):
-                print(
-                    f"IDEMPOTENT: candidate already promoted to {exc.source_id}"
-                )
+                print(f"IDEMPOTENT: candidate already promoted to {exc.source_id}")
                 return 0
             print(f"ERROR: {exc}")
             return 2
@@ -1737,8 +1868,91 @@ def main() -> int:
                     f"RECORD: {job_result.path.relative_to(args.root.resolve())}"
                 )
                 return 0 if job_result.status == "success" else 1
-        except (OSError, TransactionError, ValueError) as exc:
-            print(f"ERROR: {exc}")
+            if args.backup_command == "durable":
+                root = args.root.resolve()
+                if args.durable_command == "create":
+                    if not args.apply:
+                        request = load_durable_backup_request(
+                            root,
+                            args.config,
+                            apply=False,
+                        )
+                        receipt = runtime.create_durable_backup(request)
+                        print(
+                            "DRY-RUN durable backup preflight passed "
+                            f"backup_id={receipt.backup_id}"
+                        )
+                        print("DRY-RUN: no files changed; rerun with --apply")
+                        return 0
+                    job_result = runtime.run_job(
+                        root,
+                        "backup-durable",
+                        durable_config=args.config,
+                    )
+                    print(
+                        f"{job_result.status.upper()} {job_result.job_id}: "
+                        f"{job_result.message}\n"
+                        f"RECORD: {job_result.path.relative_to(root)}"
+                    )
+                    return 0 if job_result.status == "success" else 1
+
+                request = load_durable_backup_request(
+                    root,
+                    args.config,
+                    apply=False,
+                )
+                receipt = runtime.load_durable_backup_receipt(
+                    durable_receipt_path(root, args.backup_id)
+                )
+                if args.durable_command == "verify-remote":
+                    verified = runtime.verify_durable_backup_remote(
+                        receipt,
+                        backend=request.backend,
+                    )
+                    print(
+                        f"VERIFIED durable backup {verified['backup_id']}: "
+                        f"sets={verified['sets']}"
+                    )
+                    return 0
+
+                identity, destination = _durable_restore_preflight(
+                    root,
+                    identity=args.identity,
+                    destination=args.destination,
+                )
+                if not args.apply:
+                    if (
+                        receipt.status != "verified"
+                        or len(receipt.sets) != 2
+                        or {item.backup_set for item in receipt.sets}
+                        != {"candidate", "source_assets"}
+                        or receipt.remote_repository != request.backend.repository
+                        or receipt.remote_release != request.backend.release_tag
+                    ):
+                        raise ValueError(
+                            "durable receipt is not a complete verified backup"
+                        )
+                    print(
+                        "DRY-RUN durable restore preflight passed "
+                        f"backup_id={receipt.backup_id}"
+                    )
+                    print("DRY-RUN: destination unchanged; rerun with --apply")
+                    return 0
+                restored = runtime.restore_durable_backup(
+                    root,
+                    receipt,
+                    backend=request.backend,
+                    identity=identity,
+                    destination=destination,
+                )
+                print(
+                    f"RESTORED durable backup {restored.backup_id}: "
+                    f"schema={restored.candidate_schema_version}; "
+                    f"source_assets={restored.source_asset_count}"
+                )
+                return 0
+        except (OSError, RuntimeError, TransactionError, ValueError) as exc:
+            print(f"ERROR: {redact_secrets(str(exc))}")
             return 2
     if args.command == "benchmark":
         try:
@@ -1753,16 +1967,59 @@ def main() -> int:
         except (OSError, ValueError) as exc:
             print(f"ERROR: {exc}")
             return 2
-    if args.command == "release":
+    if args.command == "benchmark-candidates":
         try:
-            readiness = runtime.release_readiness(
+            candidate_result = runtime.benchmark_candidate_queue(
                 args.root.resolve(),
-                project_id=args.project,
+                rows=args.rows,
+                repeats=args.repeats,
+                warmups=args.warmups,
+                page_size=args.page_size,
+                offset=args.offset,
+                max_seconds=args.max_seconds,
             )
-            print(runtime.render_release_readiness(readiness), end="")
-            return 0 if readiness.ready else 1
+            print(json.dumps(candidate_result.as_dict(), sort_keys=True))
+            return 0 if candidate_result.passed else 1
         except (OSError, ValueError) as exc:
             print(f"ERROR: {exc}")
+            return 2
+    if args.command == "release":
+        try:
+            readiness = runtime.release_readiness_for(
+                args.root.resolve(),
+                version=args.version,
+                project_id=args.project,
+                as_of=args.as_of,
+            )
+            if args.format == "json":
+                print(
+                    json.dumps(
+                        readiness.as_dict(),
+                        allow_nan=False,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    )
+                )
+            else:
+                print(runtime.render_release_readiness(readiness), end="")
+            return 0 if readiness.ready else 1
+        except (OSError, ValueError) as exc:
+            if args.format == "json":
+                print(
+                    json.dumps(
+                        {
+                            "error": {
+                                "code": "release_evaluation_error",
+                                "message": str(exc),
+                            }
+                        },
+                        allow_nan=False,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    )
+                )
+            else:
+                print(f"ERROR: {exc}")
             return 2
     if args.command == "scale":
         print(runtime.render_scale_assessment(args.root.resolve()), end="")
@@ -1840,8 +2097,7 @@ def main() -> int:
                     for obj in objects
                     if obj.object_type == "forecast"
                     and (
-                        args.status is None
-                        or obj.metadata.get("status") == args.status
+                        args.status is None or obj.metadata.get("status") == args.status
                     )
                 ]
                 if args.due_before:
@@ -1893,9 +2149,7 @@ def main() -> int:
                     )
                     for _path, content in updates.items():
                         print(content)
-                    print(
-                        "\nDRY-RUN: no files changed; rerun with --apply to write"
-                    )
+                    print("\nDRY-RUN: no files changed; rerun with --apply to write")
                 return 0
             except (OSError, TransactionError, ValueError) as exc:
                 print(f"ERROR: {exc}")
@@ -1915,9 +2169,7 @@ def main() -> int:
                         root, spec=spec, created_at=args.date
                     )
                     print(f"# {relative}\n\n{content}")
-                    print(
-                        "\nDRY-RUN: no files changed; rerun with --apply to write"
-                    )
+                    print("\nDRY-RUN: no files changed; rerun with --apply to write")
                 return 0
             except (OSError, TransactionError, ValueError) as exc:
                 print(f"ERROR: {exc}")
@@ -2018,9 +2270,7 @@ def main() -> int:
                     print("\nDRY-RUN: no files changed; rerun with --apply to write")
             elif args.recommendation_command == "gate":
                 spec = _load_json_spec(args.spec)
-                gate = runtime.recommendation_gate(
-                    root, spec=spec, as_of=args.as_of
-                )
+                gate = runtime.recommendation_gate(root, spec=spec, as_of=args.as_of)
                 problems = gate["problems"]
                 if not problems:
                     print("GATE PASS: spec is structurally complete and fresh.")
@@ -2060,8 +2310,7 @@ def main() -> int:
                     as_of=args.date,
                 )
                 print(
-                    f"superseded {args.old_id} by {args.new_id} "
-                    f"(dual pointers updated)"
+                    f"superseded {args.old_id} by {args.new_id} (dual pointers updated)"
                 )
             elif args.recommendation_command == "list":
                 objects, _ = runtime.validate_repository(root)
@@ -2070,8 +2319,7 @@ def main() -> int:
                     for obj in objects
                     if obj.object_type == "recommendation"
                     and (
-                        args.status is None
-                        or obj.metadata.get("status") == args.status
+                        args.status is None or obj.metadata.get("status") == args.status
                     )
                 ]
                 print(runtime.render_recommendation_rows(recs), end="")
@@ -2130,9 +2378,7 @@ def main() -> int:
                 return 0
             if args.analyze_command == "compare":
                 objects, _ = runtime.validate_repository(root)
-                report = runtime.compare_runs(
-                    objects, runtime.split_values(args.runs)
-                )
+                report = runtime.compare_runs(objects, runtime.split_values(args.runs))
                 print(runtime.render_compare_report(report), end="")
                 return 0
             if args.analyze_command == "replay":
@@ -2201,8 +2447,10 @@ def main() -> int:
                     slug = args.mode
                     if slug not in metrics["modes"]:
                         raise ValueError(f"no completed runs for mode slug {slug!r}")
-                    metrics = {"modes": {slug: metrics["modes"][slug]},
-                               "overall": metrics["overall"]}
+                    metrics = {
+                        "modes": {slug: metrics["modes"][slug]},
+                        "overall": metrics["overall"],
+                    }
                 print(runtime.render_mode_metrics(metrics), end="")
                 return 0
         except (OSError, TransactionError, ValueError, FileExistsError) as exc:

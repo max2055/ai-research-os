@@ -145,10 +145,7 @@ def render_mode_list(objects: list[ResearchObject]) -> str:
     )
     if not modes:
         return "no analysis modes registered"
-    header = (
-        f"{'MODE':<38} {'NAME':<18} {'SCOPE':<34} {'STATUS':<10} "
-        f"{'REVIEW':<10} V"
-    )
+    header = f"{'MODE':<38} {'NAME':<18} {'SCOPE':<34} {'STATUS':<10} {'REVIEW':<10} V"
     lines = [header, "-" * len(header)]
     for mode in modes:
         meta = mode_metadata(mode)

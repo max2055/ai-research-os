@@ -52,11 +52,7 @@ class ResolvedInputs:
     input_snapshot_hash: str = ""
 
     def ids_by_type(self, object_type: str) -> list[str]:
-        return [
-            obj.object_id
-            for obj in self.objects
-            if obj.object_type == object_type
-        ]
+        return [obj.object_id for obj in self.objects if obj.object_type == object_type]
 
 
 def _object_fingerprint(obj: ResearchObject) -> str:
@@ -66,9 +62,7 @@ def _object_fingerprint(obj: ResearchObject) -> str:
         ensure_ascii=False,
         default=str,
     )
-    return hashlib.sha256(
-        (canonical + "\n" + obj.body).encode("utf-8")
-    ).hexdigest()
+    return hashlib.sha256((canonical + "\n" + obj.body).encode("utf-8")).hexdigest()
 
 
 def _snapshot_hash(

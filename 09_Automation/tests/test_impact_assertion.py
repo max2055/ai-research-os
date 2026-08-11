@@ -90,7 +90,9 @@ class ImpactAssertionSchemaTests(unittest.TestCase):
     def test_rejects_non_entity_reference_format(self) -> None:
         # SRC- is not a valid ImpactEntityReference prefix.
         with self.assertRaises(ValidationError):
-            ImpactAssertionSchema.model_validate(_impact_base(target_id="SRC-20260807-001"))
+            ImpactAssertionSchema.model_validate(
+                _impact_base(target_id="SRC-20260807-001")
+            )
 
     def test_rejects_unknown_impact_type(self) -> None:
         with self.assertRaises(ValidationError):
@@ -164,8 +166,11 @@ class ImpactAssertionValidationTests(unittest.TestCase):
     def test_reviewed_impact_with_reviewed_evidence_passes(self) -> None:
         evidence = ResearchObject(
             path=Path("04_Evidence/Events/EVT-20260716-037.md"),
-            metadata={"id": "EVT-20260716-037", "type": "event",
-                      "review_status": "reviewed"},
+            metadata={
+                "id": "EVT-20260716-037",
+                "type": "event",
+                "review_status": "reviewed",
+            },
             body="",
         )
         obj = self._obj(

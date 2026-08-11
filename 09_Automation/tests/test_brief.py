@@ -161,9 +161,7 @@ class BriefTests(unittest.TestCase):
         self._make_channel(root, "CHN-arxiv", ctype="arxiv")
         return root
 
-    def _make_channel(
-        self, root: Path, cid: str, *, ctype: str = "rss"
-    ) -> None:
+    def _make_channel(self, root: Path, cid: str, *, ctype: str = "rss") -> None:
         (root / "02_Knowledge" / "Channels" / f"{cid}.md").write_text(
             CHANNEL_TMPL.format(cid=cid, ctype=ctype), encoding="utf-8"
         )
@@ -245,9 +243,7 @@ class BriefTests(unittest.TestCase):
             self.assertEqual(
                 ["CND-neg"], [c["candidate_id"] for c in data["conflicts"]]
             )
-            self.assertEqual(
-                ["CND-arxiv"], [c["candidate_id"] for c in data["papers"]]
-            )
+            self.assertEqual(["CND-arxiv"], [c["candidate_id"] for c in data["papers"]])
             self.assertEqual(
                 ["SRC-20260729-001"],
                 [s["object_id"] for s in data["sources_today"]],
