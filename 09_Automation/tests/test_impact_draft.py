@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 try:
     from research_os.repositories.markdown import MarkdownDocument
     from research_os.schemas import validate_metadata
@@ -29,6 +31,7 @@ def _real_proposal() -> dict:
     return proposals[0]
 
 
+@pytest.mark.local_integration
 class PrepareImpactDraftTests(unittest.TestCase):
     """C-011: proposal dict -> schema-valid pending IMP Markdown (read-only)."""
 
@@ -81,6 +84,7 @@ class PrepareImpactDraftTests(unittest.TestCase):
             prepare_impact_draft(ROOT, proposal=proposal, created_at="2026-08-07")
 
 
+@pytest.mark.local_integration
 class PrepareImpactBatchTests(unittest.TestCase):
     """C-014: propose + draft (dry-run) / materialize (apply)."""
 

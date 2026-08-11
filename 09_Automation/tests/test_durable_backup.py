@@ -18,6 +18,8 @@ from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from research_os.adapters.backup_remote import (
     DURABLE_BACKUP_RELEASE_TAG,
     GitHubReleaseBackend,
@@ -397,6 +399,7 @@ class DurableBackupTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "backup_id"):
                 durable_backup.durable_receipt_path(root, "../../outside")
 
+    @pytest.mark.local_integration
     def test_dry_run_preflights_without_local_or_remote_writes(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -421,6 +424,7 @@ class DurableBackupTests(unittest.TestCase):
                 (root / "09_Automation/operational/backups/durable").exists()
             )
 
+    @pytest.mark.local_integration
     def test_apply_encrypts_both_sets_and_writes_only_safe_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -464,6 +468,7 @@ class DurableBackupTests(unittest.TestCase):
             ):
                 self.assertNotIn(sensitive, safe_metadata)
 
+    @pytest.mark.local_integration
     def test_collision_and_partial_upload_never_advance_latest_success(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -502,6 +507,7 @@ class DurableBackupTests(unittest.TestCase):
             self.assertFalse((durable / f"{backup_id}.json").exists())
             self.assertEqual([], list(temp_parent.iterdir()))
 
+    @pytest.mark.local_integration
     def test_age_failure_removes_all_plaintext_and_does_not_write_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -565,6 +571,7 @@ class DurableBackupTests(unittest.TestCase):
                         termination_signal=termination_signal,
                     )
 
+    @pytest.mark.local_integration
     def test_plaintext_archive_integrity_is_verified_before_upload(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -618,6 +625,7 @@ class DurableBackupTests(unittest.TestCase):
                 ).exists()
             )
 
+    @pytest.mark.local_integration
     def test_cleanup_failure_is_reported_before_receipt_is_advanced(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -650,6 +658,7 @@ class DurableBackupTests(unittest.TestCase):
             self.assertFalse((durable / f"{backup_id}.json").exists())
             self.assertFalse((durable / "latest-success.json").exists())
 
+    @pytest.mark.local_integration
     def test_restore_verifies_candidate_and_source_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -689,6 +698,7 @@ class DurableBackupTests(unittest.TestCase):
                 ).read_bytes(),
             )
 
+    @pytest.mark.local_integration
     def test_restore_rejects_backend_that_does_not_match_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -716,6 +726,7 @@ class DurableBackupTests(unittest.TestCase):
 
             self.assertFalse(destination.exists())
 
+    @pytest.mark.local_integration
     def test_restore_rejects_tamper_nonempty_and_live_destinations(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -768,6 +779,7 @@ class DurableBackupTests(unittest.TestCase):
                 )
             self.assertFalse(tampered_destination.exists())
 
+    @pytest.mark.local_integration
     def test_restore_rejects_unsafe_tar_members_before_extraction(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)

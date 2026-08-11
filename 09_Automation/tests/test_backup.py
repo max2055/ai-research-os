@@ -12,6 +12,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 import test_research_os_core as fixtures
 from research_os.services.backup import (
     backup_age_status,
@@ -214,6 +216,7 @@ raise SystemExit(2)
                 len(list(job_folder.glob("*backup-candidate*"))),
             )
 
+    @pytest.mark.local_integration
     def test_durable_create_dry_run_preflights_without_writes_or_job(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -250,6 +253,7 @@ raise SystemExit(2)
                 ).exists()
             )
 
+    @pytest.mark.local_integration
     def test_durable_apply_verify_and_restore_are_safe_and_audited(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -369,6 +373,7 @@ raise SystemExit(2)
                 self.assertNotIn(sensitive, persisted)
             self.assertIn(backup_id, persisted)
 
+    @pytest.mark.local_integration
     def test_durable_restore_dry_run_rejects_nonempty_and_live_targets(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
@@ -435,6 +440,7 @@ raise SystemExit(2)
             self.assertNotIn(str(identity_relative), refused_nonempty.stdout)
             self.assertNotIn(str(identity_relative), refused_live.stdout)
 
+    @pytest.mark.local_integration
     def test_durable_apply_failure_writes_redacted_job(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
