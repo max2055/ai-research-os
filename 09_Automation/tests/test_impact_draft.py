@@ -47,6 +47,7 @@ class PrepareImpactDraftTests(unittest.TestCase):
             obj = validate_metadata(doc.metadata)
             self.assertEqual("impact_assertion", obj.type)
             self.assertEqual("pending", obj.review_status)
+            self.assertEqual(proposal["project_ids"], doc.metadata["project_ids"])
             # extra traceability fields survive round-trip
             self.assertEqual(proposal["relation_id"], doc.metadata["relation_id"])
             self.assertEqual(proposal["predicate"], doc.metadata["predicate"])
@@ -58,6 +59,14 @@ class PrepareImpactDraftTests(unittest.TestCase):
         self.assertIn("review_status: pending", content)
         self.assertIn("generation_method: direct-proposal", content)
         self.assertIn("# Impact Assertion", content)
+
+    def test_draft_preserves_proposal_project_scope(self) -> None:
+        proposal = dict(_real_proposal())
+        proposal["project_ids"] = ["PRJ-001"]
+        _, content = prepare_impact_draft(
+            ROOT, proposal=proposal, created_at="2026-08-07"
+        )
+        self.assertIn("project_ids: [PRJ-001]", content)
 
     def test_rejects_bad_date(self) -> None:
         with self.assertRaises(ValueError):

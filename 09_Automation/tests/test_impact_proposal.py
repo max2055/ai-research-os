@@ -128,6 +128,17 @@ class DirectImpactProposalTests(unittest.TestCase):
             self.assertEqual("2026-08-01", proposal["valid_from"])
             self.assertEqual([], validate_mechanism(proposal["mechanism"]))
 
+    def test_proposals_inherit_sorted_unique_event_project_scope(self) -> None:
+        objects = [
+            _event(project_ids=["PRJ-002", "PRJ-001", "PRJ-002"]),
+            _rel(),
+            *_entities(),
+        ]
+        proposals = propose_direct_impacts(objects, event_id="EVT-1")
+        self.assertTrue(proposals)
+        for proposal in proposals:
+            self.assertEqual(["PRJ-001", "PRJ-002"], proposal["project_ids"])
+
     def test_proposes_all_non_conditional_allowed_types(self) -> None:
         proposals = propose_direct_impacts(self._objects(), event_id="EVT-1")
         types = {p["impact_type"] for p in proposals}

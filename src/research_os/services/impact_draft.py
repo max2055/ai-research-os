@@ -174,7 +174,7 @@ def _proposal_meta(
         "created_at": created_at,
         "updated_at": created_at,
         "schema_version": 2,
-        "project_ids": [],
+        "project_ids": list(proposal.get("project_ids", [])),
         "status": "active",
         "review_status": "pending",
         "tags": [],
