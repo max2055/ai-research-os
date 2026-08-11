@@ -698,6 +698,35 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
                 else:
                     self.assertEqual([expected_code], codes)
 
+    def test_newer_failed_durable_job_overrides_then_newer_success_clears_alert(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            self.write_durable_receipt(root, created_at="2026-08-10T00:00:00Z")
+            failed = run_job(
+                root,
+                "backup-durable",
+                started_at=datetime(2026, 8, 10, 1, 0, tzinfo=UTC),
+            )
+            self.assertEqual("failed", failed.status)
+
+            failed_snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+            self.assertEqual(
+                "failed", failed_snapshot["backup"]["durable"]["status"]
+            )
+            self.assertEqual(
+                ["BKP_DURABLE_FAILED"],
+                [item["code"] for item in failed_snapshot["alerts"]],
+            )
+
+            self.write_durable_receipt(root, created_at="2026-08-10T02:00:00Z")
+            recovered_snapshot = health_snapshot(root, now="2026-08-10T12:00:00Z")
+            self.assertEqual(
+                "fresh", recovered_snapshot["backup"]["durable"]["status"]
+            )
+            self.assertEqual([], recovered_snapshot["alerts"])
+
     def test_health_cost_uses_discovery_runs_and_never_exposes_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = prepared_root(temp)

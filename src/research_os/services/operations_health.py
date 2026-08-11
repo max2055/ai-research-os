@@ -191,7 +191,33 @@ def _backup_status(root: Path, now: datetime) -> dict[str, Any]:
         }
 
 
-def _durable_backup_status(root: Path, now: datetime) -> dict[str, Any]:
+def _timestamp(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return parsed.astimezone(UTC) if parsed.tzinfo is not None else None
+
+
+def _latest_durable_attempt(
+    objects: list[ResearchObject],
+) -> tuple[datetime, ResearchObject] | None:
+    attempts = []
+    for obj in objects:
+        if obj.object_type != "job" or obj.metadata.get("job_name") != "backup-durable":
+            continue
+        started_at = _timestamp(obj.metadata.get("started_at"))
+        if started_at is not None:
+            attempts.append((started_at, obj))
+    return max(attempts, key=lambda item: item[0]) if attempts else None
+
+
+def _durable_backup_status(
+    root: Path, now: datetime, objects: list[ResearchObject]
+) -> dict[str, Any]:
     resolved_root = root.resolve()
     receipt_path = durable_latest_success_path(resolved_root)
     relative = str(receipt_path.relative_to(resolved_root))
@@ -205,8 +231,8 @@ def _durable_backup_status(root: Path, now: datetime) -> dict[str, Any]:
         }
     try:
         receipt = load_durable_backup_receipt(receipt_path)
-        created_at = datetime.fromisoformat(receipt.created_at.replace("Z", "+00:00"))
-        if created_at.tzinfo is None:
+        created_at = _timestamp(receipt.created_at)
+        if created_at is None:
             raise ValueError("durable receipt timestamp must include timezone")
         age_hours = (
             now.astimezone(UTC) - created_at.astimezone(UTC)
@@ -222,6 +248,13 @@ def _durable_backup_status(root: Path, now: datetime) -> dict[str, Any]:
             status = "invalid"
         else:
             status = "fresh" if age_hours <= 24 else "stale"
+        latest_attempt = _latest_durable_attempt(objects)
+        if (
+            latest_attempt is not None
+            and latest_attempt[0] > created_at
+            and latest_attempt[1].metadata.get("status") == "failed"
+        ):
+            status = "failed"
         return {
             "status": status,
             "age_hours": round(age_hours, 2),
@@ -318,7 +351,7 @@ def health_snapshot(
         for key in _SECRET_KEYS
     }
     local_backup = _backup_status(root, now_dt)
-    durable_backup = _durable_backup_status(root, now_dt)
+    durable_backup = _durable_backup_status(root, now_dt, objects)
     durable_alert = _durable_backup_alert(str(durable_backup["status"]))
     cost_budget = os.environ.get("RESEARCH_OS_MODEL_COST_BUDGET")
     cost = monthly_cost_report(
