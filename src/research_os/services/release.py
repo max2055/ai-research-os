@@ -1337,7 +1337,7 @@ def _performance_evidence_passed(text: str, as_of: date) -> tuple[bool, float | 
         candidate_passed = bool(
             re.fullmatch(r"10,000 exactly", _plain_cell(values["Fixture rows"]))
             and re.fullmatch(
-                r"current version 2", _plain_cell(values["Candidate schema"])
+                r"current version 3", _plain_cell(values["Candidate schema"])
             )
             and re.fullmatch(
                 r"1\s*/\s*7", _plain_cell(values["Warmups / measured repeats"])

@@ -20,7 +20,11 @@ from research_os.services.backup import (
     create_candidate_snapshot,
     verify_candidate_snapshot,
 )
-from research_os.services.candidate_db import apply_migrations, candidate_db_path
+from research_os.services.candidate_db import (
+    SCHEMA_VERSION,
+    apply_migrations,
+    candidate_db_path,
+)
 from test_cli import run_cli
 
 
@@ -153,7 +157,7 @@ raise SystemExit(2)
             verified = verify_candidate_snapshot(destination, manifest_path)
             self.assertEqual("ok", verified["status"])
             self.assertEqual(64, len(manifest["sha256"]))
-            self.assertEqual(2, manifest["schema_version"])
+            self.assertEqual(SCHEMA_VERSION, manifest["schema_version"])
             self.assertNotIn("candidate_rows", manifest)
             with self.assertRaises(FileExistsError):
                 create_candidate_snapshot(root, destination)
