@@ -105,11 +105,11 @@ class CandidateDbTests(unittest.TestCase):
             finally:
                 connection.close()
 
-    def test_v2_drops_action_fk_so_purge_keeps_audit(self) -> None:
+    def test_v2_migration_keeps_action_fk_removed_for_purge(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "candidates.db"
             apply_migrations(path)
-            self.assertEqual(2, current_version(path))
+            self.assertEqual(SCHEMA_VERSION, current_version(path))
             connection = sqlite_connect(path)
             try:
                 connection.execute("PRAGMA foreign_keys = ON")
@@ -137,6 +137,113 @@ class CandidateDbTests(unittest.TestCase):
                 self.assertEqual("dismiss", row[0])
             finally:
                 connection.close()
+
+    def test_v3_migration_preserves_candidate_and_action_on_v2_rollback(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "candidates.db"
+            create_v2_schema(path)
+            connection = sqlite_connect(path)
+            try:
+                connection.execute(
+                    "INSERT INTO candidates (candidate_id, channel_id, "
+                    "discovered_at, title, created_at, status) "
+                    "VALUES ('CND-x', 'CHN-sec', '2026-08-06T00:00:00Z', "
+                    "'X', '2026-08-06T00:00:00Z', 'dismissed')"
+                )
+                connection.execute(
+                    "INSERT INTO candidate_actions (action_id, candidate_id, "
+                    "action, reason, actor, acted_at) "
+                    "VALUES ('CA-1', 'CND-x', 'dismiss', 'noise', "
+                    "'max', '2026-08-06T00:00:00Z')"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            self.assertEqual(3, apply_migrations(path))
+            connection = sqlite_connect(path)
+            try:
+                connection.execute(
+                    "INSERT INTO mutation_audit (event_id, mutation_id, "
+                    "event_status, operation, actor, target_type, target_id, "
+                    "target_version, input_digest, issued_at, event_at, "
+                    "expires_at, reason_code, domain_action_id) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        "MA-1",
+                        "MUT-1",
+                        "previewed",
+                        "candidate.dismiss",
+                        "max",
+                        "candidate",
+                        "CND-x",
+                        "a" * 64,
+                        "b" * 64,
+                        "2026-08-12T00:00:00Z",
+                        "2026-08-12T00:00:00Z",
+                        "2026-08-12T00:10:00Z",
+                        None,
+                        None,
+                    ),
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            rollback_migrations(path, to_version=2)
+            self.assertEqual(2, current_version(path))
+            connection = sqlite_connect(path)
+            try:
+                self.assertEqual(
+                    "CND-x",
+                    connection.execute(
+                        "SELECT candidate_id FROM candidates "
+                        "WHERE candidate_id = 'CND-x'"
+                    ).fetchone()[0],
+                )
+                self.assertEqual(
+                    "dismiss",
+                    connection.execute(
+                        "SELECT action FROM candidate_actions "
+                        "WHERE action_id = 'CA-1'"
+                    ).fetchone()[0],
+                )
+                with self.assertRaises(sqlite3.OperationalError):
+                    connection.execute("SELECT * FROM mutation_audit").fetchall()
+            finally:
+                connection.close()
+
+    def test_candidate_version_changes_when_any_candidate_field_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            path = candidate_db.candidate_db_path(root)
+            apply_migrations(path)
+            connection = sqlite_connect(path)
+            try:
+                connection.execute(
+                    "INSERT INTO candidates (candidate_id, channel_id, "
+                    "discovered_at, title, snippet, created_at, status) "
+                    "VALUES ('CND-x', 'CHN-sec', '2026-08-06T00:00:00Z', "
+                    "'X', 'before', '2026-08-06T00:00:00Z', 'new')"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            before = candidate_db.candidate_version(root, "CND-x")
+            connection = sqlite_connect(path)
+            try:
+                connection.execute(
+                    "UPDATE candidates SET snippet = 'after' "
+                    "WHERE candidate_id = 'CND-x'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            after = candidate_db.candidate_version(root, "CND-x")
+            self.assertRegex(before, r"^[0-9a-f]{64}$")
+            self.assertNotEqual(before, after)
 
     def test_start_discovery_run_allows_only_one_concurrent_channel_run(
         self,
@@ -383,6 +490,18 @@ def sqlite_connect(path: Path):
     import sqlite3
 
     return sqlite3.connect(path)
+
+
+def create_v2_schema(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite_connect(path)
+    try:
+        connection.executescript(candidate_db._SCHEMA_V1)
+        connection.executescript(candidate_db._SCHEMA_V2)
+        connection.execute("PRAGMA user_version = 2")
+        connection.commit()
+    finally:
+        connection.close()
 
 
 if __name__ == "__main__":

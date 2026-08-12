@@ -8,14 +8,17 @@ roll back atomically.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from research_os.repositories.transaction import TransactionError
+from research_os.services.mutation_audit import MUTATION_AUDIT_SCHEMA
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 _DEFAULT_PATH = Path("09_Automation/operational/candidates.db")
 
 _SCHEMA_V1 = """
@@ -196,6 +199,12 @@ def apply_migrations(path: Path) -> int:
             connection.execute("PRAGMA user_version = 2")
             connection.commit()
             version = 2
+        if version < 3:
+            connection.executescript("BEGIN")
+            connection.executescript(MUTATION_AUDIT_SCHEMA)
+            connection.execute("PRAGMA user_version = 3")
+            connection.commit()
+            version = 3
         return version
     except sqlite3.Error as exc:
         connection.rollback()
@@ -216,7 +225,13 @@ def rollback_migrations(path: Path, to_version: int = 0) -> None:
     connection = sqlite3.connect(path)
     try:
         connection.executescript("BEGIN")
+        if version == 3 and to_version == 2:
+            connection.execute("DROP TABLE IF EXISTS mutation_audit")
+            connection.execute("PRAGMA user_version = 2")
+            connection.commit()
+            return
         for table in (
+            "mutation_audit",
             "candidate_actions",
             "duplicate_clusters",
             "discovery_runs",
@@ -228,6 +243,39 @@ def rollback_migrations(path: Path, to_version: int = 0) -> None:
     except sqlite3.Error as exc:
         connection.rollback()
         raise TransactionError(f"candidate rollback failed: {exc}") from exc
+    finally:
+        connection.close()
+
+
+def candidate_version_on_connection(
+    connection: sqlite3.Connection,
+    candidate_id: str,
+) -> str:
+    """Hash the complete current Candidate row using canonical JSON."""
+    cursor = connection.execute(
+        "SELECT * FROM candidates WHERE candidate_id = ?",
+        (candidate_id,),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        raise ValueError(f"unknown candidate {candidate_id}")
+    names = [str(column[0]) for column in cursor.description]
+    canonical = json.dumps(
+        {name: value for name, value in sorted(zip(names, row, strict=True))},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def candidate_version(root: Path, candidate_id: str) -> str:
+    path = candidate_db_path(root.resolve())
+    if not path.exists():
+        raise ValueError(f"unknown candidate {candidate_id}")
+    connection = _connect(path)
+    try:
+        return candidate_version_on_connection(connection, candidate_id)
     finally:
         connection.close()
 
