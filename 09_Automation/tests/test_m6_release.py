@@ -145,7 +145,7 @@ class ReleaseReadinessTests(unittest.TestCase):
 
     def test_v03_maps_every_phase6_release_gate_key(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-12")
+        readiness = release_readiness_v03(root, as_of="2026-08-13")
 
         self.assertEqual(self.V03_KEYS, tuple(check.key for check in readiness.checks))
         for check in readiness.checks:
@@ -156,7 +156,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     @pytest.mark.local_integration
     def test_current_v03_has_only_the_five_time_and_human_blockers(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-12")
+        readiness = release_readiness_v03(root, as_of="2026-08-13")
         blockers = {check.key: check for check in readiness.blockers}
 
         self.assertFalse(readiness.ready)
@@ -175,7 +175,7 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertTrue(by_key["engineering.migration_recovery"].passed)
         self.assertTrue(by_key["engineering.recovery_boundaries"].passed)
         self.assertTrue(by_key["engineering.dashboard_security"].passed)
-        verification_path = "00_System/v0.3_Release_Gate_Verification_2026-08-12.md"
+        verification_path = "00_System/v0.3_Release_Gate_Verification_2026-08-13.md"
         self.assertIn(
             verification_path,
             by_key["engineering.quality_suite"].evidence_paths,
@@ -870,7 +870,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     @pytest.mark.local_integration
     def test_v03_quality_and_passed_decision_provenance_are_exact(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-12")
+        readiness = release_readiness_v03(root, as_of="2026-08-13")
         by_key = {check.key: check for check in readiness.checks}
 
         self.assertTrue(by_key["engineering.quality_suite"].passed)
