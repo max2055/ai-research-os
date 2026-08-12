@@ -144,8 +144,8 @@ IA、Pilot、Release Gate、规模化、备份、安全、许可和成本条款�
   one-use nonce、target-version conflict、replay/expiry/restart protection 与 redacted audit
   已落地。Candidate schema v3 同一 transaction 写 Candidate、action 和 committed audit，
   v3→v2 rollback 保留 Candidate/action 数据。
-- Verification：最终 quality/security baseline commit `9191c931c424fa86d41056f21affa2bb6abee099`；
-  non-local suite 755 passed / 1 skipped，branch coverage 80.69%，Ruff/mypy/compileall、strict
+- Verification：当前 quality/security baseline commit `6337ccda9b2087b5a58c25cffc14304002f47647`；
+  non-local suite 755 passed / 1 skipped，branch coverage 80.66%，Ruff/mypy/compileall、strict
   validation、index/doctor、10-route GET smoke、disposable mutation smoke、schema v3 recovery
   与 10,000-row p95 1.090937s benchmark 均通过。F-023 保持 16/21、5 个既有 blocker，
   未产生研究审批、Thesis confidence 或发布状态变化。
