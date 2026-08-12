@@ -12,6 +12,7 @@ import pytest
 import test_research_os_core as fixtures
 from research_os.services.indexing import index_drift, render_project_indexes
 from research_os.services.release import (
+    SECURITY_PATHS,
     ReleaseCheck,
     ReleaseEvaluationError,
     completed_cadence_records,
@@ -48,6 +49,21 @@ class ReleaseReadinessTests(unittest.TestCase):
         "human.known_limitations_read",
         "human.release_approval",
     )
+
+    def test_dashboard_security_provenance_covers_web_mutation_boundary(self) -> None:
+        self.assertEqual(
+            {
+                "src/research_os/services/candidate_db.py",
+                "src/research_os/services/mutation_audit.py",
+                "src/research_os/services/mutation_gateway.py",
+                "src/research_os/services/triage.py",
+                "src/research_os/services/web_identity.py",
+                "src/research_os/ui/app.py",
+                "09_Automation/tests/test_m6_security.py",
+                "09_Automation/tests/test_web_mutation.py",
+            },
+            set(SECURITY_PATHS),
+        )
 
     def seed_v03_field_gate_evidence(self, root: Path) -> None:
         source_root = Path(__file__).resolve().parents[2]

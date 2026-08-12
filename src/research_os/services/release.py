@@ -155,8 +155,14 @@ QUALITY_PATHS = (
     "pyproject.toml",
 )
 SECURITY_PATHS = (
+    "src/research_os/services/candidate_db.py",
+    "src/research_os/services/mutation_audit.py",
+    "src/research_os/services/mutation_gateway.py",
+    "src/research_os/services/triage.py",
+    "src/research_os/services/web_identity.py",
     "src/research_os/ui/app.py",
     "09_Automation/tests/test_m6_security.py",
+    "09_Automation/tests/test_web_mutation.py",
 )
 PERFORMANCE_OPERATIONS = frozenset(
     {
