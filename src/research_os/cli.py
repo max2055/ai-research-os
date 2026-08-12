@@ -115,7 +115,7 @@ def _resolved_model(root: Path, provider_flag: str, model_flag: str) -> tuple[st
     return provider, model or "echo"
 
 
-def parse_args() -> argparse.Namespace:
+def build_parser() -> argparse.ArgumentParser:
     default_root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description="AI Research OS automation")
     parser.add_argument("--root", type=Path, default=default_root)
@@ -1037,7 +1037,33 @@ def parse_args() -> argparse.Namespace:
         "--as-of",
         help="evaluate dated evidence as of YYYY-MM-DD",
     )
-    return parser.parse_args()
+    return parser
+
+
+def parse_args() -> argparse.Namespace:
+    return build_parser().parse_args()
+
+
+def cli_capability_keys() -> frozenset[str]:
+    """Return every executable argparse leaf as a stable dotted key."""
+
+    def walk(
+        parser: argparse.ArgumentParser,
+        prefix: tuple[str, ...],
+    ) -> set[str]:
+        subcommands: dict[str, argparse.ArgumentParser] = {}
+        for action in parser._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                subcommands.update(action.choices)
+        if not subcommands:
+            return {".".join(prefix)}
+        return {
+            key
+            for name, child in subcommands.items()
+            for key in walk(child, (*prefix, name))
+        }
+
+    return frozenset(walk(build_parser(), ()))
 
 
 def command_validate(
