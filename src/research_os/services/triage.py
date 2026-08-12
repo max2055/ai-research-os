@@ -170,13 +170,18 @@ def restore_candidate(
     *,
     actor: str,
     apply: bool = False,
+    connection: sqlite3.Connection | None = None,
 ) -> dict[str, Any]:
     """Return a dismissed/expired candidate to the review queue."""
     if not actor or not actor.strip():
         raise ValueError("actor is required to restore")
     root = root.resolve()
     db_path = candidate_db.candidate_db_path(root)
-    status = _candidate_status(db_path, candidate_id)
+    status = (
+        _candidate_status_on_connection(connection, candidate_id)
+        if connection is not None
+        else _candidate_status(db_path, candidate_id)
+    )
     if status is None:
         raise ValueError(f"unknown candidate {candidate_id}")
     if status not in _RESTORABLE:
@@ -194,27 +199,35 @@ def restore_candidate(
     }
     if not apply:
         return result
-    connection = _connect(db_path)
+    owns_connection = connection is None
+    active = connection or _connect(db_path)
     try:
-        connection.execute("BEGIN")
-        connection.execute(
-            "UPDATE candidates SET status = 'new' WHERE candidate_id = ?",
-            (candidate_id,),
+        if owns_connection:
+            active.execute("BEGIN")
+        cursor = active.execute(
+            "UPDATE candidates SET status = 'new' "
+            "WHERE candidate_id = ? AND status = ?",
+            (candidate_id, status),
         )
+        if cursor.rowcount != 1:
+            raise ValueError(f"candidate {candidate_id} changed during restore")
         action_id = _record_action(
-            connection,
+            active,
             candidate_id=candidate_id,
             action="restore",
             reason=f"restore from {status} to review queue",
             actor=actor,
             payload={"status_before": status},
         )
-        connection.commit()
+        if owns_connection:
+            active.commit()
     except sqlite3.Error as exc:
-        connection.rollback()
+        if owns_connection:
+            active.rollback()
         raise TransactionError(f"candidate restore failed: {exc}") from exc
     finally:
-        connection.close()
+        if owns_connection:
+            active.close()
     result["action_id"] = action_id
     return result
 
