@@ -8,7 +8,10 @@ import sqlite3
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
+
+from research_os.repositories.transaction import FileTransaction
 
 
 class MutationPreviewLike(Protocol):
@@ -147,3 +150,45 @@ def record_mutation_event(
         ),
     )
     return event_id
+
+
+def record_mutation_recovery_manifest(
+    root: Path,
+    preview: MutationPreviewLike,
+    *,
+    source_id: str,
+    created_paths: list[Path],
+    path_digests: Mapping[str, str],
+    status: str,
+    event_at: str,
+    reason_code: str,
+) -> Path:
+    """Write a bounded operational recovery record without captured content."""
+
+    relative = (
+        Path("09_Automation/operational/mutation-recovery")
+        / f"{preview.mutation_id}.json"
+    )
+    manifest = {
+        "schema_version": 1,
+        "mutation_id": preview.mutation_id,
+        "operation": preview.operation,
+        "actor": preview.actor,
+        "target_type": preview.target_type,
+        "target_id": preview.target_id,
+        "target_version": preview.target_version,
+        "input_digest": normalized_input_digest(preview.normalized_input),
+        "source_id": source_id,
+        "created_paths": [str(path) for path in created_paths],
+        "path_digests": dict(sorted(path_digests.items())),
+        "status": status,
+        "reason_code": reason_code,
+        "event_at": event_at,
+    }
+    transaction = FileTransaction(root.resolve())
+    transaction.stage_create(
+        relative,
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+    )
+    transaction.commit()
+    return relative

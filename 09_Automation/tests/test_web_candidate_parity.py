@@ -11,16 +11,21 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from research_os.adapters.file import FileCaptureAdapter
 from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
+from research_os.services.mutation_audit import normalized_input_digest
 from research_os.services.mutation_gateway import MutationGateway
 from research_os.services.triage import dismiss_candidate
 from research_os.services.web_candidate_mutations import (
+    commit_candidate_promote,
     commit_candidate_restore,
+    prepare_candidate_promote,
     prepare_candidate_restore,
 )
 from research_os.ui.app import create_app
 from test_m5_dashboard_jobs import prepared_root
+from test_promote import PromoteTests
 
 
 class CandidateRestoreAdapterTests(unittest.TestCase):
@@ -158,6 +163,160 @@ class CandidateRestoreAdapterTests(unittest.TestCase):
                 root = self._root(temp, status=status)
                 with self.assertRaises(ValueError):
                     prepare_candidate_restore(root, "CND-restore-1", actor="max")
+
+
+class CandidatePromoteAdapterTests(unittest.TestCase):
+    def _root(self, temp: str) -> tuple[Path, Path]:
+        fixtures = PromoteTests()
+        root = fixtures._make_root(temp)
+        fixtures._insert_and_enrich(root)
+        return root, fixtures._html_file(root)
+
+    def _prepared(self, root: Path, capture: Path):
+        return prepare_candidate_promote(
+            root,
+            "CND-0000",
+            actor="max",
+            adapter=FileCaptureAdapter(capture),
+        )
+
+    def _preview(self, prepared):
+        gateway = MutationGateway(
+            b"s" * 64,
+            now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
+        )
+        return gateway.issue(prepared.preview_input).preview
+
+    def _database_rows(self, root: Path) -> tuple[tuple, list[tuple], list[tuple]]:
+        connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+        try:
+            candidate = connection.execute(
+                "SELECT status, promoted_source_id FROM candidates "
+                "WHERE candidate_id = 'CND-0000'"
+            ).fetchone()
+            actions = connection.execute(
+                "SELECT action_id, action, actor FROM candidate_actions "
+                "WHERE candidate_id = 'CND-0000' AND action = 'promote'"
+            ).fetchall()
+            audits = connection.execute(
+                "SELECT mutation_id, event_status, domain_action_id, input_digest "
+                "FROM mutation_audit WHERE operation = 'candidate.promote'"
+            ).fetchall()
+            return candidate, actions, audits
+        finally:
+            connection.close()
+
+    def test_promote_preview_freezes_bounded_source_and_asset_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, capture = self._root(temp)
+            before = self._database_rows(root)
+            prepared = self._prepared(root, capture)
+            after = self._database_rows(root)
+
+        value = prepared.preview_input
+        self.assertEqual(before, after)
+        self.assertEqual("candidate.promote", value.operation)
+        self.assertEqual("max", value.actor)
+        self.assertEqual("candidate", value.target_type)
+        self.assertEqual("CND-0000", value.target_id)
+        self.assertRegex(value.target_version, r"^[0-9a-f]{64}$")
+        self.assertEqual(prepared.plan.source_id, value.normalized_input["source_id"])
+        self.assertEqual(
+            prepared.plan.capture.content_sha256,
+            value.normalized_input["content_sha256"],
+        )
+        self.assertEqual(2, len(value.normalized_input["assets"]))
+        serialized = json.dumps(value.normalized_input, sort_keys=True)
+        self.assertNotIn("HBM production capacity announcement", serialized)
+        self.assertNotIn("preview_token", serialized)
+        self.assertNotIn("secret", serialized.lower())
+        self.assertEqual(64, len(normalized_input_digest(value.normalized_input)))
+        self.assertFalse((root / prepared.plan.source_path).exists())
+
+    def test_promote_commit_coordinates_files_candidate_action_and_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, capture = self._root(temp)
+            prepared = self._prepared(root, capture)
+            preview = self._preview(prepared)
+            result = commit_candidate_promote(root, preview, prepared.plan)
+            candidate, actions, audits = self._database_rows(root)
+
+            self.assertEqual(("promoted", prepared.plan.source_id), candidate)
+            self.assertTrue((root / prepared.plan.source_path).is_file())
+            self.assertTrue(
+                all((root / path).is_file() for path in prepared.plan.capture.assets)
+            )
+            self.assertEqual([("promote", "max")], [row[1:] for row in actions])
+            self.assertEqual(
+                [
+                    (
+                        preview.mutation_id,
+                        "committed",
+                        actions[0][0],
+                        normalized_input_digest(preview.normalized_input),
+                    )
+                ],
+                audits,
+            )
+            self.assertEqual(prepared.plan.source_id, result["source_id"])
+            self.assertEqual(actions[0][0], result["action_id"])
+
+    def test_promote_audit_failure_compensates_files_and_database(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, capture = self._root(temp)
+            prepared = self._prepared(root, capture)
+            preview = self._preview(prepared)
+            with (
+                patch(
+                    "research_os.services.web_candidate_mutations."
+                    "record_mutation_event",
+                    side_effect=sqlite3.OperationalError("injected audit failure"),
+                ),
+                self.assertRaises(TransactionError),
+            ):
+                commit_candidate_promote(root, preview, prepared.plan)
+
+            candidate, actions, audits = self._database_rows(root)
+            self.assertEqual(("new", None), candidate)
+            self.assertEqual([], actions)
+            self.assertEqual([], audits)
+            self.assertFalse((root / prepared.plan.source_path).exists())
+            self.assertTrue(
+                all(not (root / path).exists() for path in prepared.plan.capture.assets)
+            )
+            manifest = (
+                root
+                / "09_Automation"
+                / "operational"
+                / "mutation-recovery"
+                / f"{preview.mutation_id}.json"
+            )
+            record = json.loads(manifest.read_text(encoding="utf-8"))
+            self.assertEqual("compensated", record["status"])
+            self.assertEqual("candidate.promote", record["operation"])
+            self.assertEqual(prepared.plan.source_id, record["source_id"])
+            serialized = manifest.read_text(encoding="utf-8")
+            self.assertNotIn("HBM production capacity announcement", serialized)
+            self.assertNotIn("secret", serialized.lower())
+
+    def test_promote_rejects_changed_candidate_without_publishing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, capture = self._root(temp)
+            prepared = self._prepared(root, capture)
+            preview = self._preview(prepared)
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                connection.execute(
+                    "UPDATE candidates SET status = 'dismissed' "
+                    "WHERE candidate_id = 'CND-0000'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            with self.assertRaisesRegex(ValueError, "changed"):
+                commit_candidate_promote(root, preview, prepared.plan)
+            self.assertFalse((root / prepared.plan.source_path).exists())
 
 
 class CandidateRestoreHttpTests(unittest.TestCase):

@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 from research_os.adapters.file import FileCaptureAdapter
+from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
 from research_os.services.candidate_queue import enrich_candidates
 from research_os.services.promote import (
@@ -292,6 +293,68 @@ class PromoteTests(unittest.TestCase):
             self._insert_and_enrich(root)
             with self.assertRaises(ValueError):
                 prepare_promote(root, "CND-nope", actor="max")
+
+    def test_promote_refuses_restricted_channel_and_invalid_sec_user_agent(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert_and_enrich(root)
+            channel = root / "02_Knowledge" / "Channels" / "CHN-test.md"
+            original = channel.read_text(encoding="utf-8")
+            channel.write_text(
+                original.replace(
+                    "license_status: reviewed", "license_status: restricted"
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "license"):
+                prepare_promote(
+                    root,
+                    "CND-0000",
+                    actor="max",
+                    adapter=FileCaptureAdapter(self._html_file(root)),
+                )
+
+            channel.write_text(
+                original.replace("channel_type: rss", "channel_type: sec"),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "contact User-Agent"):
+                prepare_promote(
+                    root,
+                    "CND-0000",
+                    actor="max",
+                    user_agent="anonymous-client",
+                    adapter=FileCaptureAdapter(self._html_file(root)),
+                )
+
+    def test_promote_changed_candidate_compensates_published_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert_and_enrich(root)
+            plan = prepare_promote(
+                root,
+                "CND-0000",
+                actor="max",
+                adapter=FileCaptureAdapter(self._html_file(root)),
+            )
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                connection.execute(
+                    "UPDATE candidates SET status = 'dismissed' "
+                    "WHERE candidate_id = 'CND-0000'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            with self.assertRaisesRegex(TransactionError, "changed during promote"):
+                commit_promote(root, plan)
+            self.assertFalse((root / plan.source_path).exists())
+            self.assertTrue(
+                all(not (root / path).exists() for path in plan.capture.assets)
+            )
 
 
 if __name__ == "__main__":

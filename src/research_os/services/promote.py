@@ -31,6 +31,7 @@ from research_os.services.ingestion import (
 from research_os.services.validation import validate_repository
 
 DEFAULT_USER_AGENT = "AI-Research-OS/0.3 max wu_chenlong@hotmail.com"
+_CONTACT_USER_AGENT_RE = re.compile(r"\S+@\S+\.\S+")
 
 _SOURCE_TYPE_BY_CHANNEL = {
     "rss": "article",
@@ -158,6 +159,12 @@ def prepare_promote(
         None,
     )
     channel_meta = dict(channel.metadata) if channel else {}
+    if not channel_meta:
+        raise ValueError(f"candidate {candidate_id} has no Source Channel metadata")
+    if channel_meta.get("review_status") != "reviewed":
+        raise ValueError("Source Channel must be reviewed before promote")
+    if channel_meta.get("license_status") == "restricted":
+        raise ValueError("Source Channel license is restricted")
 
     url = candidate.get("canonical_url")
     if not url:
@@ -185,9 +192,12 @@ def prepare_promote(
     published_at = str(candidate.get("published_at_proposal") or "") or "unknown"
     title = str(candidate["title"])
 
-    capture_kwargs: dict[str, Any] = {
-        "user_agent": user_agent or DEFAULT_USER_AGENT,
-    }
+    resolved_user_agent = user_agent or DEFAULT_USER_AGENT
+    if str(
+        channel_meta.get("channel_type") or ""
+    ) == "sec" and not _CONTACT_USER_AGENT_RE.search(resolved_user_agent):
+        raise ValueError("SEC promote requires a contact User-Agent")
+    capture_kwargs: dict[str, Any] = {"user_agent": resolved_user_agent}
     if max_bytes is not None:
         capture_kwargs["max_bytes"] = max_bytes
     capture_adapter = adapter or UrlCaptureAdapter(url, **capture_kwargs)
@@ -235,46 +245,21 @@ def commit_promote(root: Path, plan: PromotePlan) -> dict[str, Any]:
     are removed so no orphan Source remains (Phase 2 §13).
     """
     root = root.resolve()
-    created = commit_new_source_capture(root, plan.capture)
+    created = publish_promote_files(root, plan)
     db_path = candidate_db.candidate_db_path(root)
     try:
         connection = sqlite3.connect(db_path)
         try:
-            connection.execute("BEGIN")
-            connection.execute(
-                "UPDATE candidates SET status = 'promoted', "
-                "promoted_source_id = ? WHERE candidate_id = ?",
-                (plan.source_id, plan.candidate_id),
-            )
-            connection.execute(
-                "INSERT INTO candidate_actions ("
-                "action_id, candidate_id, action, reason, actor, acted_at, "
-                "payload_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    plan.action_id,
-                    plan.candidate_id,
-                    "promote",
-                    plan.reason,
-                    plan.actor,
-                    plan.acted_at,
-                    json.dumps(
-                        {
-                            "source_id": plan.source_id,
-                            "source_path": str(plan.source_path),
-                        },
-                        ensure_ascii=False,
-                    ),
-                ),
-            )
+            connection.execute("BEGIN IMMEDIATE")
+            link_promoted_candidate(connection, plan)
             connection.commit()
-        except sqlite3.Error as exc:
+        except (sqlite3.Error, ValueError) as exc:
             connection.rollback()
             raise TransactionError(f"candidate promote link failed: {exc}") from exc
         finally:
             connection.close()
     except TransactionError:
-        for path in created:
-            (root / path).unlink(missing_ok=True)
+        compensate_promote_files(root, created)
         raise
     return {
         "candidate_id": plan.candidate_id,
@@ -283,6 +268,59 @@ def commit_promote(root: Path, plan: PromotePlan) -> dict[str, Any]:
         "created_paths": [str(path) for path in created],
         "action_id": plan.action_id,
     }
+
+
+def publish_promote_files(root: Path, plan: PromotePlan) -> list[Path]:
+    """Publish the frozen Source and assets as one file transaction."""
+
+    return commit_new_source_capture(root.resolve(), plan.capture)
+
+
+def compensate_promote_files(root: Path, created: list[Path]) -> bool:
+    """Remove only files created by this promote and verify compensation."""
+
+    root = root.resolve()
+    for path in reversed(created):
+        (root / path).unlink(missing_ok=True)
+    return all(not (root / path).exists() for path in created)
+
+
+def link_promoted_candidate(
+    connection: sqlite3.Connection,
+    plan: PromotePlan,
+) -> str:
+    """Link a promotable Candidate and append its action in caller transaction."""
+
+    cursor = connection.execute(
+        "UPDATE candidates SET status = 'promoted', promoted_source_id = ? "
+        "WHERE candidate_id = ? AND status IN ('new', 'triaged') "
+        "AND promoted_source_id IS NULL",
+        (plan.source_id, plan.candidate_id),
+    )
+    if cursor.rowcount != 1:
+        raise ValueError(f"candidate {plan.candidate_id} changed during promote")
+    connection.execute(
+        "INSERT INTO candidate_actions ("
+        "action_id, candidate_id, action, reason, actor, acted_at, payload_json"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            plan.action_id,
+            plan.candidate_id,
+            "promote",
+            plan.reason,
+            plan.actor,
+            plan.acted_at,
+            json.dumps(
+                {
+                    "source_id": plan.source_id,
+                    "source_path": str(plan.source_path),
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+        ),
+    )
+    return plan.action_id
 
 
 def render_promote_plan(plan: PromotePlan) -> str:
