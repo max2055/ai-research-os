@@ -20,6 +20,7 @@ from research_os.services.benchmark import (
     benchmark_repository,
     run_scale_benchmark,
 )
+from research_os.services.candidate_db import SCHEMA_VERSION
 from test_candidate_queue import CandidateQueueTests
 from test_cli import run_cli
 
@@ -154,7 +155,7 @@ class ScaleBenchmarkTests(unittest.TestCase):
         self.assertIsInstance(result, CandidateQueueBenchmark)
         self.assertEqual(10_000, result.rows)
         self.assertEqual(10_000, result.fixture_distribution["total_rows"])
-        self.assertEqual(2, result.fixture_distribution["schema_version"])
+        self.assertEqual(SCHEMA_VERSION, result.fixture_distribution["schema_version"])
         self.assertEqual(1, len(result.samples_seconds))
         self.assertEqual(result.samples_seconds[0], result.p95_seconds)
         self.assertTrue(result.query_plan)
