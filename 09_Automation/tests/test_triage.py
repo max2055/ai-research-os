@@ -235,6 +235,29 @@ class TriageTests(unittest.TestCase):
                 self._actions(root, "CND-0000"),
             )
 
+    def test_dismiss_can_join_a_caller_owned_transaction(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(root, "CND-0000")
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                connection.execute("BEGIN IMMEDIATE")
+                result = dismiss_candidate(
+                    root,
+                    "CND-0000",
+                    actor="max",
+                    reason="not in scope",
+                    apply=True,
+                    connection=connection,
+                )
+                self.assertTrue(connection.in_transaction)
+                connection.rollback()
+            finally:
+                connection.close()
+            self.assertTrue(result["action_id"])
+            self.assertEqual("new", self._status(root, "CND-0000"))
+            self.assertEqual([], self._actions(root, "CND-0000"))
+
     def test_dismiss_refuses_promoted_and_missing_reason(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = self._make_root(temp)

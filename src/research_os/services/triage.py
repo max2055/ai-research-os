@@ -46,13 +46,22 @@ def _candidate_status(db_path: Path, candidate_id: str) -> str | None:
         return None
     connection = _connect(db_path)
     try:
-        row = connection.execute(
-            "SELECT status FROM candidates WHERE candidate_id = ?",
-            (candidate_id,),
-        ).fetchone()
-        return str(row["status"]) if row else None
+        return _candidate_status_on_connection(connection, candidate_id)
     finally:
         connection.close()
+
+
+def _candidate_status_on_connection(
+    connection: sqlite3.Connection,
+    candidate_id: str,
+) -> str | None:
+    row = connection.execute(
+        "SELECT status FROM candidates WHERE candidate_id = ?",
+        (candidate_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return str(row["status"] if isinstance(row, sqlite3.Row) else row[0])
 
 
 def _record_action(
@@ -89,6 +98,7 @@ def dismiss_candidate(
     actor: str,
     reason: str,
     apply: bool = False,
+    connection: sqlite3.Connection | None = None,
 ) -> dict[str, Any]:
     """Mark a candidate dismissed (human decision, reason recorded)."""
     if not actor or not actor.strip():
@@ -97,7 +107,11 @@ def dismiss_candidate(
         raise ValueError("reason is required to dismiss")
     root = root.resolve()
     db_path = candidate_db.candidate_db_path(root)
-    status = _candidate_status(db_path, candidate_id)
+    status = (
+        _candidate_status_on_connection(connection, candidate_id)
+        if connection is not None
+        else _candidate_status(db_path, candidate_id)
+    )
     if status is None:
         raise ValueError(f"unknown candidate {candidate_id}")
     if status == "promoted":
@@ -117,27 +131,35 @@ def dismiss_candidate(
     }
     if not apply:
         return result
-    connection = _connect(db_path)
+    owns_connection = connection is None
+    active = connection or _connect(db_path)
     try:
-        connection.execute("BEGIN")
-        connection.execute(
-            "UPDATE candidates SET status = 'dismissed' WHERE candidate_id = ?",
-            (candidate_id,),
+        if owns_connection:
+            active.execute("BEGIN")
+        cursor = active.execute(
+            "UPDATE candidates SET status = 'dismissed' "
+            "WHERE candidate_id = ? AND status = ?",
+            (candidate_id, status),
         )
+        if cursor.rowcount != 1:
+            raise ValueError(f"candidate {candidate_id} changed during dismiss")
         action_id = _record_action(
-            connection,
+            active,
             candidate_id=candidate_id,
             action="dismiss",
             reason=reason,
             actor=actor,
             payload={"status_before": status},
         )
-        connection.commit()
+        if owns_connection:
+            active.commit()
     except sqlite3.Error as exc:
-        connection.rollback()
+        if owns_connection:
+            active.rollback()
         raise TransactionError(f"candidate dismiss failed: {exc}") from exc
     finally:
-        connection.close()
+        if owns_connection:
+            active.close()
     result["action_id"] = action_id
     return result
 

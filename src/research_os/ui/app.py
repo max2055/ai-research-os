@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import html
 import json
-from datetime import date, datetime, timedelta
+import sqlite3
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
@@ -19,6 +20,8 @@ from fastapi.responses import (
 
 from research_os.domain.models import ResearchObject
 from research_os.llm import llm_adapter, llm_config, model_fetch, provider_catalog
+from research_os.repositories.transaction import TransactionError
+from research_os.services import candidate_db
 from research_os.services.analysis_compare import compare_runs
 from research_os.services.analysis_evaluator import (
     evaluate_run,
@@ -40,6 +43,11 @@ from research_os.services.metrics import (
     research_metrics,
 )
 from research_os.services.mode_metrics import mode_metrics
+from research_os.services.mutation_audit import (
+    MutationAuditEvent,
+    record_mutation_event,
+)
+from research_os.services.mutation_gateway import MutationConflict, MutationPreview
 from research_os.services.ontology import render_impact
 from research_os.services.operations_health import health_snapshot, operations_snapshot
 from research_os.services.pilot import pilot_status
@@ -53,6 +61,7 @@ from research_os.services.read_model import (
     sector_snapshot,
 )
 from research_os.services.review_cadence import current_next_review_date
+from research_os.services.triage import dismiss_candidate
 from research_os.services.validation import validate_repository
 
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
@@ -93,6 +102,58 @@ def esc(value: Any) -> str:
     if isinstance(value, list):
         return html.escape(", ".join(str(item) for item in value)) or "—"
     return html.escape(str(value))
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _commit_candidate_dismiss(
+    root: Path,
+    preview: MutationPreview,
+) -> dict[str, str]:
+    """Atomically commit Candidate state, domain action, and mutation audit."""
+    connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        current_version = candidate_db.candidate_version_on_connection(
+            connection,
+            preview.target_id,
+        )
+        if current_version != preview.target_version:
+            raise MutationConflict("target_changed", preview)
+        result = dismiss_candidate(
+            root,
+            preview.target_id,
+            actor=preview.actor,
+            reason=str(preview.normalized_input["reason"]),
+            apply=True,
+            connection=connection,
+        )
+        action_id = str(result["action_id"])
+        audit_id = record_mutation_event(
+            connection,
+            MutationAuditEvent.from_preview(
+                preview,
+                event_status="committed",
+                event_at=_utc_now(),
+                domain_action_id=action_id,
+            ),
+        )
+        connection.commit()
+        return {
+            "action_id": action_id,
+            "audit_id": audit_id,
+            "mutation_id": preview.mutation_id,
+        }
+    except sqlite3.Error as exc:
+        connection.rollback()
+        raise TransactionError(f"candidate Web mutation failed: {exc}") from exc
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def object_url(obj: ResearchObject) -> str:

@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import tempfile
 import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Event, Thread
+from unittest.mock import patch
 
 from research_os.repositories.transaction import TransactionError
+from research_os.services import candidate_db
 from research_os.services.mutation_gateway import (
     MutationConflict,
     MutationForbidden,
@@ -21,6 +24,7 @@ from research_os.services.web_identity import (
     BrowserSessionRegistry,
     load_web_identity,
 )
+from research_os.ui.app import _commit_candidate_dismiss
 
 
 class MutableClock:
@@ -227,6 +231,92 @@ class MutationGatewayTests(unittest.TestCase):
         release.set()
         first.join(timeout=3)
         self.assertCountEqual(["committing", "committed"], outcomes)
+
+
+class CandidateDismissTransactionTests(unittest.TestCase):
+    def _root_and_preview(self, temp: str):
+        root = Path(temp)
+        path = candidate_db.candidate_db_path(root)
+        candidate_db.apply_migrations(path)
+        candidate_db.insert_candidates(
+            path,
+            [
+                {
+                    "candidate_id": "CND-1",
+                    "title": "Candidate one",
+                    "canonical_url": "https://example.com/one",
+                }
+            ],
+            "CHN-test",
+            "2026-08-12T00:00:00Z",
+        )
+        gateway = MutationGateway(
+            b"s" * 64,
+            now=lambda: datetime(2026, 8, 12, tzinfo=UTC),
+        )
+        grant = gateway.issue(
+            MutationPreviewInput(
+                operation="candidate.dismiss",
+                actor="max",
+                target_type="candidate",
+                target_id="CND-1",
+                target_version=candidate_db.candidate_version(root, "CND-1"),
+                normalized_input={"reason": "out of scope"},
+                summary={"status_before": "new", "status_after": "dismissed"},
+            )
+        )
+        return root, grant.preview
+
+    def _rows(self, root: Path):
+        connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+        try:
+            status = connection.execute(
+                "SELECT status FROM candidates WHERE candidate_id = 'CND-1'"
+            ).fetchone()[0]
+            actions = connection.execute(
+                "SELECT action_id, actor, reason FROM candidate_actions"
+            ).fetchall()
+            audits = connection.execute(
+                "SELECT mutation_id, event_status, domain_action_id "
+                "FROM mutation_audit"
+            ).fetchall()
+            return status, actions, audits
+        finally:
+            connection.close()
+
+    def test_candidate_action_and_committed_audit_share_one_transaction(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, preview = self._root_and_preview(temp)
+            result = _commit_candidate_dismiss(root, preview)
+            status, actions, audits = self._rows(root)
+        self.assertEqual("dismissed", status)
+        self.assertEqual([("max", "out of scope")], [row[1:] for row in actions])
+        self.assertEqual(
+            [(preview.mutation_id, "committed", actions[0][0])],
+            audits,
+        )
+        self.assertEqual(actions[0][0], result["action_id"])
+        self.assertEqual(preview.mutation_id, result["mutation_id"])
+
+    def test_domain_action_failure_rolls_back_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, preview = self._root_and_preview(temp)
+            with patch(
+                "research_os.services.triage._record_action",
+                side_effect=sqlite3.OperationalError("injected action failure"),
+            ), self.assertRaises(TransactionError):
+                _commit_candidate_dismiss(root, preview)
+            self.assertEqual(("new", [], []), self._rows(root))
+
+    def test_commit_audit_failure_rolls_back_candidate_and_action(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, preview = self._root_and_preview(temp)
+            with patch(
+                "research_os.ui.app.record_mutation_event",
+                side_effect=sqlite3.OperationalError("injected audit failure"),
+            ), self.assertRaises(TransactionError):
+                _commit_candidate_dismiss(root, preview)
+            self.assertEqual(("new", [], []), self._rows(root))
 
 
 if __name__ == "__main__":

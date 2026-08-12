@@ -12,15 +12,32 @@ from typing import Any, Protocol
 
 
 class MutationPreviewLike(Protocol):
-    mutation_id: str
-    operation: str
-    actor: str
-    target_type: str
-    target_id: str
-    target_version: str
-    normalized_input: Mapping[str, Any]
-    issued_at_iso: str
-    expires_at_iso: str
+    @property
+    def mutation_id(self) -> str: ...
+
+    @property
+    def operation(self) -> str: ...
+
+    @property
+    def actor(self) -> str: ...
+
+    @property
+    def target_type(self) -> str: ...
+
+    @property
+    def target_id(self) -> str: ...
+
+    @property
+    def target_version(self) -> str: ...
+
+    @property
+    def normalized_input(self) -> Mapping[str, Any]: ...
+
+    @property
+    def issued_at_iso(self) -> str: ...
+
+    @property
+    def expires_at_iso(self) -> str: ...
 
 
 MUTATION_AUDIT_SCHEMA = """
