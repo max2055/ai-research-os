@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import tempfile
 import unittest
@@ -11,6 +12,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Event, Thread
 from unittest.mock import patch
+
+from fastapi.testclient import TestClient
 
 from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
@@ -24,7 +27,8 @@ from research_os.services.web_identity import (
     BrowserSessionRegistry,
     load_web_identity,
 )
-from research_os.ui.app import _commit_candidate_dismiss
+from research_os.ui.app import _commit_candidate_dismiss, create_app
+from test_m5_dashboard_jobs import prepared_root
 
 
 class MutableClock:
@@ -318,6 +322,245 @@ class CandidateDismissTransactionTests(unittest.TestCase):
                 _commit_candidate_dismiss(root, preview)
             self.assertEqual(("new", [], []), self._rows(root))
 
+
+class CandidateDismissHttpTests(unittest.TestCase):
+    def _configured_root(self, temp: str, *, configured: bool = True) -> Path:
+        root = prepared_root(temp)
+        if configured:
+            path = root / "00_System" / "web.local.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "researcher_id": "max",
+                        "mutation_signing_secret": "s" * 64,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            path.chmod(0o600)
+        candidate_db.insert_candidates(
+            candidate_db.candidate_db_path(root),
+            [
+                {
+                    "candidate_id": "CND-web-1",
+                    "title": "Candidate <script>unsafe</script>",
+                    "canonical_url": "https://example.com/web-1",
+                    "snippet": "Test candidate",
+                }
+            ],
+            "CHN-test",
+            "2026-08-12T00:00:00Z",
+        )
+        return root
+
+    def _client(self, root: Path) -> TestClient:
+        return TestClient(create_app(root), base_url="http://127.0.0.1")
+
+    def _hidden(self, text: str, name: str) -> str:
+        match = re.search(
+            rf'<input[^>]+name="{re.escape(name)}"[^>]+value="([^"]+)"',
+            text,
+        )
+        self.assertIsNotNone(match, f"missing hidden field {name}")
+        assert match is not None
+        return match.group(1)
+
+    def _status_and_counts(self, root: Path) -> tuple[str, int, int, int]:
+        connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+        try:
+            status = connection.execute(
+                "SELECT status FROM candidates WHERE candidate_id = 'CND-web-1'"
+            ).fetchone()[0]
+            actions = connection.execute(
+                "SELECT COUNT(*) FROM candidate_actions"
+            ).fetchone()[0]
+            previews = connection.execute(
+                "SELECT COUNT(*) FROM mutation_audit "
+                "WHERE event_status = 'previewed'"
+            ).fetchone()[0]
+            commits = connection.execute(
+                "SELECT COUNT(*) FROM mutation_audit "
+                "WHERE event_status = 'committed'"
+            ).fetchone()[0]
+            return str(status), int(actions), int(previews), int(commits)
+        finally:
+            connection.close()
+
+    def _preview(self, client: TestClient, *, reason: str = "out of scope"):
+        detail = client.get("/pipeline/queue/CND-web-1")
+        csrf = self._hidden(detail.text, "csrf_token")
+        return client.post(
+            "/pipeline/queue/CND-web-1/dismiss/preview",
+            data={"reason": reason, "csrf_token": csrf},
+            headers={"Origin": "http://127.0.0.1"},
+        )
+
+    def test_preview_commit_redirect_and_refresh_are_end_to_end_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._configured_root(temp)
+            client = self._client(root)
+            detail = client.get("/pipeline/queue/CND-web-1")
+            self.assertEqual(200, detail.status_code)
+            self.assertIn("HttpOnly", detail.headers["set-cookie"])
+            self.assertIn("SameSite=strict", detail.headers["set-cookie"])
+            self.assertIn("驳回候选", detail.text)
+            self.assertIn("本地 · 可审计", detail.text)
+            self.assertNotIn("写入请走 CLI", detail.text)
+
+            preview = self._preview(client, reason="  out   of scope  ")
+            self.assertEqual(200, preview.status_code)
+            self.assertEqual(("new", 0, 1, 0), self._status_and_counts(root))
+            self.assertIn("Candidate &lt;script&gt;unsafe&lt;/script&gt;", preview.text)
+            self.assertIn("out of scope", preview.text)
+            self.assertNotRegex(
+                preview.text,
+                r'name="(?:actor|target_id|reason|status_after)"',
+            )
+            token = self._hidden(preview.text, "preview_token")
+            csrf = self._hidden(preview.text, "csrf_token")
+
+            committed = client.post(
+                "/pipeline/queue/CND-web-1/dismiss/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+                follow_redirects=False,
+            )
+            self.assertEqual(303, committed.status_code)
+            self.assertNotIn(token, committed.headers["location"])
+            result = client.get(committed.headers["location"])
+            refreshed = client.get(committed.headers["location"])
+            self.assertEqual(200, result.status_code)
+            self.assertEqual(result.text, refreshed.text)
+            self.assertIn("已驳回", result.text)
+            self.assertEqual(("dismissed", 1, 1, 1), self._status_and_counts(root))
+
+            candidate_db.insert_candidates(
+                candidate_db.candidate_db_path(root),
+                [
+                    {
+                        "candidate_id": "CND-web-2",
+                        "title": "Other candidate",
+                        "canonical_url": "https://example.com/web-2",
+                    }
+                ],
+                "CHN-test",
+                "2026-08-12T00:01:00Z",
+            )
+            wrong_target = committed.headers["location"].replace(
+                "CND-web-1", "CND-web-2"
+            )
+            self.assertEqual(404, client.get(wrong_target).status_code)
+
+            replay = client.post(
+                "/pipeline/queue/CND-web-1/dismiss/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(409, replay.status_code)
+            self.assertEqual(("dismissed", 1, 1, 1), self._status_and_counts(root))
+
+    def test_missing_identity_keeps_get_readable_and_blocks_preview(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._configured_root(temp, configured=False)
+            client = self._client(root)
+            detail = client.get("/pipeline/queue/CND-web-1")
+            self.assertEqual(200, detail.status_code)
+            self.assertNotIn("驳回候选", detail.text)
+            response = client.post(
+                "/pipeline/queue/CND-web-1/dismiss/preview",
+                data={"reason": "noise", "csrf_token": "missing"},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(503, response.status_code)
+            self.assertEqual(("new", 0, 0, 0), self._status_and_counts(root))
+
+    def test_origin_host_session_and_csrf_are_all_required(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._configured_root(temp)
+            client = self._client(root)
+            detail = client.get("/pipeline/queue/CND-web-1")
+            csrf = self._hidden(detail.text, "csrf_token")
+            path = "/pipeline/queue/CND-web-1/dismiss/preview"
+            for headers, token in (
+                ({}, csrf),
+                ({"Origin": "https://attacker.example"}, csrf),
+                ({"Origin": "http://127.0.0.1"}, "wrong"),
+            ):
+                response = client.post(
+                    path,
+                    data={"reason": "noise", "csrf_token": token},
+                    headers=headers,
+                )
+                self.assertEqual(403, response.status_code)
+            hostile = TestClient(
+                create_app(root),
+                base_url="http://research.example",
+            ).post(
+                path,
+                data={"reason": "noise", "csrf_token": csrf},
+                headers={"Origin": "http://research.example"},
+            )
+            self.assertEqual(403, hostile.status_code)
+            self.assertEqual(("new", 0, 0, 0), self._status_and_counts(root))
+
+    def test_tampered_and_stale_preview_never_execute(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._configured_root(temp)
+            client = self._client(root)
+            preview = self._preview(client)
+            token = self._hidden(preview.text, "preview_token")
+            csrf = self._hidden(preview.text, "csrf_token")
+            tampered = client.post(
+                "/pipeline/queue/CND-web-1/dismiss/commit",
+                data={"preview_token": token + "x", "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(403, tampered.status_code)
+            self.assertEqual(("new", 0, 1, 0), self._status_and_counts(root))
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._configured_root(temp)
+            client = self._client(root)
+            preview = self._preview(client)
+            token = self._hidden(preview.text, "preview_token")
+            csrf = self._hidden(preview.text, "csrf_token")
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                connection.execute(
+                    "UPDATE candidates SET snippet = 'changed' "
+                    "WHERE candidate_id = 'CND-web-1'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            stale = client.post(
+                "/pipeline/queue/CND-web-1/dismiss/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(409, stale.status_code)
+            self.assertEqual(("new", 0, 1, 0), self._status_and_counts(root))
+
+    def test_restart_invalidates_preview_and_reason_is_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._configured_root(temp)
+            client = self._client(root)
+            for reason in ("   ", "x" * 501):
+                response = self._preview(client, reason=reason)
+                self.assertEqual(422, response.status_code)
+            preview = self._preview(client)
+            token = self._hidden(preview.text, "preview_token")
+
+            restarted = self._client(root)
+            detail = restarted.get("/pipeline/queue/CND-web-1")
+            csrf = self._hidden(detail.text, "csrf_token")
+            response = restarted.post(
+                "/pipeline/queue/CND-web-1/dismiss/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(409, response.status_code)
+            self.assertEqual(("new", 0, 1, 0), self._status_and_counts(root))
 
 if __name__ == "__main__":
     unittest.main()

@@ -149,6 +149,7 @@ class MutationGateway:
         *,
         actor: str,
         operation: str,
+        target_id: str | None = None,
         current_target_version: Callable[[str], str],
         execute: Callable[[MutationPreview], dict[str, str]],
     ) -> dict[str, str]:
@@ -174,6 +175,9 @@ class MutationGateway:
             if operation != preview.operation:
                 record.state = "consumed"
                 raise MutationForbidden("operation_mismatch", preview)
+            if target_id is not None and target_id != preview.target_id:
+                record.state = "consumed"
+                raise MutationForbidden("target_mismatch", preview)
             if current_target_version(preview.target_id) != preview.target_version:
                 record.state = "consumed"
                 raise MutationConflict("target_changed", preview)

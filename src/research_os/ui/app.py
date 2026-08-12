@@ -1,21 +1,24 @@
-"""Local, read-only FastAPI dashboard rendered directly from Markdown."""
+"""Local FastAPI research workspace with explicit audited mutations."""
 
 from __future__ import annotations
 
 import html
 import json
 import sqlite3
+from collections.abc import Mapping
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from threading import Lock
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
     JSONResponse,
     PlainTextResponse,
+    RedirectResponse,
 )
 
 from research_os.domain.models import ResearchObject
@@ -47,7 +50,14 @@ from research_os.services.mutation_audit import (
     MutationAuditEvent,
     record_mutation_event,
 )
-from research_os.services.mutation_gateway import MutationConflict, MutationPreview
+from research_os.services.mutation_gateway import (
+    MutationConflict,
+    MutationForbidden,
+    MutationGateway,
+    MutationPreview,
+    MutationPreviewInput,
+    PreviewGrant,
+)
 from research_os.services.ontology import render_impact
 from research_os.services.operations_health import health_snapshot, operations_snapshot
 from research_os.services.pilot import pilot_status
@@ -63,8 +73,16 @@ from research_os.services.read_model import (
 from research_os.services.review_cadence import current_next_review_date
 from research_os.services.triage import dismiss_candidate
 from research_os.services.validation import validate_repository
+from research_os.services.web_identity import (
+    BrowserSessionRegistry,
+    WebIdentity,
+    load_web_identity,
+)
 
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+_SESSION_COOKIE = "research_os_session"
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+_MAX_FORM_BYTES = 16_384
 
 _LLM_HUMAN_ERRORS = {
     "auth": "认证失败：API Key 无效或已过期",
@@ -156,6 +174,120 @@ def _commit_candidate_dismiss(
         connection.close()
 
 
+def _record_preview(root: Path, preview: MutationPreview) -> str:
+    connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+    try:
+        event_id = record_mutation_event(
+            connection,
+            MutationAuditEvent.from_preview(
+                preview,
+                event_status="previewed",
+                event_at=_utc_now(),
+            ),
+        )
+        connection.commit()
+        return event_id
+    except sqlite3.Error as exc:
+        connection.rollback()
+        raise TransactionError(f"mutation preview audit failed: {exc}") from exc
+    finally:
+        connection.close()
+
+
+def _record_rejection(root: Path, error: MutationForbidden | MutationConflict) -> None:
+    preview = error.preview
+    if preview is None:
+        return
+    connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+    try:
+        record_mutation_event(
+            connection,
+            MutationAuditEvent.from_preview(
+                preview,
+                event_status=("expired" if error.reason_code == "expired" else "rejected"),
+                event_at=_utc_now(),
+                reason_code=error.reason_code,
+            ),
+        )
+        connection.commit()
+    except sqlite3.Error:
+        connection.rollback()
+    finally:
+        connection.close()
+
+
+async def _urlencoded_form(request: Request) -> dict[str, str]:
+    content_type = request.headers.get("content-type", "").split(";", 1)[0]
+    if content_type != "application/x-www-form-urlencoded":
+        raise HTTPException(status_code=422, detail="invalid mutation input")
+    body = await request.body()
+    if len(body) > _MAX_FORM_BYTES:
+        raise HTTPException(status_code=422, detail="invalid mutation input")
+    try:
+        parsed = parse_qs(
+            body.decode("utf-8"),
+            keep_blank_values=True,
+            strict_parsing=True,
+            max_num_fields=4,
+        )
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="invalid mutation input") from exc
+    if any(len(values) != 1 for values in parsed.values()):
+        raise HTTPException(status_code=422, detail="invalid mutation input")
+    return {key: values[0] for key, values in parsed.items()}
+
+
+def _require_browser_boundary(
+    request: Request,
+    form: Mapping[str, str],
+    sessions: BrowserSessionRegistry,
+) -> tuple[str, str]:
+    host = request.url.hostname
+    expected_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
+    session_id = request.cookies.get(_SESSION_COOKIE, "")
+    csrf_token = form.get("csrf_token", "")
+    if (
+        host not in _LOOPBACK_HOSTS
+        or request.headers.get("origin") != expected_origin
+        or not sessions.validate(session_id, csrf_token)
+    ):
+        raise HTTPException(status_code=403, detail="mutation request forbidden")
+    return session_id, csrf_token
+
+
+def _dismiss_confirmation(
+    detail: Mapping[str, Any],
+    grant: PreviewGrant,
+    csrf_token: str,
+) -> str:
+    preview = grant.preview
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">确认候选操作</div><h2>{esc(detail.get("title"))}</h2>
+<p>{esc(preview.target_id)} · {badge(preview.summary.get("status_before"))} → {badge(preview.summary.get("status_after"), danger=True)}</p>
+</div><div><div class="eyebrow">有效至</div><h3>{esc(preview.expires_at_iso)}</h3>
+<p class="muted">操作者 {esc(preview.actor)}</p></div></section>
+<section class="panel"><h3>驳回原因</h3><p>{esc(preview.normalized_input.get("reason"))}</p>
+<form class="mutation-form" method="post" action="/pipeline/queue/{esc(preview.target_id)}/dismiss/commit">
+<input type="hidden" name="preview_token" value="{esc(grant.token)}">
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button class="button-danger" type="submit">确认驳回</button>
+<a href="/pipeline/queue/{esc(preview.target_id)}">取消</a></div></form></section>"""
+    return shell(f"确认驳回 · {preview.target_id}", content)
+
+
+def _dismiss_result(
+    detail: Mapping[str, Any],
+    result: Mapping[str, str],
+) -> str:
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">候选操作完成</div><h2>{esc(detail.get("title"))}</h2>
+<p>{badge("已驳回", danger=True)} · {esc(detail.get("candidate_id"))}</p></div></section>
+<section class="panel"><h3>审计标识</h3>
+{table(["Mutation", "Candidate action", "Mutation audit"], [[esc(result.get("mutation_id")), esc(result.get("action_id")), esc(result.get("audit_id"))]])}
+<p><a href="/pipeline/queue/{esc(detail.get("candidate_id"))}">返回候选详情</a></p></section>"""
+    return shell(f"已驳回 · {detail.get('candidate_id')}", content)
+
+
 def object_url(obj: ResearchObject) -> str:
     plural = {
         "source": "sources",
@@ -238,7 +370,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
   <div class="shell">
     <div class="brand">
       <h1><a href="/" style="color:inherit;text-decoration:none">AI Research OS</a></h1>
-      <span>本地 · 只读 · Markdown 驱动</span>
+      <span>本地 · 可审计 · 研究工作区</span>
     </div>
     <nav aria-label="Primary">
       <a href="/home{project_query}">产业首页</a>
@@ -258,7 +390,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
 </header>
 <main class="shell">{content}</main>
 <footer class="shell">
-  数据由 Markdown 于 {esc(timestamp)} 实时重建。本页面不会修改任何研究数据。
+  数据于 {esc(timestamp)} 实时重建。写操作必须经过具名预览、确认与审计。
 </footer>
 </body>
 </html>"""
@@ -980,7 +1112,7 @@ def _suggestion_panel(detail: dict[str, Any]) -> str:
         return ""
     return (
         '<section class="panel"><h3>处理建议（只读）</h3>'
-        f"<p>{' · '.join(hints)} · 写入请走 CLI（dry-run → --apply）</p></section>"
+        f"<p>{' · '.join(hints)} · 可用操作在候选详情页预览并确认。</p></section>"
     )
 
 
@@ -1015,7 +1147,12 @@ def _reviewed_evidence(
     return "".join(links) + table(["已评审事件", "日期", "标题"], event_rows)
 
 
-def _pipeline_candidate(repo: DashboardRepository, candidate_id: str) -> str:
+def _pipeline_candidate(
+    repo: DashboardRepository,
+    candidate_id: str,
+    *,
+    csrf_token: str | None = None,
+) -> str:
     detail = queue_show(repo.root, candidate_id)
     if detail is None:
         raise KeyError(candidate_id)
@@ -1043,6 +1180,15 @@ def _pipeline_candidate(repo: DashboardRepository, candidate_id: str) -> str:
 <p>{badge(detail.get("status"))} · {esc(detail.get("channel_id"))}</p></div>
 <div><div class="eyebrow">优先级</div><h2>{esc(priority)}</h2>
 <p class="muted">{esc(detail.get("model_version")) or "启发式打分"}</p></div></section>"""
+    dismiss_form = ""
+    if csrf_token is not None and detail.get("status") not in {"promoted", "dismissed"}:
+        dismiss_form = f"""<section class="panel mutation-panel"><h3>驳回候选</h3>
+<form class="mutation-form" method="post" action="/pipeline/queue/{esc(candidate_id)}/dismiss/preview">
+<label for="dismiss-reason">原因</label>
+<textarea id="dismiss-reason" name="reason" maxlength="500" required></textarea>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button class="button-danger" type="submit">预览驳回</button></div>
+</form></section>"""
     panels = f"""<section class="panel"><h3>候选区</h3>{_candidate_facts(detail)}</section>
 <section class="grid" style="margin-top:1rem">
 <div class="panel"><h3>实体建议</h3>{table(["字段", "值"], _proposal_rows(entity))}</div>
@@ -1050,6 +1196,7 @@ def _pipeline_candidate(repo: DashboardRepository, candidate_id: str) -> str:
 </section>
 {_scoring_panel(detail)}
 {_suggestion_panel(detail)}
+{dismiss_form}
 <section class="panel" style="border-top:2px solid var(--accent)"><h3>已评审证据区</h3>
 {_reviewed_evidence(repo, entity, detail.get("existing_source_id"))}</section>
 <section class="grid" style="margin-top:1rem">
@@ -2720,12 +2867,32 @@ def _llm_page() -> str:
 
 def create_app(root: Path) -> FastAPI:
     repo = DashboardRepository(root)
+    sessions = BrowserSessionRegistry()
+    gateway_lock = Lock()
+    gateway_identity: WebIdentity | None = None
+    gateway: MutationGateway | None = None
+    mutation_results: dict[str, dict[str, str]] = {}
+    result_lock = Lock()
     app = FastAPI(
         title="AI Research OS",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
     )
+
+    def mutation_gateway() -> tuple[WebIdentity, MutationGateway]:
+        nonlocal gateway_identity, gateway
+        identity = load_web_identity(repo.root)
+        if identity is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Web mutation identity is unavailable",
+            )
+        with gateway_lock:
+            if gateway_identity != identity or gateway is None:
+                gateway_identity = identity
+                gateway = MutationGateway(identity.mutation_signing_secret)
+            return identity, gateway
 
     @app.get("/static/styles.css", response_class=PlainTextResponse)
     def styles() -> PlainTextResponse:
@@ -2817,11 +2984,144 @@ def create_app(root: Path) -> FastAPI:
         )
 
     @app.get("/pipeline/queue/{candidate_id}", response_class=HTMLResponse)
-    def pipeline_candidate(candidate_id: str) -> HTMLResponse:
+    def pipeline_candidate(candidate_id: str, request: Request) -> HTMLResponse:
         try:
-            return HTMLResponse(_pipeline_candidate(repo, candidate_id))
+            identity = load_web_identity(repo.root)
+            session_id, csrf_token = sessions.issue()
+            response = HTMLResponse(
+                _pipeline_candidate(
+                    repo,
+                    candidate_id,
+                    csrf_token=csrf_token if identity is not None else None,
+                )
+            )
+            response.set_cookie(
+                _SESSION_COOKIE,
+                session_id,
+                httponly=True,
+                samesite="strict",
+                secure=request.url.scheme == "https",
+                max_age=3600,
+                path="/",
+            )
+            return response
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=candidate_id) from exc
+
+    @app.post(
+        "/pipeline/queue/{candidate_id}/dismiss/preview",
+        response_class=HTMLResponse,
+    )
+    async def candidate_dismiss_preview(
+        candidate_id: str,
+        request: Request,
+    ) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"reason", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        reason = " ".join(form["reason"].split())
+        if not 1 <= len(reason) <= 500:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            dry_run = dismiss_candidate(
+                repo.root,
+                candidate_id,
+                actor=identity.researcher_id,
+                reason=reason,
+                apply=False,
+            )
+            detail = queue_show(repo.root, candidate_id)
+            if detail is None:
+                raise ValueError(f"unknown candidate {candidate_id}")
+            grant = active_gateway.issue(
+                MutationPreviewInput(
+                    operation="candidate.dismiss",
+                    actor=identity.researcher_id,
+                    target_type="candidate",
+                    target_id=candidate_id,
+                    target_version=candidate_db.candidate_version(
+                        repo.root,
+                        candidate_id,
+                    ),
+                    normalized_input={"reason": reason},
+                    summary={
+                        "status_before": dry_run["status_before"],
+                        "status_after": dry_run["status_after"],
+                    },
+                )
+            )
+            _record_preview(repo.root, grant.preview)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail="candidate cannot be dismissed") from exc
+        except TransactionError as exc:
+            raise HTTPException(status_code=500, detail="mutation preview failed") from exc
+        return HTMLResponse(
+            _dismiss_confirmation(detail, grant, form["csrf_token"])
+        )
+
+    @app.post(
+        "/pipeline/queue/{candidate_id}/dismiss/commit",
+        response_class=HTMLResponse,
+    )
+    async def candidate_dismiss_commit(
+        candidate_id: str,
+        request: Request,
+    ) -> RedirectResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            result = active_gateway.commit(
+                form["preview_token"],
+                actor=identity.researcher_id,
+                operation="candidate.dismiss",
+                target_id=candidate_id,
+                current_target_version=lambda target: candidate_db.candidate_version(
+                    repo.root,
+                    target,
+                ),
+                execute=lambda preview: _commit_candidate_dismiss(repo.root, preview),
+            )
+        except MutationForbidden as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=403, detail="mutation request forbidden") from exc
+        except MutationConflict as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=409, detail="mutation preview conflict") from exc
+        except TransactionError as exc:
+            raise HTTPException(status_code=500, detail="mutation commit failed") from exc
+        result["target_id"] = candidate_id
+        with result_lock:
+            mutation_results[result["mutation_id"]] = result
+        location = (
+            f"/pipeline/queue/{candidate_id}/mutations/{result['mutation_id']}"
+        )
+        return RedirectResponse(location, status_code=303)
+
+    @app.get(
+        "/pipeline/queue/{candidate_id}/mutations/{mutation_id}",
+        response_class=HTMLResponse,
+    )
+    def candidate_dismiss_result(
+        candidate_id: str,
+        mutation_id: str,
+    ) -> HTMLResponse:
+        with result_lock:
+            result = mutation_results.get(mutation_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="unknown mutation result")
+        detail = queue_show(repo.root, candidate_id)
+        if (
+            detail is None
+            or result["mutation_id"] != mutation_id
+            or result["target_id"] != candidate_id
+        ):
+            raise HTTPException(status_code=404, detail="unknown mutation result")
+        return HTMLResponse(_dismiss_result(detail, result))
 
     @app.get("/pipeline/channels", response_class=HTMLResponse)
     def pipeline_channels() -> HTMLResponse:

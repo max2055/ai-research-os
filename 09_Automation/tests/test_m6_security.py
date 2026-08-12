@@ -80,7 +80,13 @@ class DashboardSecurityTests(unittest.TestCase):
             if (set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}) - {"GET"}
         }
         self.assertEqual(
-            {"/llm/config", "/llm/models", "/llm/test"},
+            {
+                "/llm/config",
+                "/llm/models",
+                "/llm/test",
+                "/pipeline/queue/{candidate_id}/dismiss/commit",
+                "/pipeline/queue/{candidate_id}/dismiss/preview",
+            },
             write_routes,
         )
 

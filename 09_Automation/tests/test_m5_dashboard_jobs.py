@@ -184,7 +184,7 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(200, home.status_code)
             self.assertIn("AI Research OS", home.text)
             self.assertIn("THS-001", home.text)
-            self.assertIn("本地 · 只读", home.text)
+            self.assertIn("本地 · 可审计", home.text)
 
             queue = client.get("/reviews?project=PRJ-001&type=source&status=pending")
             self.assertEqual(200, queue.status_code)
@@ -210,9 +210,8 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual("PRJ-001", state.json()["project_id"])
             self.assertGreaterEqual(len(state.json()["objects"]), 4)
 
-            # The research dashboard is read-only EXCEPT the /llm config
-            # endpoints (deliberate server-side provider/key/model config UI —
-            # the API key never leaves the server). No other write routes.
+            # Only the explicit LLM configuration and Candidate dismiss
+            # preview/commit routes may accept writes.
             write_routes = sorted(
                 {
                     route.path
@@ -221,14 +220,21 @@ class DashboardTests(unittest.TestCase):
                     - {"GET"}
                 }
             )
-            self.assertEqual(["/llm/config", "/llm/models", "/llm/test"], write_routes)
-            for route in app.routes:
-                methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
-                if route.path.startswith("/llm") or route.path in {
+            self.assertEqual(
+                [
                     "/llm/config",
                     "/llm/models",
                     "/llm/test",
-                }:
+                    "/pipeline/queue/{candidate_id}/dismiss/commit",
+                    "/pipeline/queue/{candidate_id}/dismiss/preview",
+                ],
+                write_routes,
+            )
+            for route in app.routes:
+                methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
+                if route.path.startswith("/llm") or route.path.startswith(
+                    "/pipeline/queue/{candidate_id}/dismiss/"
+                ):
                     continue
                 self.assertEqual({"GET"}, methods, route.path)
 
@@ -353,7 +359,7 @@ class DashboardTests(unittest.TestCase):
                 if route.path.startswith("/pipeline")
                 for method in getattr(route, "methods", set())
             }
-            self.assertNotIn("POST", pipeline_methods)
+            self.assertIn("POST", pipeline_methods)
             self.assertNotIn("PUT", pipeline_methods)
             self.assertNotIn("DELETE", pipeline_methods)
 
@@ -1615,7 +1621,16 @@ class IndustryHomeTests(unittest.TestCase):
                     - {"GET"}
                 }
             )
-            self.assertEqual(["/llm/config", "/llm/models", "/llm/test"], write_routes)
+            self.assertEqual(
+                [
+                    "/llm/config",
+                    "/llm/models",
+                    "/llm/test",
+                    "/pipeline/queue/{candidate_id}/dismiss/commit",
+                    "/pipeline/queue/{candidate_id}/dismiss/preview",
+                ],
+                write_routes,
+            )
 
 
 def _write_home_security(root: Path) -> str:

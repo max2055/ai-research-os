@@ -205,7 +205,7 @@ pre {
 
 .empty { color: var(--muted); font-style: italic; }
 
-select, button {
+select, button, textarea {
   border: 1px solid var(--line);
   border-radius: 0.5rem;
   background: white;
@@ -220,6 +220,24 @@ button {
   border-color: var(--accent);
   color: white;
   cursor: pointer;
+}
+
+.mutation-panel { margin-top: 1rem; border-top: 2px solid var(--danger); }
+.mutation-form { display: grid; gap: 0.75rem; max-width: 42rem; }
+.mutation-form label { font-weight: 700; }
+.mutation-form textarea { min-height: 7rem; resize: vertical; width: 100%; }
+.mutation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+.mutation-actions button { margin-left: 0; }
+.button-danger { background: var(--danger); border-color: var(--danger); }
+.mutation-form textarea:focus-visible,
+.mutation-actions button:focus-visible {
+  outline: 3px solid var(--accent-soft);
+  outline-offset: 2px;
 }
 
 footer { color: var(--muted); font-size: 0.75rem; padding: 1rem 0 2rem; }
