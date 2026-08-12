@@ -1,6 +1,6 @@
-# Phase 6：Dashboard、持续运行、规模化与 v0.3 发布
+# Phase 6：Web 产品、持续运行、规模化与 v0.3 发布
 
-状态：`in_progress / release blocked`（WP-600～612 工程完成；F-023 当前 16/21）
+状态：`in_progress / release blocked`（F-026 Candidate dismiss 已完成；F-027～029 待实施；F-023 当前 16/21）
 建议周期：5–8 周 + 30 天真实 Pilot  
 前置：Phase 2–5 工程 Gate  
 
@@ -40,8 +40,10 @@ Industry Home
 └── System Health
 ```
 
-Dashboard 默认继续 loopback-only。Web mutation 是否引入必须另行批准；v0.3 可以先用
-CLI/Markdown 完成所有权威写入。
+RCP-v03-011 已批准网站成为唯一用户产品界面。部署当前继续 loopback-only；Markdown 仍为
+研究事实源，但创建、修改、审核、批准、运维和恢复必须迁移为受审计 Web workflow。现有
+CLI 只可作为迁移期内部兼容、scheduler、诊断和 disaster-recovery adapter，不能作为长期
+用户产品入口；物理删除以 Web parity 和完整恢复演练通过为前置。
 
 ## 3. 页面要求
 
@@ -207,6 +209,8 @@ Health 必须覆盖：
 - 模型 provider 的数据保留策略记录；
 - prompt injection 内容不能改变系统规则或执行命令；
 - 日志可审计但不含正文/凭证等敏感数据。
+- Web mutation 必须覆盖 CSRF/Origin、重复提交、并发冲突、具名 actor、显式确认、
+  原子提交与回滚；后台任务不具备研究审批 capability。
 
 ## 9. 工作包
 
@@ -237,6 +241,10 @@ Health 必须覆盖：
 | F-023 | release check v0.3 | service/tests | machine-verifiable checklist |
 | F-024 | human release packet | review doc | reviewer/date/decision |
 | F-025 | final tag/release | release engineering | 仅在全 Gate 后 |
+| F-026 | Web mutation foundation | service/UI/audit | ✅ Candidate dismiss + preview/confirm/actor/version/audit/rollback |
+| F-027 | research workflow parity | Web UI | Candidate→Evidence→Impact/Analysis→Decision |
+| F-028 | operations/recovery parity | Web UI/services | jobs/backup/restore/release 无用户 CLI 依赖 |
+| F-029 | CLI retirement | package/docs | Web parity + recovery Gate 后移除产品 entry point |
 
 ## 10. 30 天 Pilot
 

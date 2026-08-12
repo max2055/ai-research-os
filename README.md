@@ -24,7 +24,7 @@ operational-hardening MVP 已合并，F-023 当前 16/21 checks 通过，仍未�
 
 当前状态读取顺序：
 
-1. `research-os release check` / `--version 0.3`：机器可验证的发布 Gate。
+1. 网站 System Health / Release 页面（待 F-028 补齐）；迁移期由内部 release evaluator 提供机器 Gate。
 2. 具名、带日期的人审文件：人工决定。
 3. `00_System/v0.3_AI_Industry_Intelligence_OS/09_Master_Backlog.md`：执行状态。
 4. README 与阶段路线图：摘要；带日期的 Audit/Acceptance 是时间点证据，不覆盖当前态。
@@ -78,32 +78,32 @@ operational-hardening MVP 已合并，F-023 当前 16/21 checks 通过，仍未�
 - [x] 阶段 5：反馈与复盘机制。
 - [x] 阶段 6：规模化和 Ontology 升级。
 
-自动化入口：
-
-```bash
-python3 09_Automation/research_os.py status
-python3 09_Automation/research_os.py validate
-python3 09_Automation/research_os.py index --check
-```
-
-产品化安装与诊断：
-
-```bash
-python3 -m venv /tmp/ai-research-os-dev-venv
-/tmp/ai-research-os-dev-venv/bin/pip install -e ".[dev,ui]"
-/tmp/ai-research-os-dev-venv/bin/research-os doctor
-source /tmp/ai-research-os-dev-venv/bin/activate
-```
-
-启动本地只读 Dashboard：
+产品入口：
 
 ```bash
 research-os ui
 ```
 
-默认地址为 `http://127.0.0.1:8765`，v1 只允许 loopback，不提供 Web 写入。
+打开 `http://127.0.0.1:8765/home`。根据 RCP-v03-011，网站是唯一用户产品界面。
+F-026 已交付首个受控 Web mutation：研究者可在 Candidate 详情页按“预览驳回 → 明确确认
+→ 提交 → 结果页”完成 dismiss。Candidate promote/restore、研究对象创建与人工审核、Thesis
+变更、运维、备份、恢复和发布检查仍待 F-027/F-028 补齐；这些产品缺口不应通过要求
+研究者使用 CLI 来隐藏。
 
-本地完整校验必须使用 strict 模式；它会读取 Git 外的真实 Source assets：
+内部工程兼容入口（迁移期，非用户产品界面）：
+
+```bash
+python3 -m venv /tmp/ai-research-os-dev-venv
+/tmp/ai-research-os-dev-venv/bin/pip install -e ".[dev,ui]"
+/tmp/ai-research-os-dev-venv/bin/research-os doctor
+python3 09_Automation/research_os.py validate
+python3 09_Automation/research_os.py index --check
+```
+
+这些命令只供开发、scheduler 兼容、诊断和 disaster recovery 使用；不再新增用户专属
+CLI workflow，并在 F-027～029 Web parity 与恢复 Gate 完成后移除产品 CLI entry point。
+
+内部完整校验必须使用 strict 模式；它会读取 Git 外的真实 Source assets：
 
 ```bash
 research-os validate --strict
@@ -122,7 +122,7 @@ research-os index --check --metadata-only
 
 metadata-only 不能替代上述 strict local Gate。
 
-查看发布状态：
+迁移期内部发布状态核验：
 
 ```bash
 research-os release check
@@ -135,7 +135,7 @@ WP-620 真实 Pilot、WP-530 自然 Resolution、两次 Weekly 加一次 Monthly
 Known Limitations 阅读确认和 F-024 人工发布批准。自动化不能代填真实 Source、
 Forecast outcome、Weekly/Monthly 运行或最终发布决定。
 
-加密 durable backup 先 dry-run，再显式 apply：
+迁移期内部 durable backup adapter 先预览，再显式 apply：
 
 ```bash
 BACKUP_CONFIG=09_Automation/operational/backup.local.json
@@ -147,8 +147,8 @@ research-os backup durable create --config "$BACKUP_CONFIG" --apply
 配置的 private GitHub backup prerelease。密钥配置、24 小时 RPO、remote verify 与
 disposable restore 步骤见 `00_System/Recovery_Runbook.md`。
 
-激活产品环境后，旧的 `python3 09_Automation/research_os.py ...` 入口
-至少保留一个版本周期；兼容入口不再包含独立的无依赖业务内核。
+旧的 `python3 09_Automation/research_os.py ...` 与 `research-os ...` 入口仅作为内部兼容层；
+它们不再定义产品 UX，删除时点由 RCP-v03-011 的 Web parity 与 recovery Gate 决定。
 仓库位于 iCloud 时，开发 venv 应放在同步目录外。
 
 首轮建设完成审计见：`00_System/Implementation_Audit.md`。

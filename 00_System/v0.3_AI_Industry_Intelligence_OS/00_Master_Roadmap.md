@@ -1,6 +1,6 @@
 # AI Industry Intelligence & Decision OS v0.3 总路线图
 
-状态：`approved / execution in progress`（RCP-v03-001～010 已按阶段批准；发布仍受真实时间 Gate 约束）
+状态：`approved / execution in progress`（RCP-v03-001～011 已批准；Web-only 迁移与发布 Gate 仍在进行）
 版本：v0.3-plan-1  
 制定日期：2026-08-04  
 继承基线：AI Research OS v0.2 Evidence Kernel  
@@ -62,7 +62,7 @@ GitHub Release 完成 release engineering。
 6. Thesis confidence 不得自动改变。
 7. 自动化不得生成权威买卖指令。
 8. 原始 Source asset 不覆盖。
-9. 写操作 dry-run 优先，显式 `--apply`。
+9. 写操作先预览、再由具名人工明确确认；CLI 的 dry-run/`--apply` 语义迁移为 Web mutation 合同。
 10. 每个新能力必须可验证、可回滚、可交接。
 
 ## 3. 产品分层
@@ -77,7 +77,7 @@ GitHub Release 完成 release engineering。
 | Analysis | 可版本化的分析模式与运行结果 | mode definition + immutable run artifact |
 | Decision | Forecast、Scenario、Valuation、Recommendation Draft | reviewed Markdown objects |
 | Evaluation | Forecast resolution、calibration、模式表现 | append-only resolution records |
-| Experience | Daily Brief、产业地图、公司雷达、影响图、决策台 | 可重建 Dashboard read model |
+| Experience | 唯一 Web 产品界面：研究、审核、运维、恢复与发布 | 可重建 read model + 受审计 mutation service |
 
 Candidate 数据量预计远大于正式研究对象，因此不能把每条候选新闻都写成正式 Source。
 正式研究结论仍以 Markdown 对象和人工审核为权威边界。
@@ -92,7 +92,7 @@ Candidate 数据量预计远大于正式研究对象，因此不能把每条候�
 | 3 | Impact Assertion 与跨板块传导 | 4–6 周 | 20 个真实事件的人工影响路径 Gate | 阶段 1–2 | ✅ 完成（2026-08-08，C-018 approved + 多跳激活）|
 | 4 | Analysis Mode Framework | 4–6 周 | 6 个模式、同证据可复现、差异可解释 | 阶段 3 | ✅ 完成（2026-08-09，D-019 10-case Gate PASS + D-020 acceptance）|
 | 5 | Forecast、Valuation 与 Recommendation Draft | 5–7 周 | 可解析预测、三情景、人工建议 Gate | 阶段 4 | ⬜ in_progress（WP-500～520 完成；仅剩 WP-530 自然到期解析，未来日期依赖）|
-| 6 | Dashboard、规模化、运行与发布 | 5–8 周 | 30 天 pilot、恢复、性能、治理和发布 Gate | 阶段 2–5；RCP-v03-010 | ⬜ in_progress / release blocked（WP-600～612 工程完成；F-023 当前 16/21；等待真实 Pilot、自然到期结果、cadence/limitations 确认与人工发布 Gate）|
+| 6 | Web 产品、规模化、运行与发布 | 5–8 周 + Web parity migration | Web-only parity、30 天 pilot、恢复、性能、治理和发布 Gate | 阶段 2–5；RCP-v03-010/011 | ⬜ in_progress / release blocked（F-026 Candidate dismiss 已完成；F-027～029 未完成；F-023 当前 16/21）|
 
 状态解释：Phase 3 的原 14 个具名判断已在 2026-08-12 增补为 20 个 in-scope
 结构化判断；原阈值不变，EVT-20260429-046 继续按 max 的范围决定排除。
@@ -121,7 +121,7 @@ Agent 开工前必须同时读取根目录 `AGENTS.md` 和本目录相关阶段�
 
 - 阶段范围和非目标没有静默变化；
 - 所需 RCP 已获人工批准；
-- Schema、CLI、API、UI 和文档与实现一致；
+- Schema、service/API、Web UI 和文档与实现一致；迁移期内部 CLI adapter 不构成用户入口；
 - 新对象/关系有 validation；
 - happy path、失败、幂等、事务回滚和兼容测试齐全；
 - 全仓库 `validate` 为 0 error；

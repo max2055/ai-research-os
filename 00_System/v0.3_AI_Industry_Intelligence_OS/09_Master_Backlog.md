@@ -3,7 +3,7 @@
 状态：`wave6-release-gates`（Wave 0-5 与 WP-600～612 工程完成；F-023 当前 16/21；未批准 v0.3 发布）
 规则：本文件是执行索引；任务细节以各 Phase 文件为准。Agent 不得只读本表就开工。
 
-当前状态权威顺序：F-023 CLI 负责机器 Gate，具名人审文件负责人工决定，本表负责
+当前状态权威顺序：F-023 release evaluator 负责机器 Gate，具名人审文件负责人工决定，本表负责
 工作包状态，README/Roadmap 只做摘要。截至 2026-08-12，5 个未通过检查为：
 `ingestion.pilot_completion`、`decision.natural_resolutions`、
 `human.cadence_reviews`、`human.known_limitations_read`、
@@ -260,8 +260,24 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-612 | F-019～020 | runbook/limitations | completed |
 | WP-620 | F-021～022 | 30-day Pilot/resolutions | **BLOCKED**（future-date dependent；real 30-day Pilot） |
 | WP-630 | F-023～025 | release check/human decision/tag | in_progress（F-023 completed；F-024 BLOCKED；F-025 waits for all Gates） |
+| WP-640 | F-026～029 | Web mutation/parity/operations/CLI retirement | in_progress（F-026 completed；F-027 next） |
 
-Wave 6 开工前置已满足：RCP-v03-010 已获批（2026-08-09，`6e5aa8e` 修订 + approval）；F-001 页面/查询/边界按 RCP 批准时点同步完成。WP-600 起可开工。
+Wave 6 原只读基线由 RCP-v03-010 批准并完成。RCP-v03-011 于 2026-08-12 取代其
+GET-only/CLI 产品边界，新增 WP-640：网站成为唯一用户产品界面，CLI 仅作迁移期内部
+adapter，并在 Web parity、scheduler/service 改接和 recovery rehearsal 后删除。
+
+WP-640 progress（2026-08-12）：F-026 已完成首个端到端 Web mutation。
+- **F-026**：Candidate detail → dismiss preview → dedicated confirmation → commit → `303`
+  result flow；commit 仅接收 session-bound CSRF 与 10 分钟 HMAC preview token。
+- **一致性与审计**：Candidate status、`candidate_actions` 和 redacted `mutation_audit`
+  在 schema v3 的同一 SQLite transaction 提交；target version、one-use nonce、expiry、
+  replay、restart、actor/operation mismatch 与 stale target 均受保护。
+- **安全边界**：当前 exact non-GET allowlist 为 3 条 `/llm/*` 加 dismiss preview/commit；
+  Review、Thesis 和其他研究对象仍无 mutation adapter，自动任务仍无审批或 confidence 修改权。
+- **验证**：最终代码 Gate、10-route loopback GET smoke、一次 disposable mutation smoke、
+  schema v3 recovery 和 10,000-row benchmark 均已记录；F-023 保持 16/21，五个既有 blocker 不变。
+- **下一步**：F-027 补 Candidate promote/restore 与研究工作流 parity；F-028 补运维/恢复
+  parity；F-029 在完整 parity 与 recovery rehearsal 后移除产品 CLI entry point。
 
 WP-600 close-out（2026-08-09）：F-001~003 落地，Wave 6 第一个 WP。
 - **F-001**：`00_System/Dashboard_Design_v2.md`（Product IA v2——IA 树、页面→查询/边界表、read model 约定、GET-only 不变量、loopback、WP-600 范围；镜像 v1 先例 `Dashboard_and_Jobs_Design.md`）。
@@ -301,8 +317,8 @@ WP-611 close-out（2026-08-10）：F-015~018 完成许可、备份、恢复与�
 - **F-018**：`v0.3_Migration_Rehearsal.md` 在另一 disposable clone 对 8 个 v0.2 legacy Company 做 v1→v2 plan/apply；1027/1027 unowned objects apply 期间不变。故障注入触发 `rollback precondition changed` 且拒绝覆盖；修复 after-hash 后 1035/1035 正式对象字节级恢复，Candidate DB hash/schema v2 不变；forward/rollback 后 validate/index/full pytest 通过。
 
 WP-612 close-out（2026-08-10）：F-019~020 完成 operator 与决策边界文档。
-- **F-019**：`v0.3_User_Runbook.md` 覆盖 install/config、loopback Dashboard、daily/weekly/monthly、Candidate/Evidence/Impact/Analysis/Forecast/Decision review、local+durable backup、recipient/identity 分离、off-device receipt/key custody、disposable restore、P0~P3 failure response、secrets/escalation；所有写命令明确 dry-run 与 `--apply` 边界。
-- **F-020**：`v0.3_Known_Limitations.md` 以 Facts/Inferences/Judgments 分离数据/时效、模型/provider retention、许可、SQLite/single-user、read-only Web、metadata-only CI、strict local Gate、六态 cost、backup receipt/key custody、校准和投资行为边界；document contract tests 固化必备项与 blocked 状态。
+- **F-019**：`v0.3_User_Runbook.md` 已按 RCP-v03-011 改为 Web Product and Migration Runbook；现有命令只保留为内部兼容/恢复证据，Web parity 缺口显式披露。
+- **F-020**：`v0.3_Known_Limitations.md` 以 Facts/Inferences/Judgments 分离数据/时效、模型/provider retention、许可、SQLite/single-user、Web-only 目标与未完成 parity、metadata-only CI、strict local Gate、六态 cost、backup receipt/key custody、校准和投资行为边界；document contract tests 固化必备项与 blocked 状态。
 - **真实时间门不变**：WP-530 最早真实 Forecast resolution 仍为 2026-10-31；WP-620 仍需真实 30-day Pilot/natural resolutions；不生成 synthetic outcome、reviewer、date 或 approval。WP-630 继续等待这些 Gate 与 human release packet。
 - **release check 边界**：默认 `research-os release check` 仍是 v0.2 的 18 Gate，当前 18/18 Ready；显式 `--version 0.3` 已实现 WP-630/F-023 的 21-key read-only evaluator，当前 16/21。结果必须保持 BLOCKED，并独立显示 WP-530、WP-620、cadence、Known Limitations 阅读确认和 F-024；checker 不创建 packet、reviewer、date、approval、tag 或 release。
 - **private CI 边界**：hosted workflow 仅用 metadata-only validation/index、asset-independent tests、Ruff/mypy、10-route smoke 与预期 blocker assertion；权限 `contents: read`，不读取 raw assets、Candidate DB、secret、backup identity，不替代 strict local/full restore Gate。
@@ -577,3 +593,17 @@ max 批准 operational audit。当前 quality suite 与 Dashboard smoke/security
 - Consequences: Phase 6 解除 RCP 阻塞；Wave 6（WP-600 起）转 ready。
 - Reviewer: max
 - Revisit trigger/date: WP-600 实施遇架构问题；发布 Gate 需调整时间依赖时提修改 RCP。
+
+#### 批准 RCP-v03-011（2026-08-12）
+
+- Decision ID: RCP-v03-011-approval
+- Date: 2026-08-12
+- Decision: 网站成为唯一用户产品界面；RCP-v03-010 的 GET-only/CLI 权威写入条款被
+  定向取代。Web mutation 必须复用领域 service 并具备 preview、具名人工确认、版本冲突、
+  audit、原子失败和 rollback。自动任务仍不得批准研究对象或改变 Thesis confidence。
+  CLI 立即退出用户产品面，作为内部兼容层保留到 Web parity 和恢复 Gate 通过后删除。
+- Reason: 产品功能统一通过网站实现，同时不能以入口迁移弱化研究治理或破坏现有恢复能力。
+- Effective date: 2026-08-12；WP-640 转 ready，F-023 仍为既有合同 16/21。
+- Consequences: 新增 F-026～029；F-024 人工判断必须看到 Web parity 尚未完成的限制。
+- Reviewer: max
+- Revisit trigger/date: F-026 threat model、F-028 recovery parity 或 CLI removal Gate 遇阻时。
