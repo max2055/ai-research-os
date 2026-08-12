@@ -223,6 +223,7 @@ button {
 }
 
 .mutation-panel { margin-top: 1rem; border-top: 2px solid var(--danger); }
+.restore-panel { border-top-color: var(--accent); }
 .mutation-form { display: grid; gap: 0.75rem; max-width: 42rem; }
 .mutation-form label { font-weight: 700; }
 .mutation-form textarea { min-height: 7rem; resize: vertical; width: 100%; }

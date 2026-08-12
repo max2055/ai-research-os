@@ -73,6 +73,10 @@ from research_os.services.read_model import (
 from research_os.services.review_cadence import current_next_review_date
 from research_os.services.triage import dismiss_candidate
 from research_os.services.validation import validate_repository
+from research_os.services.web_candidate_mutations import (
+    commit_candidate_restore,
+    prepare_candidate_restore,
+)
 from research_os.services.web_identity import (
     BrowserSessionRegistry,
     WebIdentity,
@@ -288,6 +292,39 @@ def _dismiss_result(
 {table(["Mutation", "Candidate action", "Mutation audit"], [[esc(result.get("mutation_id")), esc(result.get("action_id")), esc(result.get("audit_id"))]])}
 <p><a href="/pipeline/queue/{esc(detail.get("candidate_id"))}">返回候选详情</a></p></section>"""
     return shell(f"已驳回 · {detail.get('candidate_id')}", content)
+
+
+def _restore_confirmation(
+    detail: Mapping[str, Any],
+    grant: PreviewGrant,
+    csrf_token: str,
+) -> str:
+    preview = grant.preview
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">确认候选操作</div><h2>{esc(detail.get("title"))}</h2>
+<p>{esc(preview.target_id)} · {badge(preview.summary.get("status_before"))} → {badge(preview.summary.get("status_after"))}</p>
+</div><div><div class="eyebrow">有效至</div><h3>{esc(preview.expires_at_iso)}</h3>
+<p class="muted">操作者 {esc(preview.actor)}</p></div></section>
+<section class="panel"><h3>恢复到候选队列</h3><p>{esc(preview.normalized_input.get("reason"))}</p>
+<form class="mutation-form" method="post" action="/pipeline/queue/{esc(preview.target_id)}/restore/commit">
+<input type="hidden" name="preview_token" value="{esc(grant.token)}">
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">确认恢复</button>
+<a href="/pipeline/queue/{esc(preview.target_id)}">取消</a></div></form></section>"""
+    return shell(f"确认恢复 · {preview.target_id}", content)
+
+
+def _restore_result(
+    detail: Mapping[str, Any],
+    result: Mapping[str, str],
+) -> str:
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">候选操作完成</div><h2>{esc(detail.get("title"))}</h2>
+<p>{badge("已恢复")} · {esc(detail.get("candidate_id"))}</p></div></section>
+<section class="panel"><h3>审计标识</h3>
+{table(["Mutation", "Candidate action", "Mutation audit"], [[esc(result.get("mutation_id")), esc(result.get("action_id")), esc(result.get("audit_id"))]])}
+<p><a href="/pipeline/queue/{esc(detail.get("candidate_id"))}">返回候选详情</a></p></section>"""
+    return shell(f"已恢复 · {detail.get('candidate_id')}", content)
 
 
 def object_url(obj: ResearchObject) -> str:
@@ -1191,6 +1228,14 @@ def _pipeline_candidate(
 <input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
 <div class="mutation-actions"><button class="button-danger" type="submit">预览驳回</button></div>
 </form></section>"""
+    restore_form = ""
+    if csrf_token is not None and detail.get("status") in {"dismissed", "expired"}:
+        restore_form = f"""<section class="panel mutation-panel restore-panel"><h3>恢复候选</h3>
+<p class="muted">将候选恢复到待评审队列；原操作历史继续保留。</p>
+<form class="mutation-form" method="post" action="/pipeline/queue/{esc(candidate_id)}/restore/preview">
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">预览恢复</button></div>
+</form></section>"""
     panels = f"""<section class="panel"><h3>候选区</h3>{_candidate_facts(detail)}</section>
 <section class="grid" style="margin-top:1rem">
 <div class="panel"><h3>实体建议</h3>{table(["字段", "值"], _proposal_rows(entity))}</div>
@@ -1199,6 +1244,7 @@ def _pipeline_candidate(
 {_scoring_panel(detail)}
 {_suggestion_panel(detail)}
 {dismiss_form}
+{restore_form}
 <section class="panel" style="border-top:2px solid var(--accent)"><h3>已评审证据区</h3>
 {_reviewed_evidence(repo, entity, detail.get("existing_source_id"))}</section>
 <section class="grid" style="margin-top:1rem">
@@ -3110,6 +3156,87 @@ def create_app(root: Path) -> FastAPI:
         location = f"/pipeline/queue/{candidate_id}/mutations/{result['mutation_id']}"
         return RedirectResponse(location, status_code=303)
 
+    @app.post(
+        "/pipeline/queue/{candidate_id}/restore/preview",
+        response_class=HTMLResponse,
+    )
+    async def candidate_restore_preview(
+        candidate_id: str,
+        request: Request,
+    ) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            detail = queue_show(repo.root, candidate_id)
+            if detail is None:
+                raise ValueError(f"unknown candidate {candidate_id}")
+            grant = active_gateway.issue(
+                prepare_candidate_restore(
+                    repo.root,
+                    candidate_id,
+                    actor=identity.researcher_id,
+                )
+            )
+            _record_preview(repo.root, grant.preview)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=409, detail="candidate cannot be restored"
+            ) from exc
+        except TransactionError as exc:
+            raise HTTPException(
+                status_code=500, detail="mutation preview failed"
+            ) from exc
+        return HTMLResponse(_restore_confirmation(detail, grant, form["csrf_token"]))
+
+    @app.post(
+        "/pipeline/queue/{candidate_id}/restore/commit",
+        response_class=HTMLResponse,
+    )
+    async def candidate_restore_commit(
+        candidate_id: str,
+        request: Request,
+    ) -> RedirectResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            result = active_gateway.commit(
+                form["preview_token"],
+                actor=identity.researcher_id,
+                operation="candidate.restore",
+                target_id=candidate_id,
+                current_target_version=lambda target: candidate_db.candidate_version(
+                    repo.root,
+                    target,
+                ),
+                execute=lambda preview: commit_candidate_restore(repo.root, preview),
+            )
+        except MutationForbidden as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=403, detail="mutation request forbidden"
+            ) from exc
+        except (MutationConflict, ValueError) as exc:
+            if isinstance(exc, MutationConflict):
+                _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=409, detail="mutation preview conflict"
+            ) from exc
+        except TransactionError as exc:
+            raise HTTPException(
+                status_code=500, detail="mutation commit failed"
+            ) from exc
+        result["target_id"] = candidate_id
+        with result_lock:
+            mutation_results[result["mutation_id"]] = result
+        location = f"/pipeline/queue/{candidate_id}/mutations/{result['mutation_id']}"
+        return RedirectResponse(location, status_code=303)
+
     @app.get(
         "/pipeline/queue/{candidate_id}/mutations/{mutation_id}",
         response_class=HTMLResponse,
@@ -3129,7 +3256,12 @@ def create_app(root: Path) -> FastAPI:
             or result["target_id"] != candidate_id
         ):
             raise HTTPException(status_code=404, detail="unknown mutation result")
-        return HTMLResponse(_dismiss_result(detail, result))
+        renderer = (
+            _restore_result
+            if result.get("operation") == "candidate.restore"
+            else _dismiss_result
+        )
+        return HTMLResponse(renderer(detail, result))
 
     @app.get("/pipeline/channels", response_class=HTMLResponse)
     def pipeline_channels() -> HTMLResponse:

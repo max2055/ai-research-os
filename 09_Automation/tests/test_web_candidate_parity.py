@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
+import re
 import sqlite3
 import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
+
+from fastapi.testclient import TestClient
 
 from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
@@ -15,6 +19,8 @@ from research_os.services.web_candidate_mutations import (
     commit_candidate_restore,
     prepare_candidate_restore,
 )
+from research_os.ui.app import create_app
+from test_m5_dashboard_jobs import prepared_root
 
 
 class CandidateRestoreAdapterTests(unittest.TestCase):
@@ -152,6 +158,158 @@ class CandidateRestoreAdapterTests(unittest.TestCase):
                 root = self._root(temp, status=status)
                 with self.assertRaises(ValueError):
                     prepare_candidate_restore(root, "CND-restore-1", actor="max")
+
+
+class CandidateRestoreHttpTests(unittest.TestCase):
+    def _root(self, temp: str, *, status: str = "dismissed") -> Path:
+        root = prepared_root(temp)
+        config = root / "00_System" / "web.local.json"
+        config.write_text(
+            json.dumps(
+                {
+                    "researcher_id": "max",
+                    "mutation_signing_secret": "s" * 64,
+                }
+            ),
+            encoding="utf-8",
+        )
+        config.chmod(0o600)
+        candidate_db.insert_candidates(
+            candidate_db.candidate_db_path(root),
+            [
+                {
+                    "candidate_id": "CND-restore-http",
+                    "title": "Restore <unsafe>",
+                    "canonical_url": "https://example.com/restore-http",
+                }
+            ],
+            "CHN-test",
+            "2026-08-13T00:00:00Z",
+        )
+        if status == "dismissed":
+            dismiss_candidate(
+                root,
+                "CND-restore-http",
+                actor="max",
+                reason="noise",
+                apply=True,
+            )
+        elif status != "new":
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                connection.execute(
+                    "UPDATE candidates SET status = ? WHERE candidate_id = ?",
+                    (status, "CND-restore-http"),
+                )
+                connection.commit()
+            finally:
+                connection.close()
+        return root
+
+    def _client(self, root: Path) -> TestClient:
+        return TestClient(create_app(root), base_url="http://127.0.0.1")
+
+    def _hidden(self, text: str, name: str) -> str:
+        match = re.search(
+            rf'<input[^>]+name="{re.escape(name)}"[^>]+value="([^"]+)"',
+            text,
+        )
+        self.assertIsNotNone(match, f"missing hidden field {name}")
+        assert match is not None
+        return match.group(1)
+
+    def _counts(self, root: Path) -> tuple[str, int, int]:
+        connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+        try:
+            status = connection.execute(
+                "SELECT status FROM candidates WHERE candidate_id = ?",
+                ("CND-restore-http",),
+            ).fetchone()[0]
+            actions = connection.execute(
+                "SELECT COUNT(*) FROM candidate_actions WHERE action = 'restore'"
+            ).fetchone()[0]
+            audits = connection.execute(
+                "SELECT COUNT(*) FROM mutation_audit "
+                "WHERE operation = 'candidate.restore' AND event_status = 'committed'"
+            ).fetchone()[0]
+            return str(status), int(actions), int(audits)
+        finally:
+            connection.close()
+
+    def test_restore_http_preview_commit_redirect_refresh_and_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._root(temp)
+            client = self._client(root)
+            detail = client.get("/pipeline/queue/CND-restore-http")
+            self.assertEqual(200, detail.status_code)
+            self.assertIn("恢复候选", detail.text)
+            csrf = self._hidden(detail.text, "csrf_token")
+
+            preview = client.post(
+                "/pipeline/queue/CND-restore-http/restore/preview",
+                data={"csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(200, preview.status_code)
+            self.assertIn("Restore &lt;unsafe&gt;", preview.text)
+            self.assertEqual(("dismissed", 0, 0), self._counts(root))
+            self.assertNotRegex(
+                preview.text,
+                r'name="(?:actor|target_id|reason|status_after)"',
+            )
+            token = self._hidden(preview.text, "preview_token")
+            csrf = self._hidden(preview.text, "csrf_token")
+
+            committed = client.post(
+                "/pipeline/queue/CND-restore-http/restore/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+                follow_redirects=False,
+            )
+            self.assertEqual(303, committed.status_code)
+            result = client.get(committed.headers["location"])
+            self.assertEqual(200, result.status_code)
+            self.assertEqual(
+                result.text,
+                client.get(committed.headers["location"]).text,
+            )
+            self.assertIn("已恢复", result.text)
+            self.assertEqual(("new", 1, 1), self._counts(root))
+
+            replay = client.post(
+                "/pipeline/queue/CND-restore-http/restore/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(409, replay.status_code)
+            self.assertEqual(("new", 1, 1), self._counts(root))
+
+    def test_restore_http_requires_browser_boundary_and_valid_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._root(temp)
+            client = self._client(root)
+            detail = client.get("/pipeline/queue/CND-restore-http")
+            csrf = self._hidden(detail.text, "csrf_token")
+            path = "/pipeline/queue/CND-restore-http/restore/preview"
+            for headers, token in (
+                ({}, csrf),
+                ({"Origin": "https://attacker.example"}, csrf),
+                ({"Origin": "http://127.0.0.1"}, "wrong"),
+            ):
+                response = client.post(
+                    path,
+                    data={"csrf_token": token},
+                    headers=headers,
+                )
+                self.assertEqual(403, response.status_code)
+            self.assertEqual(("dismissed", 0, 0), self._counts(root))
+
+        for status in ("new", "promoted"):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as temp:
+                root = self._root(temp, status=status)
+                client = self._client(root)
+                detail = client.get("/pipeline/queue/CND-restore-http")
+                self.assertNotIn("恢复候选", detail.text)
 
 
 if __name__ == "__main__":

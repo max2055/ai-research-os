@@ -89,6 +89,7 @@ def commit_candidate_restore(
         connection.commit()
         return {
             "mutation_id": preview.mutation_id,
+            "operation": preview.operation,
             "action_id": action_id,
             "audit_id": audit_id,
             "candidate_id": preview.target_id,
