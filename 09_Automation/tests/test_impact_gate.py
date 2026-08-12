@@ -17,6 +17,28 @@ except ModuleNotFoundError as exc:
     raise unittest.SkipTest("install product dependencies to run Schema tests") from exc
 
 ROOT = Path(__file__).resolve().parents[2]
+APPROVED_FIELD_GATE_EVENT_IDS = {
+    "EVT-20240226-043",
+    "EVT-20251003-001",
+    "EVT-20260225-034",
+    "EVT-20260225-035",
+    "EVT-20260302-041",
+    "EVT-20260302-047",
+    "EVT-20260302-048",
+    "EVT-20260316-042",
+    "EVT-20260407-050",
+    "EVT-20260416-033",
+    "EVT-20260429-039",
+    "EVT-20260430-001",
+    "EVT-20260520-032",
+    "EVT-20260520-038",
+    "EVT-20260531-049",
+    "EVT-20260601-044",
+    "EVT-20260610-007",
+    "EVT-20260625-001",
+    "EVT-20260728-036",
+    "EVT-20260731-040",
+}
 
 
 class _Fake:
@@ -46,6 +68,12 @@ class GateSampleTests(unittest.TestCase):
         assigned, shortfalls = gate_sample(objects)
         self.assertEqual(20, len(assigned))
         self.assertEqual([], shortfalls)
+        self.assertEqual(APPROVED_FIELD_GATE_EVENT_IDS, set(assigned))
+        self.assertNotIn(
+            "EVT-20260429-046",
+            assigned,
+            "the human-excluded second-Pilot Event must not re-enter the field gate",
+        )
         counts = Counter(assigned.values())
         for bucket, quota in QUOTA.items():
             self.assertGreaterEqual(counts.get(bucket, 0), quota)

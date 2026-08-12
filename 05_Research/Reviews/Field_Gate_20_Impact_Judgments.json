@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-07",
-  "by": "agent (max verifies)",
-  "sample_size": 14,
-  "note": "Refreshed after C-004 improvements (full impact-type proposal + content-direction inference).",
+  "generated_at": "2026-08-12",
+  "by": "max",
+  "sample_size": 20,
+  "note": "20-event C-018 field-gate sample; preserves the original 14 human judgments, adds six reviewed Events, and keeps EVT-20260429-046 excluded.",
   "judgments": [
     {
       "event_id": "EVT-20240226-043",
@@ -14,6 +14,15 @@
       "notes": "Micron HBM3E volume production for H200: positive supply/capacity/price correct; targets Micron+NVIDIA right."
     },
     {
+      "event_id": "EVT-20251003-001",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "Micron's sourced five-year DRAM ASP range supports a mixed, high-magnitude annual pricing judgment; it is historical risk evidence rather than current price guidance, and HBM may diverge from commodity DRAM."
+    },
+    {
       "event_id": "EVT-20260225-034",
       "direct_precision": true,
       "mechanism_backed": true,
@@ -21,6 +30,15 @@
       "horizon_ok": true,
       "contrary_omitted": false,
       "notes": "ASML 20-F is DESCRIPTIVE (low materiality); directions now honest mixed after title-only scoring (no all-positive over-claim)."
+    },
+    {
+      "event_id": "EVT-20260225-035",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "NVIDIA's sourced disclosure supports a mixed one-year pricing judgment: channel programs can reduce ASP while supplier increases can be passed through; the filing is risk-factor history, not current guidance."
     },
     {
       "event_id": "EVT-20260302-041",
@@ -59,6 +77,15 @@
       "notes": "Samsung HBM4 mass production for Vera Rubin: positive capacity/supply correct."
     },
     {
+      "event_id": "EVT-20260407-050",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "The reviewed BIS Event and source review support a negative one-year regulatory constraint judgment; the deadline extension changes timing but does not remove license due diligence, while downstream commercial impact remains uncertain."
+    },
+    {
       "event_id": "EVT-20260416-033",
       "direct_precision": true,
       "mechanism_backed": true,
@@ -75,6 +102,15 @@
       "horizon_ok": true,
       "contrary_omitted": false,
       "notes": "Margin now surfaced negative via SUPPLIES/CUSTOMER_OF->margin rule-map extension (毛利率降至 66%). Countervailing factor now captured: margin decline partially offset by Azure efficiency improvements."
+    },
+    {
+      "event_id": "EVT-20260430-001",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "Amazon's sourced Q1 cash-capex increase supports a positive annual AWS infrastructure-investment judgment; not all capex is AI infrastructure, and front-loaded spending may slow if demand weakens."
     },
     {
       "event_id": "EVT-20260520-032",
@@ -95,6 +131,15 @@
       "notes": "NVIDIA record DC revenue +92%: positive correct; bucketed pricing artifact (really financial)."
     },
     {
+      "event_id": "EVT-20260531-049",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "The reviewed BIS Event and source review support a negative annual regulatory constraint on advanced-computing exports; the judgment does not quantify lost demand or assume license denials."
+    },
+    {
       "event_id": "EVT-20260601-044",
       "direct_precision": true,
       "mechanism_backed": true,
@@ -111,6 +156,15 @@
       "horizon_ok": true,
       "contrary_omitted": false,
       "notes": "Oracle capex IMP-007: FCF -23.7B high AI capex, uncertain direction honest."
+    },
+    {
+      "event_id": "EVT-20260625-001",
+      "direct_precision": true,
+      "mechanism_backed": true,
+      "direction_ok": true,
+      "horizon_ok": true,
+      "contrary_omitted": false,
+      "notes": "Micron's sourced 10-Q supports a positive quarterly HBM and advanced-memory demand judgment; it explicitly leaves the long-term trajectory unknown and demand may be cyclical or front-loaded."
     },
     {
       "event_id": "EVT-20260728-036",
@@ -132,7 +186,7 @@
     }
   ],
   "metrics": {
-    "n": 14,
+    "n": 20,
     "direct_precision": 1.0,
     "mechanism_backed": 1.0,
     "direction_ok": 1.0,
@@ -149,7 +203,7 @@
   },
   "approved": {
     "by": "max",
-    "date": "2026-08-08",
-    "decision": "approve all 14 in-scope events; EVT-046 excluded"
+    "date": "2026-08-12",
+    "decision": "approve"
   }
 }

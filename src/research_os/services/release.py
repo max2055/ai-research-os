@@ -91,6 +91,7 @@ LICENSE_AUDIT_PATH = "00_System/v0.3_Channel_License_Audit.md"
 PERFORMANCE_PATH = "00_System/v0.3_Performance_Benchmark.md"
 MIGRATION_PATH = "00_System/v0.3_Migration_Rehearsal.md"
 RECOVERY_PATH = "00_System/v0.3_Recovery_Drill.md"
+ENGINEERING_VERIFICATION_PATH = "00_System/v0.3_Release_Gate_Verification_2026-08-12.md"
 LIMITATIONS_PATH = "00_System/v0.3_Known_Limitations.md"
 UNIVERSE_ACCEPTANCE_PATH = "00_System/A020_Phase_Acceptance.md"
 RELEASE_PACKET_PATH = "05_Research/Reviews/v0.3_Release_Packet.md"
@@ -1785,7 +1786,10 @@ def _verification_covers_paths(
 
 def _verification_covers_tree(root: Path, record: str) -> bool:
     return _verification_covers_paths(
-        root, record, QUALITY_PATHS, extra_status_paths=(RECOVERY_PATH,)
+        root,
+        record,
+        QUALITY_PATHS,
+        extra_status_paths=(ENGINEERING_VERIFICATION_PATH,),
     )
 
 
@@ -2661,17 +2665,24 @@ def release_readiness_v03(
 
     recovery = _read(root, RECOVERY_PATH)
     recovery_passed = _recovery_evidence_passed(root, recovery, as_of_date, objects)
+    engineering_verification = _read(root, ENGINEERING_VERIFICATION_PATH)
     quality_rows = all(
         bool(
             re.search(
                 rf"(?mi)^\|\s*{re.escape(label)}\s*\|[^\n]*\|\s*pass(?:\s*[;—-][^|]*)?\s*\|\s*$",
-                recovery,
+                engineering_verification,
             )
         )
-        for label in ("Full pytest", "Ruff", "mypy")
+        for label in (
+            "full pytest suite",
+            "Ruff lint and format",
+            "mypy and compileall",
+        )
     )
     coverage_rows = [
-        line for line in recovery.splitlines() if "coverage" in line.lower()
+        line
+        for line in engineering_verification.splitlines()
+        if "coverage" in line.lower()
     ]
     coverage_passed = any(
         (match := re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%", line))
@@ -2679,9 +2690,12 @@ def release_readiness_v03(
         and "pass" in line.lower()
         for line in coverage_rows
     )
-    quality_tree_current = _verification_covers_tree(root, recovery)
+    quality_tree_current = _verification_covers_tree(root, engineering_verification)
     quality_passed = (
-        recovery_passed and quality_rows and coverage_passed and quality_tree_current
+        _dated_pass_record(engineering_verification, as_of_date)
+        and quality_rows
+        and coverage_passed
+        and quality_tree_current
     )
 
     performance = _read(root, PERFORMANCE_PATH)
@@ -2695,8 +2709,10 @@ def release_readiness_v03(
     recovery_boundaries_passed = recovery_passed and _recovery_boundaries_passed(
         recovery
     )
-    dashboard_security_passed = recovery_passed and _verification_covers_paths(
-        root, recovery, SECURITY_PATHS
+    dashboard_security_passed = (
+        _dated_pass_record(engineering_verification, as_of_date)
+        and _dashboard_smoke_routes(engineering_verification) == DASHBOARD_SMOKE_ROUTES
+        and _verification_covers_paths(root, engineering_verification, SECURITY_PATHS)
     )
     checks += [
         _check_v03(
@@ -2709,7 +2725,7 @@ def release_readiness_v03(
             "tests/coverage/Ruff/mypy recorded passed"
             if quality_passed
             else "quality evidence missing, incomplete, or stale for the current tree",
-            RECOVERY_PATH,
+            ENGINEERING_VERIFICATION_PATH,
         ),
         _check_v03(
             "engineering.performance_slo",
@@ -2758,7 +2774,7 @@ def release_readiness_v03(
             )
             if dashboard_security_passed
             else "Dashboard smoke or security evidence missing",
-            RECOVERY_PATH,
+            ENGINEERING_VERIFICATION_PATH,
             "09_Automation/tests/test_m6_security.py",
         ),
     ]

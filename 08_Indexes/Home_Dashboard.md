@@ -412,13 +412,13 @@
 
 ## Failed jobs
 
+- [[JOB-20260811235929-001]] — discover: DiscoveryRunError: discovery run RUN-511eea969b1e4b64 failed: permanent_dns after 1 attempts
+- [[JOB-20260811235901-001]] — discover: DiscoveryRunError: discovery run RUN-b5204e02b64b43da failed: permanent_dns after 1 attempts
+- [[JOB-20260811235834-001]] — discover: DiscoveryRunError: discovery run RUN-d578ba1217bb41b6 failed: permanent_dns after 1 attempts
+- [[JOB-20260811234313-001]] — discover: DiscoveryRunError: discovery run RUN-012380c588814f13 failed: permanent_dns after 1 attempts
+- [[JOB-20260811234246-001]] — discover: DiscoveryRunError: discovery run RUN-d31da2fc701d4e69 failed: permanent_dns after 1 attempts
+- [[JOB-20260811233841-001]] — discover: DiscoveryRunError: discovery run RUN-975735f266a346b7 failed: permanent_dns after 1 attempts
 - [[JOB-20260811013747-001]] — expire: ValueError: repository has 2 validation errors
 - [[JOB-20260811013736-001]] — discover: ValueError: repository has 2 validation errors
 - [[JOB-20260811013724-001]] — discover: ValueError: repository has 2 validation errors
 - [[JOB-20260811013713-001]] — discover: ValueError: repository has 2 validation errors
-- [[JOB-20260811013701-001]] — discover: ValueError: repository has 2 validation errors
-- [[JOB-20260811013649-001]] — discover: ValueError: repository has 2 validation errors
-- [[JOB-20260811013638-001]] — discover: ValueError: repository has 2 validation errors
-- [[JOB-20260811013622-001]] — discover: ValueError: repository has 2 validation errors
-- [[JOB-20260811013605-001]] — discover: ValueError: repository has 2 validation errors
-- [[JOB-20260811013549-001]] — discover: ValueError: repository has 2 validation errors

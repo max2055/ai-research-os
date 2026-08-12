@@ -47,6 +47,35 @@ QUOTA: dict[str, int] = {
     "regulation-other": 2,
 }
 
+# Human scope decision recorded in the C-018 field-gate packet. These Events
+# remain valid research objects but are not eligible for this Pilot's sample.
+FIELD_GATE_EXCLUDED_EVENT_IDS = frozenset({"EVT-20260429-046"})
+FIELD_GATE_BUCKET_OVERRIDES = {"EVT-20260520-038": "pricing"}
+FIELD_GATE_APPROVED_EVENT_IDS = frozenset(
+    {
+        "EVT-20240226-043",
+        "EVT-20251003-001",
+        "EVT-20260225-034",
+        "EVT-20260225-035",
+        "EVT-20260302-041",
+        "EVT-20260302-047",
+        "EVT-20260302-048",
+        "EVT-20260316-042",
+        "EVT-20260407-050",
+        "EVT-20260416-033",
+        "EVT-20260429-039",
+        "EVT-20260430-001",
+        "EVT-20260520-032",
+        "EVT-20260520-038",
+        "EVT-20260531-049",
+        "EVT-20260601-044",
+        "EVT-20260610-007",
+        "EVT-20260625-001",
+        "EVT-20260728-036",
+        "EVT-20260731-040",
+    }
+)
+
 # §11 thresholds.
 DIRECT_PRECISION_MIN = 0.85
 MECHANISM_BACKED_MIN = 0.95
@@ -72,6 +101,8 @@ def gate_sample(
         for obj in objects
         if obj.object_type == "event"
         and obj.metadata.get("review_status") == "reviewed"
+        and obj.object_id not in FIELD_GATE_EXCLUDED_EVENT_IDS
+        and (target != 20 or obj.object_id in FIELD_GATE_APPROVED_EVENT_IDS)
     ]
     # Merge buckets from materialized IMP objects (incl. hand-crafted price/
     # capex/regulation IMPs) so the sample reflects actual assertions on disk.
@@ -94,6 +125,9 @@ def gate_sample(
             if proposal["impact_type"] in BUCKET_BY_IMPACT
         }
         buckets |= imp_buckets.get(event.object_id, set())
+        override = FIELD_GATE_BUCKET_OVERRIDES.get(event.object_id)
+        if override is not None:
+            buckets = {override}
         if not buckets:
             continue
         best = min(buckets, key=lambda bucket: counts[bucket])

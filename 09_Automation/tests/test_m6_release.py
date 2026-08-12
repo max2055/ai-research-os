@@ -129,7 +129,7 @@ class ReleaseReadinessTests(unittest.TestCase):
 
     def test_v03_maps_every_phase6_release_gate_key(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-10")
+        readiness = release_readiness_v03(root, as_of="2026-08-12")
 
         self.assertEqual(self.V03_KEYS, tuple(check.key for check in readiness.checks))
         for check in readiness.checks:
@@ -138,26 +138,36 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertTrue(check.evidence_paths)
 
     @pytest.mark.local_integration
-    def test_current_v03_is_blocked_by_wp530_wp620_and_f024(self) -> None:
+    def test_current_v03_has_only_the_five_time_and_human_blockers(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-10")
+        readiness = release_readiness_v03(root, as_of="2026-08-12")
         blockers = {check.key: check for check in readiness.blockers}
 
         self.assertFalse(readiness.ready)
-        self.assertEqual(9, len(blockers))
+        self.assertEqual(5, len(blockers))
         self.assertIn("WP-620", blockers["ingestion.pilot_completion"].observed)
         self.assertIn("WP-530", blockers["decision.natural_resolutions"].observed)
         self.assertIn("2026-10-31", blockers["decision.natural_resolutions"].observed)
         self.assertIn("F-024", blockers["human.release_approval"].observed)
         by_key = {check.key: check for check in readiness.checks}
-        self.assertFalse(by_key["impact_analysis.impact_field_gate"].passed)
-        self.assertIn("14/20", by_key["impact_analysis.impact_field_gate"].observed)
+        self.assertTrue(by_key["ingestion.no_silent_missed_runs"].passed)
+        self.assertTrue(by_key["impact_analysis.impact_field_gate"].passed)
+        self.assertIn("20/20", by_key["impact_analysis.impact_field_gate"].observed)
         self.assertTrue(by_key["decision.no_automated_trading"].passed)
-        self.assertFalse(by_key["engineering.quality_suite"].passed)
+        self.assertTrue(by_key["engineering.quality_suite"].passed)
         self.assertTrue(by_key["engineering.performance_slo"].passed)
         self.assertTrue(by_key["engineering.migration_recovery"].passed)
         self.assertTrue(by_key["engineering.recovery_boundaries"].passed)
-        self.assertFalse(by_key["engineering.dashboard_security"].passed)
+        self.assertTrue(by_key["engineering.dashboard_security"].passed)
+        verification_path = "00_System/v0.3_Release_Gate_Verification_2026-08-12.md"
+        self.assertIn(
+            verification_path,
+            by_key["engineering.quality_suite"].evidence_paths,
+        )
+        self.assertIn(
+            verification_path,
+            by_key["engineering.dashboard_security"].evidence_paths,
+        )
 
     def test_v03_rejects_automatic_placeholder_and_future_human_evidence(
         self,
@@ -405,6 +415,13 @@ class ReleaseReadinessTests(unittest.TestCase):
                 root / "05_Research/Reviews/Field_Gate_20_Impact_Judgments.json"
             )
             payload = json.loads(impact_path.read_text(encoding="utf-8"))
+            payload["judgments"] = payload["judgments"][:14]
+            payload["sample_size"] = 14
+            payload["metrics"]["n"] = 14
+            payload["approved"]["date"] = "2026-08-10"
+            payload["approved"]["decision"] = (
+                "approve all 14 in-scope events; EVT-046 excluded"
+            )
             sampled_ids = {str(row["event_id"]) for row in payload["judgments"]}
             objects, _ = validate_repository(root)
             extra_events = [
@@ -834,12 +851,13 @@ class ReleaseReadinessTests(unittest.TestCase):
             blocked_by_key = {check.key: check for check in blocked.checks}
             self.assertFalse(blocked_by_key["human.cadence_reviews"].passed)
 
+    @pytest.mark.local_integration
     def test_v03_quality_and_passed_decision_provenance_are_exact(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-10")
+        readiness = release_readiness_v03(root, as_of="2026-08-12")
         by_key = {check.key: check for check in readiness.checks}
 
-        self.assertFalse(by_key["engineering.quality_suite"].passed)
+        self.assertTrue(by_key["engineering.quality_suite"].passed)
         self.assertFalse(by_key["human.cadence_reviews"].passed)
         for key, object_folder in (
             ("decision.human_approved_forecasts", "/Forecasts/"),

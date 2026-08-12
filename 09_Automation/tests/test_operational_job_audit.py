@@ -24,6 +24,9 @@ AUDIT_PATH = ROOT / "00_System" / "v0.3_Discovery_Job_Audit_2026-08-10.md"
 RUN_FIXTURE_PATH = (
     ROOT / "09_Automation" / "tests" / "fixtures" / "operational_job_audit_runs.json"
 )
+RECOVERY_RUN_FIXTURE_PATH = (
+    ROOT / "09_Automation" / "tests" / "fixtures" / "operational_job_recovery_runs.json"
+)
 LIVE_DB_ENV = "RESEARCH_OS_AUDIT_CANDIDATE_DB"
 SOURCE_DB_SHA256 = "f12e1a510fd553e10e9f5dddbf88f32693ace92c3e508bdec8230b92ff921689"
 RUN_METADATA_FIELDS = frozenset(
@@ -39,6 +42,21 @@ RUN_METADATA_FIELDS = frozenset(
         "status",
     }
 )
+RECOVERY_DB_SHA256 = "d7e3347cc85f7e5bafd8d3c361c1133121b22ef2ed7a63acf250bf93890b2fa2"
+RECOVERY_RUNS = {
+    "JOB-20260811233232-001": {
+        "file": "JOB-20260811233232-001-discover.md",
+        "sha256": "af3e2c3ee09b42cc63aad3c392777208631301de04b7cfbdd615b670a30c118e",
+        "run_id": "RUN-f8bba6ff28794282",
+        "channel_id": "CHN-arxiv",
+    },
+    "JOB-20260811233308-001": {
+        "file": "JOB-20260811233308-001-discover.md",
+        "sha256": "dfb80fd2094fc44f4e953c80e4aa5510dac43a89fd95d46202c55c5980a9ddbc",
+        "run_id": "RUN-f684480c013a44de",
+        "channel_id": "CHN-arxiv-agents",
+    },
+}
 
 EXPECTED_JOB_FILES = (
     "JOB-20260809154712-001-discover.md",
@@ -491,6 +509,19 @@ def _load_run_fixture() -> tuple[dict[str, object], dict[str, dict[str, object]]
     return {str(key): value for key, value in payload.items()}, runs
 
 
+def _load_recovery_run_fixture() -> tuple[
+    dict[str, object], dict[str, dict[str, object]]
+]:
+    payload = json.loads(RECOVERY_RUN_FIXTURE_PATH.read_text(encoding="utf-8"))
+    raw_runs = payload.get("runs")
+    if not isinstance(raw_runs, list):
+        raise AssertionError("recovery run fixture must contain a runs array")
+    runs = {str(run["run_id"]): run for run in raw_runs}
+    if len(runs) != len(raw_runs):
+        raise AssertionError("recovery run fixture contains duplicate run IDs")
+    return {str(key): value for key, value in payload.items()}, runs
+
+
 def _candidate_connection() -> sqlite3.Connection:
     configured = os.environ.get(LIVE_DB_ENV)
     if not configured:
@@ -739,6 +770,56 @@ class OperationalJobAuditTests(unittest.TestCase):
                 _parse_time(metadata["finished_at"]),
             )
 
+    def test_applied_arxiv_recovery_runs_are_fixed_and_reconciled(self) -> None:
+        payload, fixture_runs = _load_recovery_run_fixture()
+        self.assertEqual(
+            {
+                "schema_version",
+                "captured_at",
+                "source_table",
+                "source_db_sha256",
+                "database_integrity_check",
+                "database_user_version",
+                "runs",
+            },
+            set(payload),
+        )
+        self.assertEqual(1, payload["schema_version"])
+        self.assertEqual("2026-08-12", payload["captured_at"])
+        self.assertEqual("discovery_runs", payload["source_table"])
+        self.assertEqual(RECOVERY_DB_SHA256, payload["source_db_sha256"])
+        self.assertEqual("ok", payload["database_integrity_check"])
+        self.assertEqual(2, payload["database_user_version"])
+        self.assertEqual(
+            {str(expected["run_id"]) for expected in RECOVERY_RUNS.values()},
+            set(fixture_runs),
+        )
+
+        for job_id, expected in RECOVERY_RUNS.items():
+            path = JOBS_DIR / str(expected["file"])
+            _assert_file_sha256(path, str(expected["sha256"]))
+            document = MarkdownDocument.read(path)
+            metadata = document.metadata
+            run_id = str(expected["run_id"])
+            channel_id = str(expected["channel_id"])
+            row = fixture_runs[run_id]
+            self.assertEqual(job_id, metadata["id"])
+            self.assertEqual("success", metadata["status"])
+            self.assertEqual(channel_id, metadata["target"])
+            self.assertEqual(RUN_METADATA_FIELDS, frozenset(row), run_id)
+            self.assertEqual(channel_id, row["channel_id"])
+            self.assertEqual("succeeded", row["status"])
+            self.assertEqual(20, row["candidate_count"])
+            self.assertEqual(0, row["http_errors"])
+            self.assertEqual(0, row["parse_errors"])
+            self.assertEqual(0, row["retries"])
+            match = SUCCESS_MESSAGE.fullmatch(str(metadata["message"]))
+            self.assertIsNotNone(match, job_id)
+            assert match is not None
+            self.assertEqual(run_id, match.group("run_id"))
+            self.assertEqual(channel_id, match.group("channel"))
+            self.assertEqual(20, int(match.group("count")))
+
     @pytest.mark.local_integration
     def test_live_candidate_db_matches_committed_run_fixture(self) -> None:
         configured = os.environ.get(LIVE_DB_ENV)
@@ -802,16 +883,18 @@ class OperationalJobAuditTests(unittest.TestCase):
         for line in EXPECTED_INCIDENT_LINES + EXPECTED_RECONCILIATION_LINES:
             self.assertEqual(1, text.count(line), line)
 
+        self.assertIn("Status: passed", text)
+        self.assertIn("Review status: reviewed", text)
+        self.assertIn("Audit date: 2026-08-12", text)
+        self.assertIn("Reviewer: max", text)
+        self.assertIn("Audit decision: approve", text)
+        self.assertNotIn("remains open", text.lower())
+
         post_fix = text[text.index("## Post-fix verification") :]
         self.assertIn("Status: **pending until transport fix**.", post_fix)
-        self.assertNotRegex(
-            post_fix,
-            r"(?i)\b(?:completed|passed)\b",
-        )
-        self.assertNotRegex(
-            post_fix,
-            r"(?i)\btransport\b[^.\n]{0,80}\b(?:fixed|verified)\b",
-        )
+        for expected in RECOVERY_RUNS.values():
+            self.assertIn(str(expected["run_id"]), post_fix)
+            self.assertIn(str(expected["channel_id"]), post_fix)
 
 
 if __name__ == "__main__":

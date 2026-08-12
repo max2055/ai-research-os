@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-12",
+  "source_table": "discovery_runs",
+  "source_db_sha256": "d7e3347cc85f7e5bafd8d3c361c1133121b22ef2ed7a63acf250bf93890b2fa2",
+  "database_integrity_check": "ok",
+  "database_user_version": 2,
+  "runs": [
+    {
+      "run_id": "RUN-f8bba6ff28794282",
+      "channel_id": "CHN-arxiv",
+      "started_at": "2026-08-11T23:32:52Z",
+      "finished_at": "2026-08-11T23:33:00Z",
+      "candidate_count": 20,
+      "http_errors": 0,
+      "parse_errors": 0,
+      "retries": 0,
+      "status": "succeeded"
+    },
+    {
+      "run_id": "RUN-f684480c013a44de",
+      "channel_id": "CHN-arxiv-agents",
+      "started_at": "2026-08-11T23:33:28Z",
+      "finished_at": "2026-08-11T23:33:36Z",
+      "candidate_count": 20,
+      "http_errors": 0,
+      "parse_errors": 0,
+      "retries": 0,
+      "status": "succeeded"
+    }
+  ]
+}
