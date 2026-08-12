@@ -219,6 +219,6 @@ matching identity 做 disposable restore。告警只能在新 verified receipt �
 - Backup payload: Candidate snapshot + Source assets；Git/secrets/launchd 分开恢复
 - v0.2 release: 18/18 Ready, human-approved and published as `v0.2.0` with attached
   wheel, sdist and SHA-256 manifest
-- v0.3 release: BLOCKED at 12/21 F-023 checks; WP-530, WP-620, and F-024 are the
-  non-bypassable time/human blockers, while current additional failures remain
-  visible in `research-os release check --version 0.3 --format json`
+- v0.3 release: BLOCKED at 16/21 F-023 checks; the remaining checks are WP-530
+  natural Resolution, WP-620 real Pilot, v0.3 cadence reviews, Known Limitations
+  reading acknowledgement, and F-024 human release approval

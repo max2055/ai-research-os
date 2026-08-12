@@ -1,6 +1,6 @@
 # Phase 6：Dashboard、持续运行、规模化与 v0.3 发布
 
-状态：`in_progress / release blocked`（WP-600～612 工程完成；F-023 当前 12/21）
+状态：`in_progress / release blocked`（WP-600～612 工程完成；F-023 当前 16/21）
 建议周期：5–8 周 + 30 天真实 Pilot  
 前置：Phase 2–5 工程 Gate  
 
@@ -266,7 +266,7 @@ Health 必须覆盖：
 
 ## 11. v0.3 Release Gate
 
-以下 checklist 与 2026-08-11 的 F-023 输出同步。工程实现记录不替代 F-023 对
+以下 checklist 与 2026-08-12 的 F-023 输出同步。工程实现记录不替代 F-023 对
 证据路径、真实运行和人工决定的检查。
 
 ### Evidence/Universe
@@ -278,12 +278,12 @@ Health 必须覆盖：
 ### Ingestion
 
 - [ ] 14 天 Candidate Gate 和 30 天 Pilot 完成。
-- [ ] 无静默漏跑、无越权抓取。
+- [x] 无静默漏跑、无越权抓取。
 - [x] enabled Channel license 全部 reviewed。
 
 ### Impact/Analysis
 
-- [ ] 20-event Impact Field Gate 通过。
+- [x] 20-event Impact Field Gate 通过。
 - [x] 10-case Mode Field Gate 通过。
 - [x] 反面路径和不同模式分歧可见。
 
@@ -296,11 +296,11 @@ Health 必须覆盖：
 
 ### Engineering
 
-- [ ] tests/coverage/ruff/mypy 全绿。
+- [x] tests/coverage/ruff/mypy 全绿。
 - [x] 性能 SLO 通过或限制明确。
 - [x] migration/rollback/recovery 通过。
 - [x] Candidate DB、assets、Git、secrets 恢复边界明确。
-- [ ] Dashboard smoke 和安全检查通过。
+- [x] Dashboard smoke 和安全检查通过。
 
 ### Human
 

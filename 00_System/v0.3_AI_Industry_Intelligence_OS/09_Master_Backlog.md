@@ -1,16 +1,14 @@
 # v0.3 Master Backlog 与实施波次
 
-状态：`wave6-release-gates`（Wave 0-5 与 WP-600～612 工程完成；F-023 当前 12/21；未批准 v0.3 发布）
+状态：`wave6-release-gates`（Wave 0-5 与 WP-600～612 工程完成；F-023 当前 16/21；未批准 v0.3 发布）
 规则：本文件是执行索引；任务细节以各 Phase 文件为准。Agent 不得只读本表就开工。
 
 当前状态权威顺序：F-023 CLI 负责机器 Gate，具名人审文件负责人工决定，本表负责
-工作包状态，README/Roadmap 只做摘要。截至 2026-08-11，9 个未通过检查为：
-`ingestion.pilot_completion`、`ingestion.no_silent_missed_runs`、
-`impact_analysis.impact_field_gate`、`decision.natural_resolutions`、
-`engineering.quality_suite`、`engineering.dashboard_security`、
+工作包状态，README/Roadmap 只做摘要。截至 2026-08-12，5 个未通过检查为：
+`ingestion.pilot_completion`、`decision.natural_resolutions`、
 `human.cadence_reviews`、`human.known_limitations_read`、
-`human.release_approval`。其中 WP-530、WP-620、F-024 是不可由工程证据替代的
-真实时间/人工主阻断项；其余检查仍须按 F-023 契约关闭，不能只凭摘要标记完成。
+`human.release_approval`。WP-530、WP-620、cadence、Known Limitations 阅读确认和
+F-024 都不可由工程证据替代；F-023 继续保持 BLOCKED。
 
 ## 1. 状态枚举
 
@@ -306,7 +304,7 @@ WP-612 close-out（2026-08-10）：F-019~020 完成 operator 与决策边界文�
 - **F-019**：`v0.3_User_Runbook.md` 覆盖 install/config、loopback Dashboard、daily/weekly/monthly、Candidate/Evidence/Impact/Analysis/Forecast/Decision review、local+durable backup、recipient/identity 分离、off-device receipt/key custody、disposable restore、P0~P3 failure response、secrets/escalation；所有写命令明确 dry-run 与 `--apply` 边界。
 - **F-020**：`v0.3_Known_Limitations.md` 以 Facts/Inferences/Judgments 分离数据/时效、模型/provider retention、许可、SQLite/single-user、read-only Web、metadata-only CI、strict local Gate、六态 cost、backup receipt/key custody、校准和投资行为边界；document contract tests 固化必备项与 blocked 状态。
 - **真实时间门不变**：WP-530 最早真实 Forecast resolution 仍为 2026-10-31；WP-620 仍需真实 30-day Pilot/natural resolutions；不生成 synthetic outcome、reviewer、date 或 approval。WP-630 继续等待这些 Gate 与 human release packet。
-- **release check 边界**：默认 `research-os release check` 仍是 v0.2 的 18 Gate，当前 18/18 Ready；显式 `--version 0.3` 已实现 WP-630/F-023 的 21-key read-only evaluator，当前 12/21。结果必须保持 BLOCKED，并独立显示 WP-530、WP-620、F-024 及其他未满足契约；checker 不创建 packet、reviewer、date、approval、tag 或 release。
+- **release check 边界**：默认 `research-os release check` 仍是 v0.2 的 18 Gate，当前 18/18 Ready；显式 `--version 0.3` 已实现 WP-630/F-023 的 21-key read-only evaluator，当前 16/21。结果必须保持 BLOCKED，并独立显示 WP-530、WP-620、cadence、Known Limitations 阅读确认和 F-024；checker 不创建 packet、reviewer、date、approval、tag 或 release。
 - **private CI 边界**：hosted workflow 仅用 metadata-only validation/index、asset-independent tests、Ruff/mypy、10-route smoke 与预期 blocker assertion；权限 `contents: read`，不读取 raw assets、Candidate DB、secret、backup identity，不替代 strict local/full restore Gate。
 - **durable health/cost**：local snapshot 与 durable receipt age 分开；durable `missing/failed/invalid/stale (>24h)` 用稳定 `BKP_DURABLE_*` code 报 P1，Dashboard 正常 render 不联网。model/API cost 按 natural month 显示 `unconfigured/no_data/ok/warning/exceeded/invalid`，missing 不当作 zero，raw budget 不渲染。
 
@@ -549,6 +547,14 @@ C-018 APPROVED（2026-08-08，max 拍板）：14 个 in-scope 事件五维全部
 - **capex**：hyperscaler capex（Microsoft FY26 10-Q 的 AI 基建投资）已含于 EVT-039/040，可拆独立 capex 事件但重叠。
 - **regulation**：无任何监管源/候选——需**新采集通道**（如出口管制/芯片法规新闻源）或手工 capture，不能编造。
 - **结论**：补满 20 需 (a) 建监管采集通道 + (b) 从现有 SEC 源建 capex/pricing 事件（人工 review）。**建议列为 WP-240 之后的采集扩展项**，C-018 判定不受其阻塞（硬阈值已达标）。
+
+F-023 证据闭环（2026-08-12，max）：在原 14 条判断上新增
+EVT-20260531-049、EVT-20260407-050、EVT-20251003-001、
+EVT-20260225-035、EVT-20260430-001、EVT-20260625-001，按原配额完成
+20/20；EVT-20260429-046 继续排除，阈值未降低，22 个 Impact Assertion 仍为
+pending。两个 arXiv Channel 的 applied recovery run 已与 Job/run metadata 对账并由
+max 批准 operational audit。当前 quality suite 与 Dashboard smoke/security 证据记录
+在 `v0.3_Release_Gate_Verification_2026-08-12.md`，F-023 为 16/21。
 
 #### 批准 RCP-v03-007（2026-08-08）
 
