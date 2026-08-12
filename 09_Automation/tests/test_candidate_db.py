@@ -206,8 +206,7 @@ class CandidateDbTests(unittest.TestCase):
                 self.assertEqual(
                     "dismiss",
                     connection.execute(
-                        "SELECT action FROM candidate_actions "
-                        "WHERE action_id = 'CA-1'"
+                        "SELECT action FROM candidate_actions WHERE action_id = 'CA-1'"
                     ).fetchone()[0],
                 )
                 with self.assertRaises(sqlite3.OperationalError):

@@ -281,8 +281,7 @@ class CandidateDismissTransactionTests(unittest.TestCase):
                 "SELECT action_id, actor, reason FROM candidate_actions"
             ).fetchall()
             audits = connection.execute(
-                "SELECT mutation_id, event_status, domain_action_id "
-                "FROM mutation_audit"
+                "SELECT mutation_id, event_status, domain_action_id FROM mutation_audit"
             ).fetchall()
             return status, actions, audits
         finally:
@@ -305,20 +304,26 @@ class CandidateDismissTransactionTests(unittest.TestCase):
     def test_domain_action_failure_rolls_back_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root, preview = self._root_and_preview(temp)
-            with patch(
-                "research_os.services.triage._record_action",
-                side_effect=sqlite3.OperationalError("injected action failure"),
-            ), self.assertRaises(TransactionError):
+            with (
+                patch(
+                    "research_os.services.triage._record_action",
+                    side_effect=sqlite3.OperationalError("injected action failure"),
+                ),
+                self.assertRaises(TransactionError),
+            ):
                 _commit_candidate_dismiss(root, preview)
             self.assertEqual(("new", [], []), self._rows(root))
 
     def test_commit_audit_failure_rolls_back_candidate_and_action(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root, preview = self._root_and_preview(temp)
-            with patch(
-                "research_os.ui.app.record_mutation_event",
-                side_effect=sqlite3.OperationalError("injected audit failure"),
-            ), self.assertRaises(TransactionError):
+            with (
+                patch(
+                    "research_os.ui.app.record_mutation_event",
+                    side_effect=sqlite3.OperationalError("injected audit failure"),
+                ),
+                self.assertRaises(TransactionError),
+            ):
                 _commit_candidate_dismiss(root, preview)
             self.assertEqual(("new", [], []), self._rows(root))
 
@@ -375,12 +380,10 @@ class CandidateDismissHttpTests(unittest.TestCase):
                 "SELECT COUNT(*) FROM candidate_actions"
             ).fetchone()[0]
             previews = connection.execute(
-                "SELECT COUNT(*) FROM mutation_audit "
-                "WHERE event_status = 'previewed'"
+                "SELECT COUNT(*) FROM mutation_audit WHERE event_status = 'previewed'"
             ).fetchone()[0]
             commits = connection.execute(
-                "SELECT COUNT(*) FROM mutation_audit "
-                "WHERE event_status = 'committed'"
+                "SELECT COUNT(*) FROM mutation_audit WHERE event_status = 'committed'"
             ).fetchone()[0]
             return str(status), int(actions), int(previews), int(commits)
         finally:
@@ -561,6 +564,7 @@ class CandidateDismissHttpTests(unittest.TestCase):
             )
             self.assertEqual(409, response.status_code)
             self.assertEqual(("new", 0, 1, 0), self._status_and_counts(root))
+
 
 if __name__ == "__main__":
     unittest.main()

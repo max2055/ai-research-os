@@ -204,7 +204,9 @@ def _record_rejection(root: Path, error: MutationForbidden | MutationConflict) -
             connection,
             MutationAuditEvent.from_preview(
                 preview,
-                event_status=("expired" if error.reason_code == "expired" else "rejected"),
+                event_status=(
+                    "expired" if error.reason_code == "expired" else "rejected"
+                ),
                 event_at=_utc_now(),
                 reason_code=error.reason_code,
             ),
@@ -3054,12 +3056,14 @@ def create_app(root: Path) -> FastAPI:
             )
             _record_preview(repo.root, grant.preview)
         except ValueError as exc:
-            raise HTTPException(status_code=409, detail="candidate cannot be dismissed") from exc
+            raise HTTPException(
+                status_code=409, detail="candidate cannot be dismissed"
+            ) from exc
         except TransactionError as exc:
-            raise HTTPException(status_code=500, detail="mutation preview failed") from exc
-        return HTMLResponse(
-            _dismiss_confirmation(detail, grant, form["csrf_token"])
-        )
+            raise HTTPException(
+                status_code=500, detail="mutation preview failed"
+            ) from exc
+        return HTMLResponse(_dismiss_confirmation(detail, grant, form["csrf_token"]))
 
     @app.post(
         "/pipeline/queue/{candidate_id}/dismiss/commit",
@@ -3088,18 +3092,22 @@ def create_app(root: Path) -> FastAPI:
             )
         except MutationForbidden as exc:
             _record_rejection(repo.root, exc)
-            raise HTTPException(status_code=403, detail="mutation request forbidden") from exc
+            raise HTTPException(
+                status_code=403, detail="mutation request forbidden"
+            ) from exc
         except MutationConflict as exc:
             _record_rejection(repo.root, exc)
-            raise HTTPException(status_code=409, detail="mutation preview conflict") from exc
+            raise HTTPException(
+                status_code=409, detail="mutation preview conflict"
+            ) from exc
         except TransactionError as exc:
-            raise HTTPException(status_code=500, detail="mutation commit failed") from exc
+            raise HTTPException(
+                status_code=500, detail="mutation commit failed"
+            ) from exc
         result["target_id"] = candidate_id
         with result_lock:
             mutation_results[result["mutation_id"]] = result
-        location = (
-            f"/pipeline/queue/{candidate_id}/mutations/{result['mutation_id']}"
-        )
+        location = f"/pipeline/queue/{candidate_id}/mutations/{result['mutation_id']}"
         return RedirectResponse(location, status_code=303)
 
     @app.get(
