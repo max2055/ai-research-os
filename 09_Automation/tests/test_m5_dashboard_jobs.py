@@ -256,6 +256,7 @@ class DashboardTests(unittest.TestCase):
                         "/evidence/events/new/",
                         "/reports/new/",
                         "/reviews/apply/",
+                        "/reviews/cadence/",
                         "/analysis/",
                         "/decision/",
                         "/operations/",
