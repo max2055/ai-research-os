@@ -77,6 +77,12 @@ from research_os.services.read_model import (
 from research_os.services.review_cadence import current_next_review_date
 from research_os.services.triage import dismiss_candidate
 from research_os.services.validation import validate_repository
+from research_os.services.web_analysis_mutations import (
+    prepare_analysis_creation,
+    prepare_analysis_replay,
+    prepare_impact_creation,
+    prepare_thesis_proposal_creation,
+)
 from research_os.services.web_candidate_mutations import (
     commit_candidate_promote,
     commit_candidate_restore,
@@ -4216,7 +4222,6 @@ def create_app(root: Path) -> FastAPI:
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=mode_id) from exc
 
-    @app.get("/analysis/runs/{run_id}", response_class=HTMLResponse)
     def analysis_run_detail(run_id: str) -> HTMLResponse:
         try:
             return HTMLResponse(_analysis_run_detail(repo, run_id))
@@ -5067,6 +5072,168 @@ action="/projects/{esc(project_id)}/advance/preview">
         ):
             raise HTTPException(status_code=404, detail="unknown mutation result")
         return HTMLResponse(_research_mutation_result_page(result))
+
+    @app.get("/impact/proposals/new", response_class=HTMLResponse)
+    def impact_create_form(request: Request) -> HTMLResponse:
+        return structured_form_response(
+            request,
+            title="新建 Impact Assertion",
+            eyebrow="Impact",
+            action="/impact/proposals/new/preview",
+            back_path="/impact",
+            example={
+                "event_id": "EVT-20260225-034",
+                "created_at": date.today().isoformat(),
+                "proposal_index": 0,
+            },
+        )
+
+    @app.post("/impact/proposals/new/preview", response_class=HTMLResponse)
+    async def impact_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_impact_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/impact/proposals/new/commit",
+            label="Impact",
+        )
+
+    @app.post("/impact/proposals/new/commit", response_class=HTMLResponse)
+    async def impact_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="impact.create"
+        )
+
+    @app.get("/analysis/runs/new", response_class=HTMLResponse)
+    def analysis_create_form(request: Request) -> HTMLResponse:
+        return structured_form_response(
+            request,
+            title="运行 Analysis",
+            eyebrow="Analysis",
+            action="/analysis/runs/new/preview",
+            back_path="/analysis/runs",
+            example={
+                "mode_id": "MOD-ANL-value-chain-v1",
+                "as_of": date.today().isoformat(),
+                "scope_ids": [],
+                "input_source_ids": [],
+                "input_event_ids": ["EVT-20260225-034"],
+                "input_impact_ids": [],
+                "input_thesis_ids": [],
+                "model_provider": "echo",
+                "model_id": "echo",
+                "model_parameters": {},
+            },
+        )
+
+    @app.post("/analysis/runs/new/preview", response_class=HTMLResponse)
+    async def analysis_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_analysis_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/analysis/runs/new/commit",
+            label="Analysis",
+        )
+
+    @app.post("/analysis/runs/new/commit", response_class=HTMLResponse)
+    async def analysis_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="analysis.run"
+        )
+
+    @app.get("/analysis/runs/{run_id}/replay", response_class=HTMLResponse)
+    def analysis_replay_form(run_id: str, request: Request) -> HTMLResponse:
+        return structured_form_response(
+            request,
+            title=f"Replay Analysis · {run_id}",
+            eyebrow="Analysis replay",
+            action=f"/analysis/runs/{run_id}/replay/preview",
+            back_path=f"/analysis/runs/{run_id}",
+            example={
+                "run_id": run_id,
+                "model_provider": "echo",
+                "model_id": "echo",
+                "model_parameters": {},
+            },
+        )
+
+    @app.post("/analysis/runs/{run_id}/replay/preview", response_class=HTMLResponse)
+    async def analysis_replay_preview(run_id: str, request: Request) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"spec_json", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            raw = json.loads(form["spec_json"])
+            if not isinstance(raw, dict) or raw.get("run_id") != run_id:
+                raise ValueError("Analysis replay target mismatch")
+            prepared = prepare_analysis_replay(
+                repo.root, actor=identity.researcher_id, spec_json=form["spec_json"]
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise HTTPException(
+                status_code=422, detail="invalid Analysis replay"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant, form["csrf_token"], f"/analysis/runs/{run_id}/replay/commit"
+            )
+        )
+
+    @app.post("/analysis/runs/{run_id}/replay/commit", response_class=HTMLResponse)
+    async def analysis_replay_commit(run_id: str, request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="analysis.replay",
+        )
+
+    @app.get("/analysis/thesis-proposals/new", response_class=HTMLResponse)
+    def thesis_proposal_form(request: Request) -> HTMLResponse:
+        return structured_form_response(
+            request,
+            title="生成 Thesis Proposal",
+            eyebrow="Non-authoritative proposal",
+            action="/analysis/thesis-proposals/new/preview",
+            back_path="/analysis/runs",
+            example={
+                "run_id": "ANL-20260808-001",
+                "created_at": date.today().isoformat(),
+            },
+        )
+
+    @app.post("/analysis/thesis-proposals/new/preview", response_class=HTMLResponse)
+    async def thesis_proposal_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_thesis_proposal_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/analysis/thesis-proposals/new/commit",
+            label="Thesis Proposal",
+        )
+
+    @app.post("/analysis/thesis-proposals/new/commit", response_class=HTMLResponse)
+    async def thesis_proposal_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="analysis.propose-thesis",
+        )
+
+    # Keep the parameterized run detail route after the fixed "/new" route.
+    app.add_api_route(
+        "/analysis/runs/{run_id}",
+        analysis_run_detail,
+        methods=["GET"],
+        response_class=HTMLResponse,
+        name="analysis-run-detail",
+    )
 
     @app.get("/evidence/events/new", response_class=HTMLResponse)
     def event_create_form(request: Request) -> HTMLResponse:

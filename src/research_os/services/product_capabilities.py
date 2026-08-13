@@ -349,7 +349,7 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("impact.propose",),
         owner="impact",
-        route="/impact/proposals/new",
+        route="/impact/proposals/new/preview",
         authority="named_human",
         feature="F-027",
     ),
@@ -431,14 +431,14 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("analyze.run", "analyze.replay", "analyze.eval"),
         owner="analysis",
-        route="/analysis/runs/new",
+        route="/analysis/runs/new/preview",
         authority="named_human",
         feature="F-027",
     ),
     *_capabilities(
         ("analyze.propose-thesis",),
         owner="analysis",
-        route="/analysis/thesis-proposals/new",
+        route="/analysis/thesis-proposals/new/preview",
         authority="named_human",
         feature="F-027",
     ),
