@@ -4326,6 +4326,114 @@ def create_app(root: Path) -> FastAPI:
     def health(project: str | None = Query(default=None)) -> HTMLResponse:
         return HTMLResponse(_health_page(repo, project))
 
+    @app.get("/health/release", response_class=HTMLResponse)
+    def health_release() -> HTMLResponse:
+        from research_os.services.release import release_readiness_v03
+
+        result = release_readiness_v03(repo.root)
+        rows = [
+            [esc(check.key), esc(check.passed), esc(check.observed)]
+            for check in result.checks
+        ]
+        return HTMLResponse(
+            shell(
+                "Release Health",
+                f'<section class="hero"><div><div class="eyebrow">Release</div><h2>{sum(check.passed for check in result.checks)}/{len(result.checks)}</h2></div></section><section class="panel">{table(["Check", "Status", "Detail"], rows)}</section>',
+            )
+        )
+
+    @app.get("/operations/metrics", response_class=HTMLResponse)
+    def operations_metrics_page(
+        project: str | None = Query(default=None),
+    ) -> HTMLResponse:
+        return HTMLResponse(_metrics_page(repo, project))
+
+    @app.get("/operations/discovery", response_class=HTMLResponse)
+    def operations_discovery_page() -> HTMLResponse:
+        rows = channel_rows(repo.root)
+        return HTMLResponse(
+            shell(
+                "Discovery",
+                f'<section class="hero"><div><div class="eyebrow">Operational</div><h2>Discovery</h2></div></section><section class="panel">{table(["Channel", "Name", "Review", "Enabled"], [[esc(r["id"]), esc(r["name"]), esc(r["review_status"]), esc(r["enabled"])] for r in rows])}</section>',
+            )
+        )
+
+    @app.get("/operations/discovery/inspect", response_class=HTMLResponse)
+    def operations_discovery_inspect() -> HTMLResponse:
+        return operations_discovery_page()
+
+    @app.get("/operations/discovery/run", response_class=HTMLResponse)
+    def operations_discovery_run_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="Run Discovery",
+            eyebrow="Operational human",
+            action="/operations/discovery/run/preview",
+            back_path="/operations/discovery",
+            example={
+                "job_name": "discover",
+                "target": "CHN-",
+                "as_of": date.today().isoformat(),
+            },
+        )
+
+    @app.post("/operations/discovery/run/preview", response_class=HTMLResponse)
+    async def operations_discovery_run_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_job_request(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/operations/discovery/run/commit",
+            label="Discovery",
+        )
+
+    @app.post("/operations/discovery/run/commit", response_class=HTMLResponse)
+    async def operations_discovery_run_commit(request: Request) -> RedirectResponse:
+        return await operations_job_commit(request)
+
+    @app.get("/operations/backups/new", response_class=HTMLResponse)
+    def operations_backup_page() -> HTMLResponse:
+        return HTMLResponse(
+            shell(
+                "Backups",
+                '<section class="hero"><div><div class="eyebrow">Operational</div><h2>Backup</h2><p>Candidate and durable backup operations remain explicit and auditable.</p></div></section><section class="panel"><a class="button-link" href="/operations/jobs/run">Run backup job</a></section>',
+            )
+        )
+
+    @app.get("/operations/recovery", response_class=HTMLResponse)
+    def operations_recovery_page() -> HTMLResponse:
+        return HTMLResponse(_health_page(repo, None))
+
+    @app.get("/operations/benchmarks", response_class=HTMLResponse)
+    def operations_benchmarks_page() -> HTMLResponse:
+        return HTMLResponse(
+            shell(
+                "Benchmarks",
+                '<section class="hero"><div><div class="eyebrow">Operational</div><h2>Benchmarks</h2><p>Benchmark runs are operational evidence and do not change research authority.</p></div></section>',
+            )
+        )
+
+    @app.get("/operations/exports", response_class=HTMLResponse)
+    def operations_exports_page() -> HTMLResponse:
+        return HTMLResponse(
+            shell(
+                "Exports",
+                '<section class="hero"><div><div class="eyebrow">Operational</div><h2>Exports</h2><p>Exports are generated from the current read model and retain source provenance.</p></div></section>',
+            )
+        )
+
+    @app.get("/brief", response_class=HTMLResponse)
+    def daily_brief_page() -> HTMLResponse:
+        from research_os.services.brief import daily_brief, render_daily_brief
+
+        return HTMLResponse(
+            shell(
+                "Daily Brief",
+                f'<section class="panel"><pre>{esc(render_daily_brief(daily_brief(repo.root, date.today().isoformat())))}</pre></section>',
+            )
+        )
+
     @app.get("/operations/jobs", response_class=HTMLResponse)
     def operations_jobs(request: Request) -> HTMLResponse:
         identity = load_web_identity(repo.root)
