@@ -4506,6 +4506,14 @@ def create_app(root: Path) -> FastAPI:
             from research_os.services.jobs import run_job
 
             def execute_job(preview: MutationPreview) -> dict[str, str]:
+                # Persist the frozen operational request through the same audited
+                # repository transaction used by every other Web mutation before
+                # invoking the server-side job runner.
+                with repository_plan_lock:
+                    frozen_plan = repository_plans.get(preview.mutation_id)
+                if frozen_plan is None:
+                    raise TransactionError("operational request plan unavailable")
+                commit_repository_mutation(repo.root, preview, frozen_plan)
                 result = run_job(
                     repo.root,
                     str(payload["job_name"]),
