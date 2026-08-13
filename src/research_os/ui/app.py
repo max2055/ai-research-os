@@ -526,7 +526,6 @@ def metadata_grid(obj: ResearchObject) -> str:
 
 def shell(title: str, content: str, *, project_id: str | None = None) -> str:
     project_query = f"?project={project_id}" if project_id else ""
-    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -563,7 +562,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
 </header>
 <main class="shell">{content}</main>
 <footer class="shell">
-  数据于 {esc(timestamp)} 实时重建。写操作必须经过具名预览、确认与审计。
+  数据在请求时实时重建。写操作必须经过具名预览、确认与审计。
 </footer>
 </body>
 </html>"""
