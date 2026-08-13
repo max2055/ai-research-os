@@ -106,6 +106,10 @@ from research_os.services.web_identity import (
     WebIdentity,
     load_web_identity,
 )
+from research_os.services.web_operations_mutations import (
+    prepare_channel_change,
+    prepare_job_request,
+)
 from research_os.services.web_registry_mutations import (
     prepare_action_close_mutation,
     prepare_action_creation,
@@ -4111,7 +4115,18 @@ def create_app(root: Path) -> FastAPI:
 
     @app.get("/pipeline/channels", response_class=HTMLResponse)
     def pipeline_channels() -> HTMLResponse:
-        return HTMLResponse(_pipeline_channels(repo))
+        try:
+            rows = channel_rows(repo.root)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail="channel state unavailable"
+            ) from exc
+        body = (
+            '<section class="hero"><div><div class="eyebrow">Pipeline</div>'
+            "<h2>Source Channels</h2></div></section>"
+            f'<section class="panel">{table(["ID", "Name", "Type", "License", "Review", "Enabled"], [[esc(row["id"]), esc(row["name"]), esc(row["channel_type"]), esc(row["license_status"]), esc(row["review_status"]), esc(row["enabled"])] for row in rows])}</section>'
+        )
+        return HTMLResponse(shell("Source Channels", body))
 
     @app.get("/companies", response_class=HTMLResponse)
     def companies() -> HTMLResponse:
@@ -4310,6 +4325,158 @@ def create_app(root: Path) -> FastAPI:
     @app.get("/health", response_class=HTMLResponse)
     def health(project: str | None = Query(default=None)) -> HTMLResponse:
         return HTMLResponse(_health_page(repo, project))
+
+    @app.get("/operations/jobs", response_class=HTMLResponse)
+    def operations_jobs(request: Request) -> HTMLResponse:
+        identity = load_web_identity(repo.root)
+        if identity is None:
+            raise HTTPException(
+                status_code=503, detail="Web mutation identity is unavailable"
+            )
+        rows = []
+        try:
+            from research_os.services.jobs import job_rows
+
+            rows = [
+                [
+                    esc(obj.object_id),
+                    esc(obj.metadata.get("job_name")),
+                    esc(obj.metadata.get("status")),
+                    esc(obj.metadata.get("message")),
+                ]
+                for obj in job_rows(repo.root)[:50]
+            ]
+        except ValueError:
+            rows = []
+        return HTMLResponse(
+            shell(
+                "Operations Jobs",
+                f'<section class="hero"><div><div class="eyebrow">Operational</div><h2>Jobs</h2></div></section><section class="panel">{table(["ID", "Job", "Status", "Message"], rows)}</section>',
+            )
+        )
+
+    @app.get("/operations/jobs/run", response_class=HTMLResponse)
+    def operations_job_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="运行 Operational Job",
+            eyebrow="Operational human",
+            action="/operations/jobs/run/preview",
+            back_path="/operations/jobs",
+            example={"job_name": "validate", "as_of": date.today().isoformat()},
+        )
+
+    @app.post("/operations/jobs/run/preview", response_class=HTMLResponse)
+    async def operations_job_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_job_request(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/operations/jobs/run/commit",
+            label="Job",
+        )
+
+    @app.post("/operations/jobs/run/commit", response_class=HTMLResponse)
+    async def operations_job_commit(request: Request) -> RedirectResponse:
+        form = await _urlencoded_form(request)
+        identity, active_gateway = mutation_gateway()
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        with repository_plan_lock:
+            mutation_id = repository_plan_tokens.get(form["preview_token"])
+            plan = repository_plans.get(mutation_id or "")
+        if plan is None:
+            raise HTTPException(status_code=409, detail="mutation preview conflict")
+        payload = dict(plan.normalized_input)
+        try:
+            from research_os.services.jobs import run_job
+
+            def execute_job(preview: MutationPreview) -> dict[str, str]:
+                result = run_job(
+                    repo.root,
+                    str(payload["job_name"]),
+                    project_id=payload.get("project_id"),
+                    target=payload.get("target"),
+                    as_of=str(payload["as_of"]),
+                )
+                with result_lock:
+                    mutation_results[result.job_id] = {
+                        "mutation_id": result.job_id,
+                        "operation": "job.run",
+                        "target_id": result.job_id,
+                        "status": result.status,
+                        "message": result.message,
+                    }
+                return {
+                    "mutation_id": preview.mutation_id,
+                    "target_id": result.job_id,
+                    "operation": preview.operation,
+                    "status": result.status,
+                    "message": result.message,
+                }
+
+            result = active_gateway.commit(
+                form["preview_token"],
+                actor=identity.researcher_id,
+                operation="job.run",
+                target_id=str(payload["job_name"]),
+                current_target_version=lambda _: repository_target_version(
+                    repo.root, plan
+                ),
+                execute=execute_job,
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=409, detail="operational job failed"
+            ) from exc
+        return RedirectResponse(
+            f"/research-mutations/{result['target_id']}", status_code=303
+        )
+
+    @app.get("/pipeline/channels/{channel_id}/change", response_class=HTMLResponse)
+    def channel_change_form(channel_id: str, request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title=f"Channel Change · {channel_id}",
+            eyebrow="Operational human",
+            action=f"/pipeline/channels/{channel_id}/change/preview",
+            back_path="/pipeline/channels",
+            example={"channel_id": channel_id, "enabled": True},
+        )
+
+    @app.post(
+        "/pipeline/channels/{channel_id}/change/preview", response_class=HTMLResponse
+    )
+    async def channel_change_preview(channel_id: str, request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_channel_change(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path=f"/pipeline/channels/{channel_id}/change/commit",
+            label="Channel",
+        )
+
+    @app.post(
+        "/pipeline/channels/{channel_id}/change/commit", response_class=HTMLResponse
+    )
+    async def channel_change_commit(
+        channel_id: str, request: Request
+    ) -> RedirectResponse:
+        form = await _urlencoded_form(request)
+        with repository_plan_lock:
+            mutation_id = repository_plan_tokens.get(form.get("preview_token", ""))
+            plan = repository_plans.get(mutation_id or "")
+        if plan is None or plan.target_id != channel_id:
+            raise HTTPException(status_code=409, detail="mutation preview conflict")
+        return source_commit_response(
+            request,
+            form,
+            operation=plan.operation,
+            target_id=channel_id,
+        )
 
     @app.get("/sources", response_class=HTMLResponse)
     def sources() -> HTMLResponse:

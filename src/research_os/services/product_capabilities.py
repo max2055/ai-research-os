@@ -74,7 +74,10 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("channels.enable", "channels.disable"),
         owner="channels",
-        route="/pipeline/channels/{channel_id}/change/preview",
+        route=(
+            "/pipeline/channels/{channel_id}/change/preview",
+            "/pipeline/channels/{channel_id}/change/commit",
+        ),
         authority="named_human",
         feature="F-028",
     ),
@@ -370,7 +373,10 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("forecast.open", "forecast.resolve"),
         owner="decision",
-        route=("/decision/forecasts/change/preview", "/decision/forecasts/change/commit"),
+        route=(
+            "/decision/forecasts/change/preview",
+            "/decision/forecasts/change/commit",
+        ),
         authority="named_human",
         feature="F-027",
     ),
@@ -384,7 +390,12 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("valuation.draft", "valuation.supersede"),
         owner="valuation",
-        route=("/decision/valuations/new/preview", "/decision/valuations/new/commit", "/decision/valuations/change/preview", "/decision/valuations/change/commit"),
+        route=(
+            "/decision/valuations/new/preview",
+            "/decision/valuations/new/commit",
+            "/decision/valuations/change/preview",
+            "/decision/valuations/change/commit",
+        ),
         authority="named_human",
         feature="F-027",
     ),
@@ -410,7 +421,12 @@ PRODUCT_CAPABILITIES = (
             "recommendation.supersede",
         ),
         owner="recommendation",
-        route=("/decision/recommendations/new/preview", "/decision/recommendations/new/commit", "/decision/recommendations/change/preview", "/decision/recommendations/change/commit"),
+        route=(
+            "/decision/recommendations/new/preview",
+            "/decision/recommendations/new/commit",
+            "/decision/recommendations/change/preview",
+            "/decision/recommendations/change/commit",
+        ),
         authority="named_human",
         feature="F-027",
     ),
@@ -431,14 +447,22 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("analyze.run", "analyze.replay", "analyze.eval"),
         owner="analysis",
-        route=("/analysis/runs/new/preview", "/analysis/runs/new/commit", "/analysis/runs/{run_id}/replay/preview", "/analysis/runs/{run_id}/replay/commit"),
+        route=(
+            "/analysis/runs/new/preview",
+            "/analysis/runs/new/commit",
+            "/analysis/runs/{run_id}/replay/preview",
+            "/analysis/runs/{run_id}/replay/commit",
+        ),
         authority="named_human",
         feature="F-027",
     ),
     *_capabilities(
         ("analyze.propose-thesis",),
         owner="analysis",
-        route=("/analysis/thesis-proposals/new/preview", "/analysis/thesis-proposals/new/commit"),
+        route=(
+            "/analysis/thesis-proposals/new/preview",
+            "/analysis/thesis-proposals/new/commit",
+        ),
         authority="named_human",
         feature="F-027",
     ),
@@ -452,7 +476,7 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("jobs.run",),
         owner="jobs",
-        route="/operations/jobs/run/preview",
+        route=("/operations/jobs/run/preview", "/operations/jobs/run/commit"),
         authority="operational_human",
         feature="F-028",
     ),
