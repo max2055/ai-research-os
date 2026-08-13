@@ -89,6 +89,18 @@ from research_os.services.web_candidate_mutations import (
     prepare_candidate_promote,
     prepare_candidate_restore,
 )
+from research_os.services.web_decision_mutations import (
+    prepare_forecast_creation,
+    prepare_forecast_opening,
+    prepare_forecast_resolution,
+    prepare_recommendation_activation,
+    prepare_recommendation_closing,
+    prepare_recommendation_creation,
+    prepare_recommendation_supersession,
+    prepare_scenario_template,
+    prepare_valuation_creation,
+    prepare_valuation_supersession,
+)
 from research_os.services.web_identity import (
     BrowserSessionRegistry,
     WebIdentity,
@@ -4604,6 +4616,24 @@ def create_app(root: Path) -> FastAPI:
             ),
         )
 
+    def decision_form_response(
+        request: Request,
+        *,
+        title: str,
+        eyebrow: str,
+        action: str,
+        back_path: str,
+        example: Mapping[str, Any],
+    ) -> HTMLResponse:
+        return structured_form_response(
+            request,
+            title=title,
+            eyebrow=eyebrow,
+            action=action,
+            back_path=back_path,
+            example=example,
+        )
+
     async def structured_preview_response(
         request: Request,
         *,
@@ -5224,6 +5254,287 @@ action="/projects/{esc(project_id)}/advance/preview">
             request,
             await _urlencoded_form(request),
             operation="analysis.propose-thesis",
+        )
+
+    @app.get("/decision/forecasts/new", response_class=HTMLResponse)
+    def forecast_create_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="新建 Forecast",
+            eyebrow="Decision",
+            action="/decision/forecasts/new/preview",
+            back_path="/decision",
+            example={
+                "spec": {
+                    "question": "",
+                    "outcome_type": "binary",
+                    "outcome_definition": "",
+                    "forecast_as_of": date.today().isoformat(),
+                    "resolution_date": "2026-12-31",
+                    "evidence_ids": [],
+                },
+                "created_at": date.today().isoformat(),
+            },
+        )
+
+    @app.post("/decision/forecasts/new/preview", response_class=HTMLResponse)
+    async def forecast_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_forecast_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/decision/forecasts/new/commit",
+            label="Forecast",
+        )
+
+    @app.post("/decision/forecasts/new/commit", response_class=HTMLResponse)
+    async def forecast_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="forecast.draft"
+        )
+
+    @app.get("/decision/forecasts/change", response_class=HTMLResponse)
+    def forecast_change_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="Forecast 生命周期变更",
+            eyebrow="Forecast",
+            action="/decision/forecasts/change/preview",
+            back_path="/decision",
+            example={
+                "forecast_id": "FCT-20260813-001",
+                "as_of": date.today().isoformat(),
+            },
+        )
+
+    @app.post("/decision/forecasts/change/preview", response_class=HTMLResponse)
+    async def forecast_change_preview(request: Request) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"spec_json", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            raw = json.loads(form["spec_json"])
+            operation = str(raw.pop("operation", "")) if isinstance(raw, dict) else ""
+            factory = {
+                "open": prepare_forecast_opening,
+                "resolve": prepare_forecast_resolution,
+            }.get(operation)
+            if factory is None:
+                raise ValueError("operation must be open or resolve")
+            prepared = factory(
+                repo.root, actor=identity.researcher_id, spec_json=json.dumps(raw)
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise HTTPException(
+                status_code=422, detail="invalid Forecast change"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant, form["csrf_token"], "/decision/forecasts/change/commit"
+            )
+        )
+
+    @app.post("/decision/forecasts/change/commit", response_class=HTMLResponse)
+    async def forecast_change_commit(request: Request) -> RedirectResponse:
+        form = await _urlencoded_form(request)
+        return source_commit_response(request, form, operation="forecast.change")
+
+    @app.get("/decision/valuations/new", response_class=HTMLResponse)
+    def valuation_create_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="新建 Valuation Snapshot",
+            eyebrow="Valuation",
+            action="/decision/valuations/new/preview",
+            back_path="/decision",
+            example={
+                "spec": {
+                    "company_id": "COM-",
+                    "as_of": date.today().isoformat(),
+                    "market_price": 0,
+                    "shares": 1,
+                    "valuation_identity": "manual",
+                },
+                "created_at": date.today().isoformat(),
+            },
+        )
+
+    @app.post("/decision/valuations/new/preview", response_class=HTMLResponse)
+    async def valuation_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_valuation_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/decision/valuations/new/commit",
+            label="Valuation",
+        )
+
+    @app.post("/decision/valuations/new/commit", response_class=HTMLResponse)
+    async def valuation_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="valuation.draft"
+        )
+
+    @app.get("/decision/valuations/change", response_class=HTMLResponse)
+    def valuation_change_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="Valuation Supersede",
+            eyebrow="Valuation",
+            action="/decision/valuations/change/preview",
+            back_path="/decision",
+            example={
+                "old_id": "VAL-",
+                "new_id": "VAL-",
+                "as_of": date.today().isoformat(),
+            },
+        )
+
+    @app.post("/decision/valuations/change/preview", response_class=HTMLResponse)
+    async def valuation_change_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_valuation_supersession(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/decision/valuations/change/commit",
+            label="Valuation change",
+        )
+
+    @app.post("/decision/valuations/change/commit", response_class=HTMLResponse)
+    async def valuation_change_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="valuation.supersede"
+        )
+
+    @app.get("/decision/scenarios/new", response_class=HTMLResponse)
+    def scenario_create_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="新建 Scenario Worksheet",
+            eyebrow="Scenario",
+            action="/decision/scenarios/new/preview",
+            back_path="/decision",
+            example={
+                "company_id": "COM-",
+                "as_of": date.today().isoformat(),
+                "question": "",
+            },
+        )
+
+    @app.post("/decision/scenarios/new/preview", response_class=HTMLResponse)
+    async def scenario_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_scenario_template(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/decision/scenarios/new/commit",
+            label="Scenario",
+        )
+
+    @app.post("/decision/scenarios/new/commit", response_class=HTMLResponse)
+    async def scenario_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="scenario.template"
+        )
+
+    @app.get("/decision/recommendations/new", response_class=HTMLResponse)
+    def recommendation_create_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="新建 Recommendation",
+            eyebrow="Recommendation",
+            action="/decision/recommendations/new/preview",
+            back_path="/decision",
+            example={
+                "spec": {
+                    "company_id": "COM-",
+                    "as_of": date.today().isoformat(),
+                    "freshness_date": date.today().isoformat(),
+                    "expected_case": "",
+                    "downside_case": "",
+                    "upside_case": "",
+                    "unknowns": [""],
+                    "falsification_conditions": [""],
+                },
+                "created_at": date.today().isoformat(),
+            },
+        )
+
+    @app.post("/decision/recommendations/new/preview", response_class=HTMLResponse)
+    async def recommendation_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_recommendation_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/decision/recommendations/new/commit",
+            label="Recommendation",
+        )
+
+    @app.post("/decision/recommendations/new/commit", response_class=HTMLResponse)
+    async def recommendation_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="recommendation.draft"
+        )
+
+    @app.get("/decision/recommendations/change", response_class=HTMLResponse)
+    def recommendation_change_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="Recommendation 生命周期变更",
+            eyebrow="Recommendation",
+            action="/decision/recommendations/change/preview",
+            back_path="/decision",
+            example={
+                "operation": "activate",
+                "rec_id": "REC-",
+                "as_of": date.today().isoformat(),
+                "reason": "",
+            },
+        )
+
+    @app.post("/decision/recommendations/change/preview", response_class=HTMLResponse)
+    async def recommendation_change_preview(request: Request) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"spec_json", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            raw = json.loads(form["spec_json"])
+            operation = str(raw.pop("operation", "")) if isinstance(raw, dict) else ""
+            factory = {
+                "activate": prepare_recommendation_activation,
+                "close": prepare_recommendation_closing,
+                "supersede": prepare_recommendation_supersession,
+            }.get(operation)
+            if factory is None:
+                raise ValueError("operation must be activate, close or supersede")
+            prepared = factory(
+                repo.root, actor=identity.researcher_id, spec_json=json.dumps(raw)
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise HTTPException(
+                status_code=422, detail="invalid Recommendation change"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant, form["csrf_token"], "/decision/recommendations/change/commit"
+            )
+        )
+
+    @app.post("/decision/recommendations/change/commit", response_class=HTMLResponse)
+    async def recommendation_change_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="recommendation.change"
         )
 
     # Keep the parameterized run detail route after the fixed "/new" route.
