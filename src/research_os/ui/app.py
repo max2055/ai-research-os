@@ -107,6 +107,7 @@ from research_os.services.web_identity import (
     load_web_identity,
 )
 from research_os.services.web_operations_mutations import (
+    prepare_cadence_review,
     prepare_channel_change,
     prepare_job_request,
 )
@@ -1005,6 +1006,7 @@ def _review_queue(
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>评审队列</h2>
 <p>筛选研究对象，并通过具名预览与确认记录人工评审决定。</p>
+<p><a class="button-link" href="/reviews/cadence">记录 Weekly / Monthly cadence review</a></p>
 </div><div><div class="eyebrow">{esc(STATUS_LABELS.get(review_status, review_status))}</div><h2>{len(rows)}</h2>
 <p class="muted">本页不会改变任何状态。</p></div></section>
 <section class="panel" style="margin-bottom:1rem">
@@ -3628,6 +3630,47 @@ def create_app(root: Path) -> FastAPI:
             path="/",
         )
         return response
+
+    @app.get("/reviews/cadence", response_class=HTMLResponse)
+    def cadence_review_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="记录 Cadence Review",
+            eyebrow="Named human review",
+            action="/reviews/cadence/preview",
+            back_path="/reviews",
+            example={
+                "project_id": "PRJ-002",
+                "cadence": "Weekly",
+                "review_date": date.today().isoformat(),
+                "metrics_snapshot": "05_Research/Reviews/Snapshots/METRICS-YYYYMMDD.json",
+                "system_facts": "Validation errors: 0; index drift: 0",
+                "evidence_changes": "",
+                "thesis_review": "",
+                "decisions": "",
+                "action_items": "",
+                "next_review": date.today().isoformat(),
+            },
+        )
+
+    @app.post("/reviews/cadence/preview", response_class=HTMLResponse)
+    async def cadence_review_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_cadence_review(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/reviews/cadence/commit",
+            label="Cadence Review",
+        )
+
+    @app.post("/reviews/cadence/commit", response_class=HTMLResponse)
+    async def cadence_review_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="review.cadence",
+        )
 
     @app.post("/reviews/apply/preview", response_class=HTMLResponse)
     async def review_apply_preview(request: Request) -> HTMLResponse:

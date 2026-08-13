@@ -309,7 +309,12 @@ PRODUCT_CAPABILITIES = (
         "review.apply",
         "reviews",
         "web",
-        ("/reviews/apply/preview", "/reviews/apply/commit"),
+        (
+            "/reviews/apply/preview",
+            "/reviews/apply/commit",
+            "/reviews/cadence/preview",
+            "/reviews/cadence/commit",
+        ),
         "named_human",
         "F-027",
     ),

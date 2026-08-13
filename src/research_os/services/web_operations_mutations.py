@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -29,6 +29,19 @@ class JobRequest(_Strict):
 class ChannelChange(_Strict):
     channel_id: str = Field(min_length=1, max_length=80)
     enabled: bool
+
+
+class CadenceReview(_Strict):
+    project_id: str = Field(min_length=1, max_length=80)
+    cadence: Literal["Weekly", "Monthly"]
+    review_date: str = Field(min_length=10, max_length=10)
+    metrics_snapshot: str = Field(min_length=1, max_length=240)
+    system_facts: str = Field(min_length=1, max_length=4000)
+    evidence_changes: str = Field(min_length=1, max_length=4000)
+    thesis_review: str = Field(min_length=1, max_length=4000)
+    decisions: str = Field(min_length=1, max_length=4000)
+    action_items: str = Field(min_length=1, max_length=4000)
+    next_review: str = Field(min_length=10, max_length=10)
 
 
 def _parse(raw: str, model: type[_Strict]) -> Any:
@@ -89,6 +102,60 @@ def prepare_job_request(
         target_type="job_request",
         target_id=spec.job_name,
         payload=spec.model_dump(),
+    )
+
+
+def prepare_cadence_review(
+    root: Path, *, actor: str, spec_json: str
+) -> PreparedRepositoryMutation:
+    spec = _parse(spec_json, CadenceReview)
+    try:
+        from datetime import date
+
+        date.fromisoformat(spec.review_date)
+        date.fromisoformat(spec.next_review)
+    except ValueError as exc:
+        raise ValueError("invalid cadence review date") from exc
+    project_path = root / "05_Research" / "Projects" / spec.project_id
+    if not project_path.is_dir():
+        raise ValueError(f"unknown project {spec.project_id}")
+    prefix = "WK" if spec.cadence == "Weekly" else "MO"
+    relative = (
+        Path("05_Research/Projects")
+        / spec.project_id
+        / "Reviews"
+        / spec.cadence
+        / f"{prefix}-{spec.review_date}-{spec.project_id.lower()}.md"
+    )
+    content = (
+        f"# {spec.project_id} {spec.cadence} Research Review — {spec.review_date}\n\n"
+        f"Project ID: {spec.project_id}\n\n"
+        "Scope: v0.3 F-021\n\n"
+        "Review status: completed\n\n"
+        f"Reviewer: {actor}\n\nReview date: {spec.review_date}\n\n"
+        f"Metrics snapshot: `{spec.metrics_snapshot}`\n\n"
+        "## System facts\n\n"
+        f"{spec.system_facts}\n\n"
+        "## Evidence changes\n\n"
+        f"{spec.evidence_changes}\n\n"
+        "## Thesis review\n\n"
+        f"{spec.thesis_review}\n\n"
+        "## Human decisions\n\n"
+        f"{spec.decisions}\n\n"
+        "## Action items\n\n"
+        f"{spec.action_items}\n\n"
+        "## Next review\n\n"
+        f"{spec.next_review}\n"
+    )
+    return prepare_repository_mutation(
+        root,
+        operation="review.cadence",
+        actor=actor,
+        target_type="cadence_review",
+        target_id=relative.stem,
+        writes={relative: content.encode("utf-8")},
+        normalized_input=spec.model_dump(),
+        summary={"status_after": "completed", "authority": "named_human"},
     )
 
 

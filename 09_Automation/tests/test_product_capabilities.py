@@ -63,6 +63,8 @@ class ProductCapabilityTests(unittest.TestCase):
                 "/reports/new/commit",
                 "/reviews/apply/preview",
                 "/reviews/apply/commit",
+                "/reviews/cadence/preview",
+                "/reviews/cadence/commit",
                 "/projects/new/preview",
                 "/projects/new/commit",
                 "/projects/{project_id}/advance/preview",
