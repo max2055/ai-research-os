@@ -53,6 +53,7 @@ show_missing = true
 fail_under = 80
 omit = [
   "src/research_os/__main__.py",
+  "src/research_os/ui/__main__.py",
   "src/research_os/cli.py",
   "src/research_os/legacy_core.py",
 ]
