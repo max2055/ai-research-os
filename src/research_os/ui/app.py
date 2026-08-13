@@ -38,6 +38,7 @@ from research_os.services.analysis_registry import (
 )
 from research_os.services.candidate_queue import promoted_rows, queue_rows, queue_show
 from research_os.services.channels import channel_rows
+from research_os.services.drafts import SOURCE_GRADES, SOURCE_TYPES
 from research_os.services.ingestion import verify_source_assets
 from research_os.services.metrics import (
     load_metrics_snapshot,
@@ -62,6 +63,7 @@ from research_os.services.ontology import render_impact
 from research_os.services.operations_health import health_snapshot, operations_snapshot
 from research_os.services.pilot import pilot_status
 from research_os.services.projects import objects_for_project
+from research_os.services.promote import PromotePlan
 from research_os.services.read_model import (
     analysis_workspace_snapshot,
     company_snapshot,
@@ -74,7 +76,9 @@ from research_os.services.review_cadence import current_next_review_date
 from research_os.services.triage import dismiss_candidate
 from research_os.services.validation import validate_repository
 from research_os.services.web_candidate_mutations import (
+    commit_candidate_promote,
     commit_candidate_restore,
+    prepare_candidate_promote,
     prepare_candidate_restore,
 )
 from research_os.services.web_identity import (
@@ -87,6 +91,13 @@ HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
 _SESSION_COOKIE = "research_os_session"
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 _MAX_FORM_BYTES = 16_384
+_SOURCE_TYPE_BY_CHANNEL = {
+    "rss": "article",
+    "web_page": "article",
+    "arxiv": "paper",
+    "github_release": "other",
+    "sec": "report",
+}
 
 _LLM_HUMAN_ERRORS = {
     "auth": "认证失败：API Key 无效或已过期",
@@ -234,7 +245,7 @@ async def _urlencoded_form(request: Request) -> dict[str, str]:
             body.decode("utf-8"),
             keep_blank_values=True,
             strict_parsing=True,
-            max_num_fields=4,
+            max_num_fields=5,
         )
     except (UnicodeDecodeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail="invalid mutation input") from exc
@@ -325,6 +336,54 @@ def _restore_result(
 {table(["Mutation", "Candidate action", "Mutation audit"], [[esc(result.get("mutation_id")), esc(result.get("action_id")), esc(result.get("audit_id"))]])}
 <p><a href="/pipeline/queue/{esc(detail.get("candidate_id"))}">返回候选详情</a></p></section>"""
     return shell(f"已恢复 · {detail.get('candidate_id')}", content)
+
+
+def _promote_confirmation(
+    detail: Mapping[str, Any],
+    grant: PreviewGrant,
+    csrf_token: str,
+) -> str:
+    preview = grant.preview
+    value = preview.normalized_input
+    asset_rows = [
+        [
+            esc(asset.get("path")),
+            esc(asset.get("byte_count")),
+            esc(asset.get("sha256")),
+        ]
+        for asset in value.get("assets", [])
+        if isinstance(asset, Mapping)
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">确认候选提升</div><h2>{esc(detail.get("title"))}</h2>
+<p>{esc(preview.target_id)} · {badge(preview.summary.get("status_before"))} → {badge(preview.summary.get("status_after"))}</p>
+</div><div><div class="eyebrow">有效至</div><h3>{esc(preview.expires_at_iso)}</h3>
+<p class="muted">操作者 {esc(preview.actor)}</p></div></section>
+<section class="panel"><h3>Source 元数据</h3>
+{_kv_table([["Source ID", esc(value.get("source_id"))], ["Project", esc(value.get("project_id"))], ["Publisher", esc(value.get("publisher"))], ["Source type", esc(value.get("source_type"))], ["Source grade", esc(value.get("source_grade"))], ["Content SHA-256", esc(value.get("content_sha256"))]])}
+<h3>冻结资产</h3>{table(["路径", "Bytes", "SHA-256"], asset_rows)}
+<form class="mutation-form" method="post" action="/pipeline/queue/{esc(preview.target_id)}/promote/commit">
+<input type="hidden" name="preview_token" value="{esc(grant.token)}">
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">确认提升</button>
+<a href="/pipeline/queue/{esc(preview.target_id)}">取消</a></div></form></section>"""
+    return shell(f"确认提升 · {preview.target_id}", content)
+
+
+def _promote_result(
+    detail: Mapping[str, Any],
+    result: Mapping[str, str],
+) -> str:
+    source_id = result.get("source_id")
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">候选操作完成</div><h2>{esc(detail.get("title"))}</h2>
+<p>{badge("已提升")} · {esc(detail.get("candidate_id"))}</p></div></section>
+<section class="panel"><h3>正式 Source</h3>
+<p><a href="/sources/{esc(source_id)}">{esc(source_id)}</a> · {esc(result.get("source_path"))}</p>
+<h3>审计标识</h3>
+{table(["Mutation", "Candidate action", "Mutation audit"], [[esc(result.get("mutation_id")), esc(result.get("action_id")), esc(result.get("audit_id"))]])}
+<p><a href="/pipeline/queue/{esc(detail.get("candidate_id"))}">返回候选详情</a></p></section>"""
+    return shell(f"已提升 · {detail.get('candidate_id')}", content)
 
 
 def object_url(obj: ResearchObject) -> str:
@@ -1236,6 +1295,59 @@ def _pipeline_candidate(
 <input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
 <div class="mutation-actions"><button type="submit">预览恢复</button></div>
 </form></section>"""
+    promote_form = ""
+    if csrf_token is not None and detail.get("status") == "new":
+        objects, _ = repo.all()
+        projects = sorted(
+            (
+                obj.object_id,
+                str(obj.metadata.get("title") or obj.object_id),
+            )
+            for obj in objects
+            if obj.object_type == "project"
+        )
+        channel = next(
+            (
+                obj
+                for obj in objects
+                if obj.object_type == "source_channel"
+                and obj.object_id == detail.get("channel_id")
+            ),
+            None,
+        )
+        channel_meta = dict(channel.metadata) if channel else {}
+        default_type = _SOURCE_TYPE_BY_CHANNEL.get(
+            str(channel_meta.get("channel_type") or ""),
+            "article",
+        )
+        default_grade = str(channel_meta.get("source_grade_proposal") or "B")
+        project_options = "".join(
+            f'<option value="{esc(project_id)}">{esc(project_id)} · {esc(title)}</option>'
+            for project_id, title in projects
+        )
+        type_options = "".join(
+            f'<option value="{esc(value)}"'
+            f"{' selected' if value == default_type else ''}>{esc(value)}</option>"
+            for value in sorted(SOURCE_TYPES)
+        )
+        grade_options = "".join(
+            f'<option value="{esc(value)}"'
+            f"{' selected' if value == default_grade else ''}>{esc(value)}</option>"
+            for value in sorted(SOURCE_GRADES)
+        )
+        promote_form = f"""<section class="panel mutation-panel promote-panel"><h3>提升为 Source</h3>
+<form class="mutation-form" method="post" action="/pipeline/queue/{esc(candidate_id)}/promote/preview">
+<label for="promote-project">Project</label>
+<select id="promote-project" name="project_id" required>{project_options}</select>
+<label for="promote-type">Source type</label>
+<select id="promote-type" name="source_type" required>{type_options}</select>
+<label for="promote-grade">Source grade</label>
+<select id="promote-grade" name="source_grade" required>{grade_options}</select>
+<label for="promote-publisher">Publisher</label>
+<input id="promote-publisher" name="publisher" maxlength="200" value="{esc(detail.get("publisher") or channel_meta.get("publisher") or "Unknown")}" required>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">预览提升</button></div>
+</form></section>"""
     panels = f"""<section class="panel"><h3>候选区</h3>{_candidate_facts(detail)}</section>
 <section class="grid" style="margin-top:1rem">
 <div class="panel"><h3>实体建议</h3>{table(["字段", "值"], _proposal_rows(entity))}</div>
@@ -1245,6 +1357,7 @@ def _pipeline_candidate(
 {_suggestion_panel(detail)}
 {dismiss_form}
 {restore_form}
+{promote_form}
 <section class="panel" style="border-top:2px solid var(--accent)"><h3>已评审证据区</h3>
 {_reviewed_evidence(repo, entity, detail.get("existing_source_id"))}</section>
 <section class="grid" style="margin-top:1rem">
@@ -2921,6 +3034,8 @@ def create_app(root: Path) -> FastAPI:
     gateway: MutationGateway | None = None
     mutation_results: dict[str, dict[str, str]] = {}
     result_lock = Lock()
+    promote_plans: dict[str, PromotePlan] = {}
+    promote_plan_lock = Lock()
     app = FastAPI(
         title="AI Research OS",
         docs_url=None,
@@ -3237,6 +3352,142 @@ def create_app(root: Path) -> FastAPI:
         location = f"/pipeline/queue/{candidate_id}/mutations/{result['mutation_id']}"
         return RedirectResponse(location, status_code=303)
 
+    @app.post(
+        "/pipeline/queue/{candidate_id}/promote/preview",
+        response_class=HTMLResponse,
+    )
+    async def candidate_promote_preview(
+        candidate_id: str,
+        request: Request,
+    ) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {
+            "project_id",
+            "source_type",
+            "source_grade",
+            "publisher",
+            "csrf_token",
+        }:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        project_id = form["project_id"].strip()
+        source_type = form["source_type"].strip()
+        source_grade = form["source_grade"].strip()
+        publisher = " ".join(form["publisher"].split())
+        objects, _ = repo.all()
+        project_ids = {obj.object_id for obj in objects if obj.object_type == "project"}
+        if (
+            project_id not in project_ids
+            or source_type not in SOURCE_TYPES
+            or source_grade not in SOURCE_GRADES
+            or not 1 <= len(publisher) <= 200
+        ):
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            detail = queue_show(repo.root, candidate_id)
+            if detail is None:
+                raise ValueError(f"unknown candidate {candidate_id}")
+            prepared = prepare_candidate_promote(
+                repo.root,
+                candidate_id,
+                actor=identity.researcher_id,
+                project_id=project_id,
+                source_type=source_type,
+                source_grade=source_grade,
+                publisher=publisher,
+            )
+            grant = active_gateway.issue(prepared.preview_input)
+            with promote_plan_lock:
+                promote_plans[grant.preview.mutation_id] = prepared.plan
+            try:
+                _record_preview(repo.root, grant.preview)
+            except Exception:
+                with promote_plan_lock:
+                    promote_plans.pop(grant.preview.mutation_id, None)
+                raise
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail="candidate cannot be promoted",
+            ) from exc
+        except TransactionError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="mutation preview failed",
+            ) from exc
+        return HTMLResponse(_promote_confirmation(detail, grant, form["csrf_token"]))
+
+    @app.post(
+        "/pipeline/queue/{candidate_id}/promote/commit",
+        response_class=HTMLResponse,
+    )
+    async def candidate_promote_commit(
+        candidate_id: str,
+        request: Request,
+    ) -> RedirectResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+
+        preview_mutation_id: str | None = None
+
+        def execute(preview: MutationPreview) -> dict[str, str]:
+            nonlocal preview_mutation_id
+            preview_mutation_id = preview.mutation_id
+            with promote_plan_lock:
+                plan = promote_plans.get(preview.mutation_id)
+            if plan is None:
+                raise ValueError("promotion plan is unavailable")
+            return commit_candidate_promote(repo.root, preview, plan)
+
+        cleanup_plan = True
+        try:
+            result = active_gateway.commit(
+                form["preview_token"],
+                actor=identity.researcher_id,
+                operation="candidate.promote",
+                target_id=candidate_id,
+                current_target_version=lambda target: candidate_db.candidate_version(
+                    repo.root,
+                    target,
+                ),
+                execute=execute,
+            )
+            preview_mutation_id = result["mutation_id"]
+        except MutationForbidden as exc:
+            preview_mutation_id = exc.preview.mutation_id if exc.preview else None
+            _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=403,
+                detail="mutation request forbidden",
+            ) from exc
+        except (MutationConflict, ValueError) as exc:
+            if isinstance(exc, MutationConflict):
+                preview_mutation_id = exc.preview.mutation_id if exc.preview else None
+                _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=409,
+                detail="mutation preview conflict",
+            ) from exc
+        except TransactionError as exc:
+            cleanup_plan = False
+            raise HTTPException(
+                status_code=500,
+                detail="mutation commit failed",
+            ) from exc
+        finally:
+            if cleanup_plan and preview_mutation_id is not None:
+                with promote_plan_lock:
+                    promote_plans.pop(preview_mutation_id, None)
+        result["target_id"] = candidate_id
+        with result_lock:
+            mutation_results[result["mutation_id"]] = result
+        location = f"/pipeline/queue/{candidate_id}/mutations/{result['mutation_id']}"
+        return RedirectResponse(location, status_code=303)
+
     @app.get(
         "/pipeline/queue/{candidate_id}/mutations/{mutation_id}",
         response_class=HTMLResponse,
@@ -3256,11 +3507,13 @@ def create_app(root: Path) -> FastAPI:
             or result["target_id"] != candidate_id
         ):
             raise HTTPException(status_code=404, detail="unknown mutation result")
-        renderer = (
-            _restore_result
-            if result.get("operation") == "candidate.restore"
-            else _dismiss_result
-        )
+        operation = result.get("operation")
+        if operation == "candidate.promote":
+            renderer = _promote_result
+        elif operation == "candidate.restore":
+            renderer = _restore_result
+        else:
+            renderer = _dismiss_result
         return HTMLResponse(renderer(detail, result))
 
     @app.get("/pipeline/channels", response_class=HTMLResponse)

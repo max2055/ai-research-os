@@ -66,6 +66,7 @@ class PromotePlan:
     publisher: str
     published_at: str
     url: str
+    project_id: str
     companies: list[str]
     reason: str
 
@@ -232,6 +233,7 @@ def prepare_promote(
         publisher=resolved_publisher,
         published_at=published_at,
         url=url,
+        project_id=project_id,
         companies=companies,
         reason="promoted from candidate triage",
     )

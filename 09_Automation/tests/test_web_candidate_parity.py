@@ -471,5 +471,246 @@ class CandidateRestoreHttpTests(unittest.TestCase):
                 self.assertNotIn("恢复候选", detail.text)
 
 
+class CandidatePromoteHttpTests(unittest.TestCase):
+    def _root(self, temp: str) -> tuple[Path, Path]:
+        fixtures = PromoteTests()
+        root = fixtures._make_root(temp)
+        fixtures._insert_and_enrich(root)
+        config = root / "00_System" / "web.local.json"
+        config.write_text(
+            json.dumps(
+                {
+                    "researcher_id": "max",
+                    "mutation_signing_secret": "s" * 64,
+                }
+            ),
+            encoding="utf-8",
+        )
+        config.chmod(0o600)
+        connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+        try:
+            connection.execute(
+                "UPDATE candidates SET title = ? WHERE candidate_id = 'CND-0000'",
+                ("Promote <unsafe>",),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+        return root, fixtures._html_file(root)
+
+    def _client(self, root: Path) -> TestClient:
+        return TestClient(create_app(root), base_url="http://127.0.0.1")
+
+    def _hidden(self, text: str, name: str) -> str:
+        match = re.search(
+            rf'<input[^>]+name="{re.escape(name)}"[^>]+value="([^"]+)"',
+            text,
+        )
+        self.assertIsNotNone(match, f"missing hidden field {name}")
+        assert match is not None
+        return match.group(1)
+
+    def _promote_form(self, csrf: str) -> dict[str, str]:
+        return {
+            "project_id": "PRJ-001",
+            "source_type": "article",
+            "source_grade": "B",
+            "publisher": "Test <publisher>",
+            "csrf_token": csrf,
+        }
+
+    def test_promote_http_preview_commit_redirect_refresh_and_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, capture = self._root(temp)
+            client = self._client(root)
+            detail = client.get("/pipeline/queue/CND-0000")
+            self.assertEqual(200, detail.status_code)
+            self.assertIn("提升为 Source", detail.text)
+            self.assertIn('value="PRJ-001"', detail.text)
+            self.assertIn('value="article" selected', detail.text)
+            self.assertIn('value="B" selected', detail.text)
+            self.assertNotRegex(detail.text, r'name="(?:actor|captured_content)"')
+            csrf = self._hidden(detail.text, "csrf_token")
+
+            with patch(
+                "research_os.services.promote.UrlCaptureAdapter",
+                return_value=FileCaptureAdapter(capture),
+            ):
+                preview = client.post(
+                    "/pipeline/queue/CND-0000/promote/preview",
+                    data=self._promote_form(csrf),
+                    headers={"Origin": "http://127.0.0.1"},
+                )
+            self.assertEqual(200, preview.status_code)
+            self.assertIn("Promote &lt;unsafe&gt;", preview.text)
+            self.assertIn("Test &lt;publisher&gt;", preview.text)
+            self.assertIn("Content SHA-256", preview.text)
+            self.assertNotIn("HBM production capacity announcement", preview.text)
+            self.assertNotRegex(
+                preview.text,
+                r'name="(?:actor|target_id|source_id|captured_content)"',
+            )
+            token = self._hidden(preview.text, "preview_token")
+            csrf = self._hidden(preview.text, "csrf_token")
+
+            committed = client.post(
+                "/pipeline/queue/CND-0000/promote/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+                follow_redirects=False,
+            )
+            self.assertEqual(303, committed.status_code)
+            result = client.get(committed.headers["location"])
+            self.assertEqual(200, result.status_code)
+            self.assertEqual(
+                result.text,
+                client.get(committed.headers["location"]).text,
+            )
+            self.assertIn("已提升", result.text)
+            self.assertIn("/sources/SRC-", result.text)
+
+            replay = client.post(
+                "/pipeline/queue/CND-0000/promote/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(409, replay.status_code)
+
+    def test_promote_http_rejects_bad_boundary_input_and_stale_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, capture = self._root(temp)
+            client = self._client(root)
+            detail = client.get("/pipeline/queue/CND-0000")
+            csrf = self._hidden(detail.text, "csrf_token")
+            path = "/pipeline/queue/CND-0000/promote/preview"
+            for headers, form in (
+                ({}, self._promote_form(csrf)),
+                (
+                    {"Origin": "https://attacker.example"},
+                    self._promote_form(csrf),
+                ),
+                (
+                    {"Origin": "http://127.0.0.1"},
+                    self._promote_form("wrong"),
+                ),
+            ):
+                response = client.post(path, data=form, headers=headers)
+                self.assertEqual(403, response.status_code)
+
+            invalid = self._promote_form(csrf)
+            invalid["source_grade"] = "Z"
+            response = client.post(
+                path,
+                data=invalid,
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(422, response.status_code)
+
+            with patch(
+                "research_os.services.promote.UrlCaptureAdapter",
+                return_value=FileCaptureAdapter(capture),
+            ):
+                preview = client.post(
+                    path,
+                    data=self._promote_form(csrf),
+                    headers={"Origin": "http://127.0.0.1"},
+                )
+            token = self._hidden(preview.text, "preview_token")
+            csrf = self._hidden(preview.text, "csrf_token")
+            connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+            try:
+                connection.execute(
+                    "UPDATE candidates SET status = 'dismissed' "
+                    "WHERE candidate_id = 'CND-0000'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            stale = client.post(
+                "/pipeline/queue/CND-0000/promote/commit",
+                data={"preview_token": token, "csrf_token": csrf},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(409, stale.status_code)
+            self.assertFalse(any((root / "01_Inbox" / "_assets").glob("SRC-*")))
+
+    def test_promote_http_transaction_failure_can_retry_same_preview(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, capture = self._root(temp)
+            client = self._client(root)
+            detail = client.get("/pipeline/queue/CND-0000")
+            csrf = self._hidden(detail.text, "csrf_token")
+            with patch(
+                "research_os.services.promote.UrlCaptureAdapter",
+                return_value=FileCaptureAdapter(capture),
+            ):
+                preview = client.post(
+                    "/pipeline/queue/CND-0000/promote/preview",
+                    data=self._promote_form(csrf),
+                    headers={"Origin": "http://127.0.0.1"},
+                )
+            token = self._hidden(preview.text, "preview_token")
+            csrf = self._hidden(preview.text, "csrf_token")
+            request = {
+                "data": {"preview_token": token, "csrf_token": csrf},
+                "headers": {"Origin": "http://127.0.0.1"},
+            }
+            with patch(
+                "research_os.ui.app.commit_candidate_promote",
+                side_effect=TransactionError("injected retryable failure"),
+            ):
+                failed = client.post(
+                    "/pipeline/queue/CND-0000/promote/commit",
+                    **request,
+                )
+            self.assertEqual(500, failed.status_code)
+
+            committed = client.post(
+                "/pipeline/queue/CND-0000/promote/commit",
+                **request,
+                follow_redirects=False,
+            )
+            self.assertEqual(303, committed.status_code)
+            replay = client.post(
+                "/pipeline/queue/CND-0000/promote/commit",
+                **request,
+            )
+            self.assertEqual(409, replay.status_code)
+
+    def test_promote_form_requires_identity_and_new_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, _ = self._root(temp)
+            (root / "00_System" / "web.local.json").unlink()
+            client = self._client(root)
+            self.assertNotIn(
+                "提升为 Source",
+                client.get("/pipeline/queue/CND-0000").text,
+            )
+            response = client.post(
+                "/pipeline/queue/CND-0000/promote/preview",
+                data=self._promote_form("missing"),
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(503, response.status_code)
+
+        for status in ("dismissed", "promoted"):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as temp:
+                root, _ = self._root(temp)
+                connection = sqlite3.connect(candidate_db.candidate_db_path(root))
+                try:
+                    connection.execute(
+                        "UPDATE candidates SET status = ? "
+                        "WHERE candidate_id = 'CND-0000'",
+                        (status,),
+                    )
+                    connection.commit()
+                finally:
+                    connection.close()
+                self.assertNotIn(
+                    "提升为 Source",
+                    self._client(root).get("/pipeline/queue/CND-0000").text,
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

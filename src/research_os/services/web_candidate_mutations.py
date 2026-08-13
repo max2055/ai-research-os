@@ -61,6 +61,7 @@ def _promote_normalized_input(plan: PromotePlan) -> dict[str, Any]:
         "source_type": plan.source_type,
         "source_grade": plan.source_grade,
         "url": plan.url,
+        "project_id": plan.project_id,
         "companies": list(plan.companies),
         "content_sha256": plan.capture.content_sha256,
         "source_record_sha256": _sha256(plan.capture.source_content.encode("utf-8")),

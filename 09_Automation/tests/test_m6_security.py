@@ -86,6 +86,8 @@ class DashboardSecurityTests(unittest.TestCase):
                 "/llm/test",
                 "/pipeline/queue/{candidate_id}/dismiss/commit",
                 "/pipeline/queue/{candidate_id}/dismiss/preview",
+                "/pipeline/queue/{candidate_id}/promote/commit",
+                "/pipeline/queue/{candidate_id}/promote/preview",
                 "/pipeline/queue/{candidate_id}/restore/commit",
                 "/pipeline/queue/{candidate_id}/restore/preview",
             },
