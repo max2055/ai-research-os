@@ -35,12 +35,15 @@ class DecisionWebAdapterTests(unittest.TestCase):
                 },
                 body="",
             )
-            with patch(
-                "research_os.services.web_decision_mutations.validate_repository",
-                return_value=([obj], []),
-            ), patch(
-                "research_os.services.recommendation_lifecycle.validate_repository",
-                return_value=([obj], []),
+            with (
+                patch(
+                    "research_os.services.web_decision_mutations.validate_repository",
+                    return_value=([obj], []),
+                ),
+                patch(
+                    "research_os.services.recommendation_lifecycle.validate_repository",
+                    return_value=([obj], []),
+                ),
             ):
                 prepared = prepare_recommendation_activation(
                     root,
