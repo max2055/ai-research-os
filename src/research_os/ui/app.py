@@ -4388,7 +4388,11 @@ def create_app(root: Path) -> FastAPI:
             label="Discovery",
         )
 
-    @app.post("/operations/discovery/run/commit", response_class=HTMLResponse)
+    @app.post(
+        "/operations/discovery/run/commit",
+        response_class=HTMLResponse,
+        name="operations-discovery-run-commit",
+    )
     async def operations_discovery_run_commit(request: Request) -> RedirectResponse:
         return await operations_job_commit(request)
 
@@ -4542,6 +4546,32 @@ def create_app(root: Path) -> FastAPI:
         return RedirectResponse(
             f"/research-mutations/{result['target_id']}", status_code=303
         )
+
+    @app.get("/pipeline/queue/batch", response_class=HTMLResponse)
+    def candidate_batch_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="Candidate Batch",
+            eyebrow="Operational human",
+            action="/pipeline/queue/batch/preview",
+            back_path="/pipeline/queue",
+            example={"job_name": "enrich", "as_of": date.today().isoformat()},
+        )
+
+    @app.post("/pipeline/queue/batch/preview", response_class=HTMLResponse)
+    async def candidate_batch_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_job_request(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/pipeline/queue/batch/commit",
+            label="Candidate batch",
+        )
+
+    @app.post("/pipeline/queue/batch/commit", response_class=HTMLResponse)
+    async def candidate_batch_commit(request: Request) -> RedirectResponse:
+        return await operations_job_commit(request)
 
     @app.get("/pipeline/channels/{channel_id}/change", response_class=HTMLResponse)
     def channel_change_form(channel_id: str, request: Request) -> HTMLResponse:

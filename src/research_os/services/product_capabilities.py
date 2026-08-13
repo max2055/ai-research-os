@@ -91,7 +91,7 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("discover.run",),
         owner="discovery",
-        route="/operations/discovery/run/preview",
+        route=("/operations/discovery/run/preview", "/operations/discovery/run/commit"),
         authority="operational_human",
         feature="F-028",
     ),
@@ -138,7 +138,7 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("candidates.expire", "candidates.purge", "candidates.enrich"),
         owner="candidate_queue",
-        route="/pipeline/queue/batch/preview",
+        route=("/pipeline/queue/batch/preview", "/pipeline/queue/batch/commit"),
         authority="operational_human",
         feature="F-027",
     ),

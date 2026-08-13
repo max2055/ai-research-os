@@ -47,6 +47,8 @@ JOB_NAMES = frozenset(
         "refresh",
         "discover",
         "expire",
+        "purge",
+        "enrich",
         "daily-brief",
         "forecast-alerts",
         "backup-candidate",
@@ -182,11 +184,15 @@ def _execute_job(
         return message
     if job_name == "expire":
         expired = expire_candidates(root, apply=True)
+        return f"retention sweep: {len(expired['expired'])} expired"
+    if job_name == "purge":
         purged = purge_candidates(root, apply=True)
-        return (
-            f"retention sweep: {len(expired['expired'])} expired, "
-            f"{len(purged['purged'])} purged"
-        )
+        return f"retention purge: {len(purged['purged'])} purged"
+    if job_name == "enrich":
+        from research_os.services.candidate_queue import enrich_candidates
+
+        enriched = enrich_candidates(root, apply=True)
+        return f"candidate enrichment: {len(enriched)} enriched"
     if job_name == "backup-candidate":
         destination = (
             Path(target).expanduser()

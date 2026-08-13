@@ -103,6 +103,10 @@ class ProductCapabilityTests(unittest.TestCase):
                 "/operations/jobs/run/commit",
                 "/pipeline/channels/{channel_id}/change/preview",
                 "/pipeline/channels/{channel_id}/change/commit",
+                "/pipeline/queue/batch/preview",
+                "/pipeline/queue/batch/commit",
+                "/operations/discovery/run/preview",
+                "/operations/discovery/run/commit",
             },
             routes,
         )
