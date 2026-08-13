@@ -48,6 +48,13 @@ class AssetVerification:
     message: str
 
 
+@dataclass(frozen=True)
+class SourceWritePlan:
+    source_id: str
+    writes: dict[Path, bytes]
+    summary: dict[str, Any]
+
+
 def sha256_bytes(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
@@ -297,6 +304,30 @@ def capture_existing_source(
     *,
     allow_duplicate: bool = False,
 ) -> list[Path]:
+    plan = prepare_existing_source_capture(
+        root,
+        source_id,
+        adapter,
+        allow_duplicate=allow_duplicate,
+    )
+    transaction = FileTransaction(root.resolve())
+    for path, content in plan.writes.items():
+        if (root.resolve() / path).is_file():
+            transaction.stage_replace_bytes(path, content)
+        else:
+            transaction.stage_create_bytes(path, content)
+    return transaction.commit()
+
+
+def prepare_existing_source_capture(
+    root: Path,
+    source_id: str,
+    adapter: CaptureAdapter,
+    *,
+    allow_duplicate: bool = False,
+) -> SourceWritePlan:
+    """Capture once and freeze an existing Source version without writing."""
+
     root = root.resolve()
     source, objects = _source_by_id(root, source_id)
     asset = adapter.capture()
@@ -340,11 +371,23 @@ def capture_existing_source(
         }
         upstream.update(match.source_id for match in duplicates)
         document.set_metadata("upstream_source_ids", sorted(upstream))
-    transaction = FileTransaction(root)
-    transaction.stage_replace(source.path, document.render())
-    for path, content in assets.items():
-        transaction.stage_create_bytes(path, content)
-    return transaction.commit()
+    writes = {
+        source.path.relative_to(root): document.render().encode("utf-8"),
+        **assets,
+    }
+    return SourceWritePlan(
+        source_id=source_id,
+        writes=writes,
+        summary={
+            "content_sha256": digest,
+            "canonical_url": canonical_url,
+            "published_date_proposal": asset.published_date_proposal,
+            "duplicate_matches": [
+                f"{match.source_id}:{match.reason}" for match in duplicates
+            ],
+            "asset_count": len(assets),
+        },
+    )
 
 
 def _record_processing_failure(
@@ -444,6 +487,72 @@ def process_source_asset(root: Path, source_id: str) -> list[Path]:
         raise
 
 
+def prepare_source_processing(root: Path, source_id: str) -> SourceWritePlan:
+    """Freeze extraction outputs without recording preview failures as mutations."""
+
+    root = root.resolve()
+    source, _ = _source_by_id(root, source_id)
+    manifests = [
+        root / str(path)
+        for path in source.metadata.get("asset_paths", [])
+        if str(path).endswith(".metadata.json")
+    ]
+    if not manifests:
+        raise ValueError(f"Source {source_id} has no captured asset manifest")
+    manifest = json.loads(manifests[-1].read_text(encoding="utf-8"))
+    raw_relative = Path(str(manifest["raw_asset_path"]))
+    content = (root / raw_relative).read_bytes()
+    digest = sha256_bytes(content)
+    if digest != manifest["content_sha256"]:
+        raise ValueError(f"asset hash mismatch for {raw_relative}")
+    result = extract_text(content, str(manifest["media_type"]))
+    extracted_relative = raw_relative.with_suffix(
+        raw_relative.suffix + ".extracted.txt"
+    )
+    extraction_metadata = raw_relative.with_suffix(
+        raw_relative.suffix + ".extraction.json"
+    )
+    if (root / extracted_relative).exists() or (root / extraction_metadata).exists():
+        raise ValueError(f"Source {source_id} latest asset is already processed")
+    extraction_record = {
+        "schema_version": 1,
+        "source_id": source_id,
+        "raw_asset_path": str(raw_relative),
+        "raw_content_sha256": digest,
+        "extraction_method": result.method,
+        "warnings": list(result.warnings),
+        "text_sha256": sha256_bytes(result.text.encode("utf-8")),
+    }
+    document = MarkdownDocument.read(source.path)
+    paths = [str(path) for path in source.metadata.get("asset_paths", [])]
+    paths.extend([str(extracted_relative), str(extraction_metadata)])
+    document.set_metadata("asset_paths", paths)
+    document.set_metadata("processing_status", "processed")
+    document.set_metadata("processing_error", None)
+    return SourceWritePlan(
+        source_id=source_id,
+        writes={
+            source.path.relative_to(root): document.render().encode("utf-8"),
+            extracted_relative: result.text.encode("utf-8"),
+            extraction_metadata: (
+                json.dumps(
+                    extraction_record,
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            ).encode("utf-8"),
+        },
+        summary={
+            "processing_status": "processed",
+            "extraction_method": result.method,
+            "warning_count": len(result.warnings),
+            "text_sha256": extraction_record["text_sha256"],
+        },
+    )
+
+
 def confirm_published_date(
     root: Path,
     source_id: str,
@@ -466,6 +575,40 @@ def confirm_published_date(
     transaction = FileTransaction(root)
     transaction.stage_replace(source.path, document.render())
     return transaction.commit()[0]
+
+
+def prepare_published_date_confirmation(
+    root: Path,
+    source_id: str,
+    confirmed_date: str,
+    *,
+    allow_proposal_override: bool = False,
+) -> SourceWritePlan:
+    """Freeze a human-confirmed Source date without writing."""
+
+    root = root.resolve()
+    if not is_iso_date(confirmed_date):
+        raise ValueError("confirmed date must be YYYY-MM-DD")
+    source, _ = _source_by_id(root, source_id)
+    proposal = source.metadata.get("published_date_proposal")
+    if proposal and proposal != confirmed_date and not allow_proposal_override:
+        raise ValueError(
+            f"confirmed date differs from proposal {proposal}; "
+            "explicit override required"
+        )
+    document = MarkdownDocument.read(source.path)
+    document.set_metadata("published_at", confirmed_date)
+    document.set_metadata("published_date_proposal", None)
+    return SourceWritePlan(
+        source_id=source_id,
+        writes={source.path.relative_to(root): document.render().encode("utf-8")},
+        summary={
+            "published_at_before": source.metadata.get("published_at"),
+            "published_at_after": confirmed_date,
+            "proposal": proposal,
+            "proposal_override": bool(proposal and proposal != confirmed_date),
+        },
+    )
 
 
 def verify_source_assets(root: Path) -> list[AssetVerification]:

@@ -231,12 +231,20 @@ class DashboardTests(unittest.TestCase):
                     "/pipeline/queue/{candidate_id}/promote/preview",
                     "/pipeline/queue/{candidate_id}/restore/commit",
                     "/pipeline/queue/{candidate_id}/restore/preview",
+                    "/sources/new/commit",
+                    "/sources/new/preview",
+                    "/sources/{source_id}/confirm-date/commit",
+                    "/sources/{source_id}/confirm-date/preview",
+                    "/sources/{source_id}/fetch/commit",
+                    "/sources/{source_id}/fetch/preview",
+                    "/sources/{source_id}/process/commit",
+                    "/sources/{source_id}/process/preview",
                 ],
                 write_routes,
             )
             for route in app.routes:
                 methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
-                if route.path.startswith("/llm") or any(
+                if route.path.startswith(("/llm", "/sources/")) or any(
                     route.path.startswith(
                         f"/pipeline/queue/{{candidate_id}}/{operation}/"
                     )
@@ -1639,6 +1647,14 @@ class IndustryHomeTests(unittest.TestCase):
                     "/pipeline/queue/{candidate_id}/promote/preview",
                     "/pipeline/queue/{candidate_id}/restore/commit",
                     "/pipeline/queue/{candidate_id}/restore/preview",
+                    "/sources/new/commit",
+                    "/sources/new/preview",
+                    "/sources/{source_id}/confirm-date/commit",
+                    "/sources/{source_id}/confirm-date/preview",
+                    "/sources/{source_id}/fetch/commit",
+                    "/sources/{source_id}/fetch/preview",
+                    "/sources/{source_id}/process/commit",
+                    "/sources/{source_id}/process/preview",
                 ],
                 write_routes,
             )

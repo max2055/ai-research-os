@@ -7,6 +7,8 @@ import json
 import sqlite3
 from collections.abc import Mapping
 from datetime import UTC, date, datetime, timedelta
+from email.parser import BytesParser
+from email.policy import default as email_policy
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -86,11 +88,26 @@ from research_os.services.web_identity import (
     WebIdentity,
     load_web_identity,
 )
+from research_os.services.web_repository_mutations import (
+    PreparedRepositoryMutation,
+    RepositoryMutationPlan,
+    commit_repository_mutation,
+    repository_target_version,
+)
+from research_os.services.web_source_workflows import (
+    MAX_UPLOAD_BYTES,
+    capture_adapter,
+    prepare_source_create,
+    prepare_source_date_confirmation,
+    prepare_source_fetch,
+    prepare_source_process,
+)
 
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
 _SESSION_COOKIE = "research_os_session"
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 _MAX_FORM_BYTES = 16_384
+_MAX_MULTIPART_BYTES = MAX_UPLOAD_BYTES + 32_768
 _SOURCE_TYPE_BY_CHANNEL = {
     "rss": "article",
     "web_page": "article",
@@ -190,6 +207,7 @@ def _commit_candidate_dismiss(
 
 
 def _record_preview(root: Path, preview: MutationPreview) -> str:
+    candidate_db.apply_migrations(candidate_db.candidate_db_path(root))
     connection = sqlite3.connect(candidate_db.candidate_db_path(root))
     try:
         event_id = record_mutation_event(
@@ -213,6 +231,7 @@ def _record_rejection(root: Path, error: MutationForbidden | MutationConflict) -
     preview = error.preview
     if preview is None:
         return
+    candidate_db.apply_migrations(candidate_db.candidate_db_path(root))
     connection = sqlite3.connect(candidate_db.candidate_db_path(root))
     try:
         record_mutation_event(
@@ -252,6 +271,56 @@ async def _urlencoded_form(request: Request) -> dict[str, str]:
     if any(len(values) != 1 for values in parsed.values()):
         raise HTTPException(status_code=422, detail="invalid mutation input")
     return {key: values[0] for key, values in parsed.items()}
+
+
+async def _multipart_form(
+    request: Request,
+) -> tuple[dict[str, str], str | None, bytes | None]:
+    content_type = request.headers.get("content-type", "")
+    if not content_type.lower().startswith("multipart/form-data;"):
+        raise HTTPException(status_code=422, detail="invalid mutation input")
+    body = await request.body()
+    if len(body) > _MAX_MULTIPART_BYTES:
+        raise HTTPException(status_code=422, detail="invalid mutation input")
+    try:
+        message = BytesParser(policy=email_policy).parsebytes(
+            b"Content-Type: " + content_type.encode("ascii") + b"\r\n\r\n" + body
+        )
+    except (UnicodeEncodeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="invalid mutation input") from exc
+    if not message.is_multipart():
+        raise HTTPException(status_code=422, detail="invalid mutation input")
+    fields: dict[str, str] = {}
+    upload_filename: str | None = None
+    upload_content: bytes | None = None
+    for part in message.iter_parts():
+        name = part.get_param("name", header="content-disposition")
+        filename = part.get_filename()
+        if (
+            not isinstance(name, str)
+            or not name
+            or name in fields
+            or (filename and upload_content is not None)
+        ):
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        payload = part.get_payload(decode=True) or b""
+        if not isinstance(payload, bytes):
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        if filename is not None:
+            if name != "source_file" or len(payload) > MAX_UPLOAD_BYTES:
+                raise HTTPException(status_code=422, detail="invalid mutation input")
+            upload_filename = filename
+            upload_content = payload
+            continue
+        if len(payload) > 2_000:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            fields[name] = payload.decode(part.get_content_charset() or "utf-8")
+        except (LookupError, UnicodeDecodeError) as exc:
+            raise HTTPException(status_code=422, detail="invalid mutation input") from exc
+    if len(fields) > 20:
+        raise HTTPException(status_code=422, detail="invalid mutation input")
+    return fields, upload_filename, upload_content
 
 
 def _require_browser_boundary(
@@ -960,9 +1029,136 @@ def _source_page(repo: DashboardRepository, source_id: str) -> str:
 <div class="panel"><h3>归档版本与提取</h3>
 {table(["资产", "类型"], asset_rows)}</div>
 <div class="panel"><h3>关联事件</h3>{table(["事件", "日期", "评审"], rows)}</div>
-<div class="panel"><h3>研究笔记</h3><pre>{esc(source.body)}</pre></div>
+<div class="panel"><h3>研究笔记</h3><pre>{esc(source.body)}</pre>
+<p><a href="/sources/{esc(source_id)}/workbench">打开来源操作</a></p></div>
 </section>"""
     return shell(source_id, content)
+
+
+def _source_list_page(repo: DashboardRepository) -> str:
+    objects, _ = repo.all()
+    sources = sorted(
+        (obj for obj in objects if obj.object_type == "source"),
+        key=lambda obj: str(obj.metadata.get("updated_at", "")),
+        reverse=True,
+    )
+    rows = [
+        [
+            f'<a href="/sources/{esc(obj.object_id)}">{esc(obj.object_id)}</a>',
+            esc(obj.metadata.get("title")),
+            esc(obj.metadata.get("publisher")),
+            badge(obj.metadata.get("processing_status")),
+            badge(obj.metadata.get("review_status")),
+        ]
+        for obj in sources
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">研究来源</div><h2>来源工作台</h2>
+<p>采集、归档、提取与核验保持独立状态。</p></div>
+<div><a class="button" href="/sources/new">新建来源</a></div></section>
+<section class="panel">{table(["来源", "标题", "发布方", "处理", "评审"], rows)}</section>"""
+    return shell("来源工作台", content)
+
+
+def _source_create_page(csrf_token: str) -> str:
+    type_options = "".join(
+        f'<option value="{esc(value)}">{esc(value)}</option>'
+        for value in sorted(SOURCE_TYPES)
+    )
+    grade_options = "".join(
+        f'<option value="{esc(value)}">{esc(value)}</option>'
+        for value in sorted(SOURCE_GRADES)
+    )
+    today = date.today().isoformat()
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">来源工作台</div><h2>新建来源</h2>
+<p>采集结果先冻结预览，确认后才写入仓库。</p></div></section>
+<section class="panel"><form class="mutation-form" method="post"
+action="/sources/new/preview" enctype="multipart/form-data">
+<label>采集方式<select name="capture_mode"><option value="url">URL</option><option value="upload">文件上传</option></select></label>
+<label>URL<input name="locator" type="url"></label>
+<label>本地文件<input name="source_file" type="file" accept=".html,.htm,.pdf,.txt,.json"></label>
+<label>标题<input name="title" required maxlength="300"></label>
+<label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*"></label>
+<label>创建日期<input name="created_at" type="date" value="{today}" required></label>
+<label>来源类型<select name="source_type">{type_options}</select></label>
+<label>发布方<input name="publisher" required maxlength="200"></label>
+<label>发布日期<input name="published_at" value="unknown" required></label>
+<label>来源等级<select name="source_grade">{grade_options}</select></label>
+<label>公司 ID（逗号分隔）<input name="companies"></label>
+<label>技术 taxonomy（逗号分隔）<input name="technologies"></label>
+<label>产品 ID（逗号分隔）<input name="products"></label>
+<label>标签（逗号分隔）<input name="tags"></label>
+<label>项目 ID（逗号分隔）<input name="project_ids" value="PRJ-001"></label>
+<label>重复处理<select name="allow_duplicate"><option value="false">阻止重复</option><option value="true">明确保留并关联上游</option></select></label>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">预览来源</button>
+<a href="/sources">取消</a></div></form></section>"""
+    return shell("新建来源", content)
+
+
+def _source_mutation_confirmation(
+    grant: PreviewGrant,
+    csrf_token: str,
+    commit_path: str,
+) -> str:
+    preview = grant.preview
+    summary_rows = [
+        [esc(key), esc(value)]
+        for key, value in sorted(preview.summary.items())
+    ]
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">来源变更确认</div><h2>{esc(preview.target_id)}</h2>
+<p>{esc(preview.operation)} · 操作者 {esc(preview.actor)}</p></div>
+<div><div class="eyebrow">有效至</div><h3>{esc(preview.expires_at_iso)}</h3></div></section>
+<section class="panel"><h3>冻结摘要</h3>{table(["字段", "值"], summary_rows)}
+<form class="mutation-form" method="post" action="{esc(commit_path)}">
+<input type="hidden" name="preview_token" value="{esc(grant.token)}">
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">确认写入</button>
+<a href="/sources/{esc(preview.target_id)}">取消</a></div></form></section>"""
+    return shell(f"确认 · {preview.target_id}", content)
+
+
+def _source_result_page(result: Mapping[str, str]) -> str:
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">来源操作完成</div><h2>{esc(result.get("target_id"))}</h2>
+<p>{badge("已提交")} · {esc(result.get("operation"))}</p></div></section>
+<section class="panel"><h3>审计标识</h3>
+{table(["Mutation", "Mutation audit", "Writes"], [[esc(result.get("mutation_id")), esc(result.get("audit_id")), esc(result.get("write_count"))]])}
+<p><a href="/sources/{esc(result.get("target_id"))}">返回来源详情</a></p></section>"""
+    return shell(f"已提交 · {result.get('target_id')}", content)
+
+
+def _source_workbench_page(
+    repo: DashboardRepository,
+    source_id: str,
+    csrf_token: str,
+) -> str:
+    source = repo.one(source_id)
+    if source.object_type != "source":
+        raise KeyError(source_id)
+    proposal = source.metadata.get("published_date_proposal") or ""
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">来源操作</div><h2>{esc(source_id)}</h2>
+<p>{esc(source.metadata.get("title"))}</p></div></section>
+<section class="grid">
+<div class="panel"><h3>抓取新版本</h3><form class="mutation-form" method="post"
+action="/sources/{esc(source_id)}/fetch/preview" enctype="multipart/form-data">
+<label>方式<select name="capture_mode"><option value="url">URL</option><option value="upload">文件上传</option></select></label>
+<label>URL<input name="locator" type="url" value="{esc(source.metadata.get('canonical_url') or source.metadata.get('url') or '')}"></label>
+<label>文件<input name="source_file" type="file"></label>
+<label>重复处理<select name="allow_duplicate"><option value="false">阻止</option><option value="true">明确保留</option></select></label>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}"><button type="submit">预览抓取</button></form></div>
+<div class="panel"><h3>提取最新资产</h3><form method="post" action="/sources/{esc(source_id)}/process/preview">
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}"><button type="submit">预览提取</button></form></div>
+<div class="panel"><h3>确认发布日期</h3><form class="mutation-form" method="post" action="/sources/{esc(source_id)}/confirm-date/preview">
+<label>日期<input name="confirmed_date" type="date" value="{esc(proposal)}" required></label>
+<label><input name="allow_proposal_override" type="checkbox" value="true"> 明确覆盖自动建议</label>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}"><button type="submit">预览日期</button></form></div>
+<div class="panel"><h3>资产核验</h3><p>当前状态在来源详情页实时计算，不产生写入。</p>
+<a href="/sources/{esc(source_id)}">返回来源详情</a></div></section>"""
+    return shell(f"来源操作 · {source_id}", content)
 
 
 def _thesis_page(repo: DashboardRepository, thesis_id: str) -> str:
@@ -1067,7 +1263,7 @@ def _pipeline_overview(repo: DashboardRepository) -> str:
     candidates = status["candidates"]
     content = f"""<section class="hero"><div>
 <div class="eyebrow">管线</div><h2>机器运转中</h2>
-<p>发现 → 筛选 → 入库。只读视图，决定在命令行完成。</p>
+<p>发现 → 筛选 → 入库。研究者在网站中预览并确认变更。</p>
 </div><div><div class="eyebrow">试点窗口</div>
 <h2>{esc(gate["days"])}/{esc(status["target_days"])}</h2>
 <p class="muted">自 {esc(status["since"])}</p></div></section>
@@ -3036,6 +3232,9 @@ def create_app(root: Path) -> FastAPI:
     result_lock = Lock()
     promote_plans: dict[str, PromotePlan] = {}
     promote_plan_lock = Lock()
+    repository_plans: dict[str, RepositoryMutationPlan] = {}
+    repository_plan_tokens: dict[str, str] = {}
+    repository_plan_lock = Lock()
     app = FastAPI(
         title="AI Research OS",
         docs_url=None,
@@ -3056,6 +3255,115 @@ def create_app(root: Path) -> FastAPI:
                 gateway_identity = identity
                 gateway = MutationGateway(identity.mutation_signing_secret)
             return identity, gateway
+
+    def issue_repository_plan(
+        prepared: PreparedRepositoryMutation,
+        active_gateway: MutationGateway,
+    ) -> PreviewGrant:
+        grant = active_gateway.issue(prepared.preview_input)
+        with repository_plan_lock:
+            repository_plans[grant.preview.mutation_id] = prepared.plan
+            repository_plan_tokens[grant.token] = grant.preview.mutation_id
+        try:
+            _record_preview(repo.root, grant.preview)
+        except Exception:
+            with repository_plan_lock:
+                repository_plans.pop(grant.preview.mutation_id, None)
+                repository_plan_tokens.pop(grant.token, None)
+            raise
+        return grant
+
+    def commit_repository_plan(
+        *,
+        active_gateway: MutationGateway,
+        identity: WebIdentity,
+        token: str,
+        operation: str,
+        target_id: str | None = None,
+    ) -> dict[str, str]:
+        preview_mutation_id: str | None = None
+        with repository_plan_lock:
+            preview_mutation_id = repository_plan_tokens.get(token)
+
+        def version(_: str) -> str:
+            if preview_mutation_id is None:
+                raise ValueError("repository plan is unavailable")
+            with repository_plan_lock:
+                plan = repository_plans.get(preview_mutation_id)
+            if plan is None:
+                raise ValueError("repository plan is unavailable")
+            return repository_target_version(repo.root, plan)
+
+        def execute(preview: MutationPreview) -> dict[str, str]:
+            nonlocal preview_mutation_id
+            preview_mutation_id = preview.mutation_id
+            with repository_plan_lock:
+                plan = repository_plans.get(preview.mutation_id)
+            if plan is None:
+                raise ValueError("repository plan is unavailable")
+            return commit_repository_mutation(repo.root, preview, plan)
+
+        cleanup = True
+        try:
+            result = active_gateway.commit(
+                token,
+                actor=identity.researcher_id,
+                operation=operation,
+                target_id=target_id,
+                current_target_version=version,
+                execute=execute,
+            )
+            preview_mutation_id = result["mutation_id"]
+            return result
+        except TransactionError:
+            cleanup = False
+            raise
+        finally:
+            if cleanup and preview_mutation_id is not None:
+                with repository_plan_lock:
+                    repository_plans.pop(preview_mutation_id, None)
+                    repository_plan_tokens.pop(token, None)
+
+    def source_commit_response(
+        request: Request,
+        form: Mapping[str, str],
+        *,
+        operation: str,
+        target_id: str | None = None,
+    ) -> RedirectResponse:
+        identity, active_gateway = mutation_gateway()
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            result = commit_repository_plan(
+                active_gateway=active_gateway,
+                identity=identity,
+                token=form["preview_token"],
+                operation=operation,
+                target_id=target_id,
+            )
+        except MutationForbidden as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=403, detail="mutation request forbidden"
+            ) from exc
+        except (MutationConflict, ValueError) as exc:
+            if isinstance(exc, MutationConflict):
+                _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=409, detail="mutation preview conflict"
+            ) from exc
+        except TransactionError as exc:
+            raise HTTPException(
+                status_code=500, detail="mutation commit failed"
+            ) from exc
+        with result_lock:
+            mutation_results[result["mutation_id"]] = result
+        location = (
+            f"/sources/{result['target_id']}/mutations/{result['mutation_id']}"
+        )
+        return RedirectResponse(location, status_code=303)
 
     @app.get("/static/styles.css", response_class=PlainTextResponse)
     def styles() -> PlainTextResponse:
@@ -3718,6 +4026,280 @@ def create_app(root: Path) -> FastAPI:
     @app.get("/health", response_class=HTMLResponse)
     def health(project: str | None = Query(default=None)) -> HTMLResponse:
         return HTMLResponse(_health_page(repo, project))
+
+    @app.get("/sources", response_class=HTMLResponse)
+    def sources() -> HTMLResponse:
+        return HTMLResponse(_source_list_page(repo))
+
+    @app.get("/sources/new", response_class=HTMLResponse)
+    def source_create_form(request: Request) -> HTMLResponse:
+        identity = load_web_identity(repo.root)
+        if identity is None:
+            raise HTTPException(
+                status_code=503, detail="Web mutation identity is unavailable"
+            )
+        session_id, csrf_token = sessions.issue()
+        response = HTMLResponse(_source_create_page(csrf_token))
+        response.set_cookie(
+            _SESSION_COOKIE,
+            session_id,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            max_age=3600,
+            path="/",
+        )
+        return response
+
+    @app.post("/sources/new/preview", response_class=HTMLResponse)
+    async def source_create_preview(request: Request) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form, filename, content = await _multipart_form(request)
+        _require_browser_boundary(request, form, sessions)
+        expected = {
+            "capture_mode",
+            "locator",
+            "title",
+            "slug",
+            "created_at",
+            "source_type",
+            "publisher",
+            "published_at",
+            "source_grade",
+            "companies",
+            "technologies",
+            "products",
+            "tags",
+            "project_ids",
+            "allow_duplicate",
+            "csrf_token",
+        }
+        if set(form) != expected:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        if (
+            form["source_type"] not in SOURCE_TYPES
+            or form["source_grade"] not in SOURCE_GRADES
+            or form["allow_duplicate"] not in {"true", "false"}
+            or not 1 <= len(" ".join(form["title"].split())) <= 300
+            or not 1 <= len(" ".join(form["publisher"].split())) <= 200
+        ):
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            adapter = capture_adapter(
+                capture_mode=form["capture_mode"],
+                locator=form["locator"],
+                upload_filename=filename,
+                upload_content=content,
+            )
+            prepared = prepare_source_create(
+                repo.root,
+                actor=identity.researcher_id,
+                adapter=adapter,
+                fields=form,
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail="invalid Source capture"
+            ) from exc
+        except (OSError, TransactionError) as exc:
+            raise HTTPException(
+                status_code=500, detail="Source preview failed"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant, form["csrf_token"], "/sources/new/commit"
+            )
+        )
+
+    @app.post("/sources/new/commit", response_class=HTMLResponse)
+    async def source_create_commit(request: Request) -> RedirectResponse:
+        form = await _urlencoded_form(request)
+        return source_commit_response(
+            request, form, operation="source.create", target_id=None
+        )
+
+    @app.get("/sources/{source_id}/workbench", response_class=HTMLResponse)
+    def source_workbench(source_id: str, request: Request) -> HTMLResponse:
+        identity = load_web_identity(repo.root)
+        if identity is None:
+            raise HTTPException(
+                status_code=503, detail="Web mutation identity is unavailable"
+            )
+        session_id, csrf_token = sessions.issue()
+        try:
+            response = HTMLResponse(
+                _source_workbench_page(repo, source_id, csrf_token)
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=source_id) from exc
+        response.set_cookie(
+            _SESSION_COOKIE,
+            session_id,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            max_age=3600,
+            path="/",
+        )
+        return response
+
+    @app.post("/sources/{source_id}/fetch/preview", response_class=HTMLResponse)
+    async def source_fetch_preview(
+        source_id: str, request: Request
+    ) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form, filename, content = await _multipart_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {
+            "capture_mode",
+            "locator",
+            "allow_duplicate",
+            "csrf_token",
+        } or form["allow_duplicate"] not in {"true", "false"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare_source_fetch(
+                repo.root,
+                source_id,
+                actor=identity.researcher_id,
+                adapter=capture_adapter(
+                    capture_mode=form["capture_mode"],
+                    locator=form["locator"],
+                    upload_filename=filename,
+                    upload_content=content,
+                ),
+                allow_duplicate=form["allow_duplicate"] == "true",
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=409, detail="Source cannot be fetched"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant,
+                form["csrf_token"],
+                f"/sources/{source_id}/fetch/commit",
+            )
+        )
+
+    @app.post("/sources/{source_id}/fetch/commit", response_class=HTMLResponse)
+    async def source_fetch_commit(
+        source_id: str, request: Request
+    ) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="source.fetch",
+            target_id=source_id,
+        )
+
+    @app.post("/sources/{source_id}/process/preview", response_class=HTMLResponse)
+    async def source_process_preview(
+        source_id: str, request: Request
+    ) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare_source_process(
+                repo.root, source_id, actor=identity.researcher_id
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=409, detail="Source cannot be processed"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant,
+                form["csrf_token"],
+                f"/sources/{source_id}/process/commit",
+            )
+        )
+
+    @app.post("/sources/{source_id}/process/commit", response_class=HTMLResponse)
+    async def source_process_commit(
+        source_id: str, request: Request
+    ) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="source.process",
+            target_id=source_id,
+        )
+
+    @app.post(
+        "/sources/{source_id}/confirm-date/preview",
+        response_class=HTMLResponse,
+    )
+    async def source_date_preview(
+        source_id: str, request: Request
+    ) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        allowed = {"confirmed_date", "csrf_token", "allow_proposal_override"}
+        if not set(form).issubset(allowed) or not {
+            "confirmed_date",
+            "csrf_token",
+        }.issubset(form):
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        if form.get("allow_proposal_override", "false") not in {"true", "false"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare_source_date_confirmation(
+                repo.root,
+                source_id,
+                actor=identity.researcher_id,
+                confirmed_date=form["confirmed_date"],
+                allow_proposal_override=form.get("allow_proposal_override") == "true",
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=409, detail="Source date cannot be confirmed"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant,
+                form["csrf_token"],
+                f"/sources/{source_id}/confirm-date/commit",
+            )
+        )
+
+    @app.post(
+        "/sources/{source_id}/confirm-date/commit",
+        response_class=HTMLResponse,
+    )
+    async def source_date_commit(
+        source_id: str, request: Request
+    ) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="source.confirm_date",
+            target_id=source_id,
+        )
+
+    @app.get(
+        "/sources/{source_id}/mutations/{mutation_id}",
+        response_class=HTMLResponse,
+    )
+    def source_mutation_result(source_id: str, mutation_id: str) -> HTMLResponse:
+        with result_lock:
+            result = mutation_results.get(mutation_id)
+        if (
+            result is None
+            or result.get("target_id") != source_id
+            or result.get("mutation_id") != mutation_id
+            or not result.get("operation", "").startswith("source.")
+        ):
+            raise HTTPException(status_code=404, detail="unknown mutation result")
+        return HTMLResponse(_source_result_page(result))
 
     @app.get("/sources/{source_id}", response_class=HTMLResponse)
     def source(source_id: str) -> HTMLResponse:

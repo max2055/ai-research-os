@@ -139,25 +139,65 @@ PRODUCT_CAPABILITIES = (
         authority="operational_human",
         feature="F-027",
     ),
-    *_capabilities(
-        ("new-source", "source.add"),
-        owner="sources",
-        route="/sources/new",
-        authority="named_human",
-        feature="F-027",
+    *(
+        ProductCapability(
+            key,
+            "sources",
+            "web",
+            ("/sources/new/preview", "/sources/new/commit"),
+            "named_human",
+            "F-027",
+        )
+        for key in ("new-source", "source.add")
     ),
-    *_capabilities(
+    ProductCapability(
+        "source.fetch",
+        "sources",
+        "web",
         (
-            "source.fetch",
-            "source.process",
-            "source.verify-assets",
-            "source.confirm-date",
-            "source.review",
+            "/sources/{source_id}/fetch/preview",
+            "/sources/{source_id}/fetch/commit",
         ),
-        owner="sources",
-        route="/sources/workbench",
-        authority="named_human",
-        feature="F-027",
+        "named_human",
+        "F-027",
+    ),
+    ProductCapability(
+        "source.process",
+        "sources",
+        "web",
+        (
+            "/sources/{source_id}/process/preview",
+            "/sources/{source_id}/process/commit",
+        ),
+        "named_human",
+        "F-027",
+    ),
+    ProductCapability(
+        "source.verify-assets",
+        "sources",
+        "web",
+        ("/sources/{source_id}",),
+        "read",
+        "F-027",
+    ),
+    ProductCapability(
+        "source.confirm-date",
+        "sources",
+        "web",
+        (
+            "/sources/{source_id}/confirm-date/preview",
+            "/sources/{source_id}/confirm-date/commit",
+        ),
+        "named_human",
+        "F-027",
+    ),
+    ProductCapability(
+        "source.review",
+        "reviews",
+        "web",
+        ("/reviews/apply/preview",),
+        "named_human",
+        "F-027",
     ),
     *_capabilities(
         (
