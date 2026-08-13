@@ -278,12 +278,13 @@ PRODUCT_CAPABILITIES = (
         authority="read",
         feature="F-027",
     ),
-    *_capabilities(
-        ("review.apply",),
-        owner="reviews",
-        route="/reviews/apply/preview",
-        authority="named_human",
-        feature="F-027",
+    ProductCapability(
+        "review.apply",
+        "reviews",
+        "web",
+        ("/reviews/apply/preview", "/reviews/apply/commit"),
+        "named_human",
+        "F-027",
     ),
     *_capabilities(
         ("actions.list", "actions.overdue"),

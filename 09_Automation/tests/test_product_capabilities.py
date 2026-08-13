@@ -61,6 +61,8 @@ class ProductCapabilityTests(unittest.TestCase):
                 "/evidence/events/new/commit",
                 "/reports/new/preview",
                 "/reports/new/commit",
+                "/reviews/apply/preview",
+                "/reviews/apply/commit",
             },
             routes,
         )

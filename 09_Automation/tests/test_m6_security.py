@@ -102,6 +102,8 @@ class DashboardSecurityTests(unittest.TestCase):
                 "/evidence/events/new/preview",
                 "/reports/new/commit",
                 "/reports/new/preview",
+                "/reviews/apply/commit",
+                "/reviews/apply/preview",
             },
             write_routes,
         )

@@ -235,6 +235,8 @@ class DashboardTests(unittest.TestCase):
                     "/pipeline/queue/{candidate_id}/restore/preview",
                     "/reports/new/commit",
                     "/reports/new/preview",
+                    "/reviews/apply/commit",
+                    "/reviews/apply/preview",
                     "/sources/new/commit",
                     "/sources/new/preview",
                     "/sources/{source_id}/confirm-date/commit",
@@ -249,7 +251,13 @@ class DashboardTests(unittest.TestCase):
             for route in app.routes:
                 methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
                 if route.path.startswith(
-                    ("/llm", "/sources/", "/evidence/events/new/", "/reports/new/")
+                    (
+                        "/llm",
+                        "/sources/",
+                        "/evidence/events/new/",
+                        "/reports/new/",
+                        "/reviews/apply/",
+                    )
                 ) or any(
                     route.path.startswith(
                         f"/pipeline/queue/{{candidate_id}}/{operation}/"
@@ -1657,6 +1665,8 @@ class IndustryHomeTests(unittest.TestCase):
                     "/pipeline/queue/{candidate_id}/restore/preview",
                     "/reports/new/commit",
                     "/reports/new/preview",
+                    "/reviews/apply/commit",
+                    "/reviews/apply/preview",
                     "/sources/new/commit",
                     "/sources/new/preview",
                     "/sources/{source_id}/confirm-date/commit",

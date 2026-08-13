@@ -98,6 +98,7 @@ from research_os.services.web_research_drafts import (
     prepare_event_creation,
     prepare_report_creation,
 )
+from research_os.services.web_review_mutations import prepare_review_mutation
 from research_os.services.web_source_workflows import (
     MAX_UPLOAD_BYTES,
     capture_adapter,
@@ -951,6 +952,7 @@ def _review_queue(
     project_id: str | None,
     object_type: str | None,
     review_status: str,
+    csrf_token: str | None = None,
 ) -> str:
     rows, selected = _review_rows(
         repo,
@@ -970,7 +972,7 @@ def _review_queue(
     )
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>评审队列</h2>
-<p>只读队列。评审决定通过显式评审命令执行。</p>
+<p>筛选研究对象，并通过具名预览与确认记录人工评审决定。</p>
 </div><div><div class="eyebrow">{esc(STATUS_LABELS.get(review_status, review_status))}</div><h2>{len(rows)}</h2>
 <p class="muted">本页不会改变任何状态。</p></div></section>
 <section class="panel" style="margin-bottom:1rem">
@@ -985,6 +987,16 @@ def _review_queue(
   hx-get="/fragments/reviews?project={esc(selected)}&type={esc(object_type or "")}&status={esc(review_status)}"
   hx-trigger="refresh">
 {table(["对象", "类型", "状态", "更新"], rows)}</section>"""
+    if csrf_token is not None:
+        content += f"""<section class="panel"><h3>记录评审决定</h3>
+<form class="mutation-form" method="post" action="/reviews/apply/preview">
+<label>目标 ID（逗号分隔）<input name="target_ids" required></label>
+<label>决定<select name="decision"><option value="approve">批准</option><option value="edit">要求修改</option><option value="reject">拒绝</option></select></label>
+<label>评审日期<input name="reviewed_at" type="date" value="{date.today().isoformat()}" required></label>
+<label>评审说明<textarea name="notes" rows="5" maxlength="2000"></textarea></label>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">预览评审</button></div>
+</form></section>"""
     return shell("评审队列", content, project_id=selected)
 
 
@@ -1283,6 +1295,15 @@ def _research_draft_result_page(result: Mapping[str, str]) -> str:
 <section class="panel">{table(["Mutation", "Mutation audit", "Writes"], [[esc(result.get("mutation_id")), esc(result.get("audit_id")), esc(result.get("write_count"))]])}
 <p><a href="/{prefix}/{esc(target_id)}">查看草稿</a> · <a href="/reviews">进入评审队列</a></p></section>"""
     return shell(f"草稿已建立 · {target_id}", content)
+
+
+def _review_result_page(result: Mapping[str, str]) -> str:
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">人工评审已记录</div><h2>{esc(result.get("target_id"))}</h2>
+<p>{badge("已应用")} · 评审对象状态与 Decision 记录已原子更新。</p></div></section>
+<section class="panel">{table(["Mutation", "Mutation audit", "Writes"], [[esc(result.get("mutation_id")), esc(result.get("audit_id")), esc(result.get("write_count"))]])}
+<p><a href="/reviews">返回评审队列</a></p></section>"""
+    return shell(f"评审已记录 · {result.get('target_id')}", content)
 
 
 def _thesis_page(repo: DashboardRepository, thesis_id: str) -> str:
@@ -3484,7 +3505,9 @@ def create_app(root: Path) -> FastAPI:
             ) from exc
         with result_lock:
             mutation_results[result["mutation_id"]] = result
-        if operation in {"event.create", "report.create"}:
+        if operation == "review.apply":
+            location = f"/reviews/mutations/{result['mutation_id']}"
+        elif operation in {"event.create", "report.create"}:
             location = (
                 f"/research-drafts/{result['target_id']}/mutations/"
                 f"{result['mutation_id']}"
@@ -3516,18 +3539,89 @@ def create_app(root: Path) -> FastAPI:
 
     @app.get("/reviews", response_class=HTMLResponse)
     def reviews(
+        request: Request,
         project: str | None = Query(default=None),
         object_type: str | None = Query(default=None, alias="type"),
         review_status: str = Query(default="pending", alias="status"),
     ) -> HTMLResponse:
-        return HTMLResponse(
+        identity = load_web_identity(repo.root)
+        session_id, csrf_token = sessions.issue()
+        response = HTMLResponse(
             _review_queue(
                 repo,
                 project,
                 object_type or None,
                 review_status,
+                csrf_token if identity is not None else None,
             )
         )
+        response.set_cookie(
+            _SESSION_COOKIE,
+            session_id,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            max_age=3600,
+            path="/",
+        )
+        return response
+
+    @app.post("/reviews/apply/preview", response_class=HTMLResponse)
+    async def review_apply_preview(request: Request) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {
+            "target_ids",
+            "decision",
+            "reviewed_at",
+            "notes",
+            "csrf_token",
+        }:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        if form["decision"] not in {"approve", "edit", "reject"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare_review_mutation(
+                repo.root,
+                actor=identity.researcher_id,
+                target_ids=form["target_ids"],
+                decision=form["decision"],
+                reviewed_at=form["reviewed_at"],
+                notes=form["notes"],
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="invalid Review decision") from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant, form["csrf_token"], "/reviews/apply/commit"
+            )
+        )
+
+    @app.post("/reviews/apply/commit", response_class=HTMLResponse)
+    async def review_apply_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="review.apply",
+            target_id=None,
+        )
+
+    @app.get(
+        "/reviews/mutations/{mutation_id}",
+        response_class=HTMLResponse,
+    )
+    def review_mutation_result(mutation_id: str) -> HTMLResponse:
+        with result_lock:
+            result = mutation_results.get(mutation_id)
+        if (
+            result is None
+            or result.get("mutation_id") != mutation_id
+            or result.get("operation") != "review.apply"
+        ):
+            raise HTTPException(status_code=404, detail="unknown mutation result")
+        return HTMLResponse(_review_result_page(result))
 
     @app.get("/fragments/reviews", response_class=HTMLResponse)
     def review_fragment(
