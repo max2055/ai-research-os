@@ -322,7 +322,9 @@ async def _multipart_form(
         try:
             fields[name] = payload.decode(part.get_content_charset() or "utf-8")
         except (LookupError, UnicodeDecodeError) as exc:
-            raise HTTPException(status_code=422, detail="invalid mutation input") from exc
+            raise HTTPException(
+                status_code=422, detail="invalid mutation input"
+            ) from exc
     if len(fields) > 20:
         raise HTTPException(status_code=422, detail="invalid mutation input")
     return fields, upload_filename, upload_content
@@ -1120,8 +1122,7 @@ def _source_mutation_confirmation(
 ) -> str:
     preview = grant.preview
     summary_rows = [
-        [esc(key), esc(value)]
-        for key, value in sorted(preview.summary.items())
+        [esc(key), esc(value)] for key, value in sorted(preview.summary.items())
     ]
     content = f"""<section class="hero"><div>
 <div class="eyebrow">来源变更确认</div><h2>{esc(preview.target_id)}</h2>
@@ -1162,7 +1163,7 @@ def _source_workbench_page(
 <div class="panel"><h3>抓取新版本</h3><form class="mutation-form" method="post"
 action="/sources/{esc(source_id)}/fetch/preview" enctype="multipart/form-data">
 <label>方式<select name="capture_mode"><option value="url">URL</option><option value="upload">文件上传</option></select></label>
-<label>URL<input name="locator" type="url" value="{esc(source.metadata.get('canonical_url') or source.metadata.get('url') or '')}"></label>
+<label>URL<input name="locator" type="url" value="{esc(source.metadata.get("canonical_url") or source.metadata.get("url") or "")}"></label>
 <label>文件<input name="source_file" type="file"></label>
 <label>重复处理<select name="allow_duplicate"><option value="false">阻止</option><option value="true">明确保留</option></select></label>
 <input type="hidden" name="csrf_token" value="{esc(csrf_token)}"><button type="submit">预览抓取</button></form></div>
@@ -1207,9 +1208,7 @@ def _event_create_page(
             "companies": [],
             "technologies": [],
             "products": [],
-            "facts": [
-                {"text": "", "source_id": "", "quote": "", "asset_path": None}
-            ],
+            "facts": [{"text": "", "source_id": "", "quote": "", "asset_path": None}],
             "inferences": [""],
             "research_judgment": "",
             "thesis_impacts": [],
@@ -3591,7 +3590,9 @@ def create_app(root: Path) -> FastAPI:
             )
             grant = issue_repository_plan(prepared, active_gateway)
         except ValueError as exc:
-            raise HTTPException(status_code=422, detail="invalid Review decision") from exc
+            raise HTTPException(
+                status_code=422, detail="invalid Review decision"
+            ) from exc
         return HTMLResponse(
             _source_mutation_confirmation(
                 grant, form["csrf_token"], "/reviews/apply/commit"
@@ -4351,9 +4352,7 @@ def create_app(root: Path) -> FastAPI:
             )
         session_id, csrf_token = sessions.issue()
         try:
-            response = HTMLResponse(
-                _source_workbench_page(repo, source_id, csrf_token)
-            )
+            response = HTMLResponse(_source_workbench_page(repo, source_id, csrf_token))
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=source_id) from exc
         response.set_cookie(
@@ -4368,9 +4367,7 @@ def create_app(root: Path) -> FastAPI:
         return response
 
     @app.post("/sources/{source_id}/fetch/preview", response_class=HTMLResponse)
-    async def source_fetch_preview(
-        source_id: str, request: Request
-    ) -> HTMLResponse:
+    async def source_fetch_preview(source_id: str, request: Request) -> HTMLResponse:
         identity, active_gateway = mutation_gateway()
         form, filename, content = await _multipart_form(request)
         _require_browser_boundary(request, form, sessions)
@@ -4408,9 +4405,7 @@ def create_app(root: Path) -> FastAPI:
         )
 
     @app.post("/sources/{source_id}/fetch/commit", response_class=HTMLResponse)
-    async def source_fetch_commit(
-        source_id: str, request: Request
-    ) -> RedirectResponse:
+    async def source_fetch_commit(source_id: str, request: Request) -> RedirectResponse:
         return source_commit_response(
             request,
             await _urlencoded_form(request),
@@ -4419,9 +4414,7 @@ def create_app(root: Path) -> FastAPI:
         )
 
     @app.post("/sources/{source_id}/process/preview", response_class=HTMLResponse)
-    async def source_process_preview(
-        source_id: str, request: Request
-    ) -> HTMLResponse:
+    async def source_process_preview(source_id: str, request: Request) -> HTMLResponse:
         identity, active_gateway = mutation_gateway()
         form = await _urlencoded_form(request)
         _require_browser_boundary(request, form, sessions)
@@ -4459,9 +4452,7 @@ def create_app(root: Path) -> FastAPI:
         "/sources/{source_id}/confirm-date/preview",
         response_class=HTMLResponse,
     )
-    async def source_date_preview(
-        source_id: str, request: Request
-    ) -> HTMLResponse:
+    async def source_date_preview(source_id: str, request: Request) -> HTMLResponse:
         identity, active_gateway = mutation_gateway()
         form = await _urlencoded_form(request)
         _require_browser_boundary(request, form, sessions)
@@ -4498,9 +4489,7 @@ def create_app(root: Path) -> FastAPI:
         "/sources/{source_id}/confirm-date/commit",
         response_class=HTMLResponse,
     )
-    async def source_date_commit(
-        source_id: str, request: Request
-    ) -> RedirectResponse:
+    async def source_date_commit(source_id: str, request: Request) -> RedirectResponse:
         return source_commit_response(
             request,
             await _urlencoded_form(request),

@@ -66,10 +66,14 @@ class SourceWebWorkflowTests(unittest.TestCase):
         }
 
     def _preview(self, prepared):
-        return MutationGateway(
-            b"s" * 64,
-            now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
-        ).issue(prepared.preview_input).preview
+        return (
+            MutationGateway(
+                b"s" * 64,
+                now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
+            )
+            .issue(prepared.preview_input)
+            .preview
+        )
 
     def test_new_source_preview_captures_once_and_freezes_pending(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -90,9 +94,7 @@ class SourceWebWorkflowTests(unittest.TestCase):
             self.assertNotIn("Traceable fact", serialized)
             self.assertEqual("pending", preview.summary["status_after"])
             source_path = next(
-                path
-                for path in root.rglob("SRC-20260813-002*.md")
-                if path.is_file()
+                path for path in root.rglob("SRC-20260813-002*.md") if path.is_file()
             )
             source = MarkdownDocument.read(source_path)
             self.assertEqual("pending", source.metadata["review_status"])
@@ -132,9 +134,7 @@ class SourceWebWorkflowTests(unittest.TestCase):
                 fields=self._fields(),
             )
             commit_repository_mutation(root, self._preview(prepared), prepared.plan)
-            process = prepare_source_process(
-                root, "SRC-20260813-002", actor="max"
-            )
+            process = prepare_source_process(root, "SRC-20260813-002", actor="max")
             source_path = next(root.rglob("SRC-20260813-002*.md"))
             source_before = source_path.read_bytes()
             self.assertFalse(any(root.rglob("*.extracted.txt")))

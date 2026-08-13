@@ -41,10 +41,14 @@ class RepositoryMutationCoordinatorTests(unittest.TestCase):
         )
 
     def _preview(self, prepared):
-        return MutationGateway(
-            b"s" * 64,
-            now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
-        ).issue(prepared.preview_input).preview
+        return (
+            MutationGateway(
+                b"s" * 64,
+                now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
+            )
+            .issue(prepared.preview_input)
+            .preview
+        )
 
     def test_prepare_freezes_bounded_manifest_and_current_version(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -168,8 +172,9 @@ class RepositoryMutationCoordinatorTests(unittest.TestCase):
                 ({Path("../escape.md"): b"x"}, "escapes"),
                 ({}, "at least one"),
             ):
-                with self.subTest(message=message), self.assertRaisesRegex(
-                    ValueError, message
+                with (
+                    self.subTest(message=message),
+                    self.assertRaisesRegex(ValueError, message),
                 ):
                     prepare_repository_mutation(
                         root,

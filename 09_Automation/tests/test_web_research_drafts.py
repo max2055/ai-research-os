@@ -36,10 +36,14 @@ class ResearchDraftWebAdapterTests(unittest.TestCase):
 
     @staticmethod
     def _preview(prepared):
-        return MutationGateway(
-            b"s" * 64,
-            now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
-        ).issue(prepared.preview_input).preview
+        return (
+            MutationGateway(
+                b"s" * 64,
+                now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
+            )
+            .issue(prepared.preview_input)
+            .preview
+        )
 
     def test_event_creation_is_pending_anchored_and_does_not_write_thesis(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

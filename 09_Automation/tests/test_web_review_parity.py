@@ -23,10 +23,14 @@ class ReviewWebAdapterTests(unittest.TestCase):
 
     @staticmethod
     def _preview(prepared):
-        return MutationGateway(
-            b"s" * 64,
-            now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
-        ).issue(prepared.preview_input).preview
+        return (
+            MutationGateway(
+                b"s" * 64,
+                now=lambda: datetime(2026, 8, 13, tzinfo=UTC),
+            )
+            .issue(prepared.preview_input)
+            .preview
+        )
 
     def test_review_freezes_decision_target_updates_and_fixed_actor(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -61,8 +65,9 @@ class ReviewWebAdapterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = self._root(temp)
             for decision in ("edit", "reject"):
-                with self.subTest(decision=decision), self.assertRaisesRegex(
-                    ValueError, "requires notes"
+                with (
+                    self.subTest(decision=decision),
+                    self.assertRaisesRegex(ValueError, "requires notes"),
                 ):
                     prepare_review_mutation(
                         root,
