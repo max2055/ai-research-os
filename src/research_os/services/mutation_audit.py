@@ -192,3 +192,41 @@ def record_mutation_recovery_manifest(
     )
     transaction.commit()
     return relative
+
+
+def record_repository_mutation_recovery_manifest(
+    root: Path,
+    preview: MutationPreviewLike,
+    *,
+    writes: list[Mapping[str, Any]],
+    status: str,
+    event_at: str,
+    reason_code: str,
+) -> Path:
+    """Record repository compensation using paths and hashes, never content."""
+
+    relative = (
+        Path("09_Automation/operational/mutation-recovery")
+        / f"{preview.mutation_id}.json"
+    )
+    manifest = {
+        "schema_version": 1,
+        "mutation_id": preview.mutation_id,
+        "operation": preview.operation,
+        "actor": preview.actor,
+        "target_type": preview.target_type,
+        "target_id": preview.target_id,
+        "target_version": preview.target_version,
+        "input_digest": normalized_input_digest(preview.normalized_input),
+        "writes": writes,
+        "status": status,
+        "reason_code": reason_code,
+        "event_at": event_at,
+    }
+    transaction = FileTransaction(root.resolve())
+    transaction.stage_create(
+        relative,
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+    )
+    transaction.commit()
+    return relative
