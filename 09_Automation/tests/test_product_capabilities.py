@@ -57,6 +57,10 @@ class ProductCapabilityTests(unittest.TestCase):
                 "/sources/{source_id}/process/commit",
                 "/sources/{source_id}/confirm-date/preview",
                 "/sources/{source_id}/confirm-date/commit",
+                "/evidence/events/new/preview",
+                "/evidence/events/new/commit",
+                "/reports/new/preview",
+                "/reports/new/commit",
             },
             routes,
         )

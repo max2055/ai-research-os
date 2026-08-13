@@ -98,6 +98,10 @@ class DashboardSecurityTests(unittest.TestCase):
                 "/sources/{source_id}/fetch/preview",
                 "/sources/{source_id}/process/commit",
                 "/sources/{source_id}/process/preview",
+                "/evidence/events/new/commit",
+                "/evidence/events/new/preview",
+                "/reports/new/commit",
+                "/reports/new/preview",
             },
             write_routes,
         )

@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import json
 import sqlite3
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, date, datetime, timedelta
 from email.parser import BytesParser
 from email.policy import default as email_policy
@@ -94,6 +94,10 @@ from research_os.services.web_repository_mutations import (
     commit_repository_mutation,
     repository_target_version,
 )
+from research_os.services.web_research_drafts import (
+    prepare_event_creation,
+    prepare_report_creation,
+)
 from research_os.services.web_source_workflows import (
     MAX_UPLOAD_BYTES,
     capture_adapter,
@@ -106,7 +110,7 @@ from research_os.services.web_source_workflows import (
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
 _SESSION_COOKIE = "research_os_session"
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
-_MAX_FORM_BYTES = 16_384
+_MAX_FORM_BYTES = 40_960
 _MAX_MULTIPART_BYTES = MAX_UPLOAD_BYTES + 32_768
 _SOURCE_TYPE_BY_CHANNEL = {
     "rss": "article",
@@ -543,6 +547,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
       <a href="/home{project_query}">产业首页</a>
       <a href="/{project_query}">概览</a>
       <a href="/reviews{project_query}">评审队列</a>
+      <a href="/sources{project_query}">来源</a>
       <a href="/metrics{project_query}">指标</a>
       <a href="/operations{project_query}">运营</a>
       <a href="/pipeline{project_query}">管线</a>
@@ -1159,6 +1164,125 @@ action="/sources/{esc(source_id)}/fetch/preview" enctype="multipart/form-data">
 <div class="panel"><h3>资产核验</h3><p>当前状态在来源详情页实时计算，不产生写入。</p>
 <a href="/sources/{esc(source_id)}">返回来源详情</a></div></section>"""
     return shell(f"来源操作 · {source_id}", content)
+
+
+def _event_create_page(
+    repo: DashboardRepository,
+    csrf_token: str,
+) -> str:
+    objects, _ = repo.all()
+    sources = [
+        obj
+        for obj in objects
+        if obj.object_type == "source"
+        and obj.metadata.get("processing_status") == "processed"
+    ]
+    source_rows = [
+        [
+            f'<a href="/sources/{esc(obj.object_id)}">{esc(obj.object_id)}</a>',
+            esc(obj.metadata.get("title")),
+            badge(obj.metadata.get("review_status")),
+        ]
+        for obj in sources
+    ]
+    today = date.today().isoformat()
+    template = json.dumps(
+        {
+            "title": "",
+            "slug": "",
+            "created_at": today,
+            "event_date": today,
+            "source_ids": [],
+            "companies": [],
+            "technologies": [],
+            "products": [],
+            "facts": [
+                {"text": "", "source_id": "", "quote": "", "asset_path": None}
+            ],
+            "inferences": [""],
+            "research_judgment": "",
+            "thesis_impacts": [],
+            "alternative_explanations": [""],
+            "unknowns": [""],
+            "follow_up_indicators": [""],
+            "confidence": 0.5,
+            "tags": [],
+            "project_ids": ["PRJ-001"],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">结构化证据</div><h2>新建 Event</h2>
+<p>Fact 必须绑定已处理 Source 的原文 quote；推理、判断与未知项分别记录。</p></div></section>
+<section class="panel"><h3>可用来源</h3>{table(["Source", "标题", "评审"], source_rows)}</section>
+<section class="panel"><form class="mutation-form" method="post" action="/evidence/events/new/preview">
+<label>Event 结构<textarea name="spec_json" rows="34" required>{esc(template)}</textarea></label>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">预览 Event</button><a href="/reviews">取消</a></div>
+</form></section>"""
+    return shell("新建 Event", content)
+
+
+def _report_create_page(
+    repo: DashboardRepository,
+    csrf_token: str,
+) -> str:
+    objects, _ = repo.all()
+    events = [
+        obj
+        for obj in objects
+        if obj.object_type == "event"
+        and obj.metadata.get("review_status") == "reviewed"
+    ]
+    event_rows = [
+        [
+            f'<a href="/events/{esc(obj.object_id)}">{esc(obj.object_id)}</a>',
+            esc(obj.metadata.get("title")),
+            esc(obj.metadata.get("event_date")),
+        ]
+        for obj in events
+    ]
+    today = date.today().isoformat()
+    template = json.dumps(
+        {
+            "title": "",
+            "slug": "",
+            "created_at": today,
+            "period_start": today,
+            "period_end": today,
+            "evidence_ids": [],
+            "thesis_ids": [],
+            "report_type": "topic",
+            "version": "v0.3",
+            "supersedes": None,
+            "tags": [],
+            "project_ids": ["PRJ-001"],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">结构化研究</div><h2>新建 Report</h2>
+<p>只从已评审 Evidence 合成；生成稿保持 pending，发布仍需人工评审。</p></div></section>
+<section class="panel"><h3>可用 Evidence</h3>{table(["Event", "标题", "日期"], event_rows)}</section>
+<section class="panel"><form class="mutation-form" method="post" action="/reports/new/preview">
+<label>Report 结构<textarea name="spec_json" rows="24" required>{esc(template)}</textarea></label>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">预览 Report</button><a href="/reports">取消</a></div>
+</form></section>"""
+    return shell("新建 Report", content)
+
+
+def _research_draft_result_page(result: Mapping[str, str]) -> str:
+    target_id = result.get("target_id")
+    prefix = "events" if result.get("operation") == "event.create" else "reports"
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">研究草稿已建立</div><h2>{esc(target_id)}</h2>
+<p>{badge("待评审")} · {esc(result.get("operation"))}</p></div></section>
+<section class="panel">{table(["Mutation", "Mutation audit", "Writes"], [[esc(result.get("mutation_id")), esc(result.get("audit_id")), esc(result.get("write_count"))]])}
+<p><a href="/{prefix}/{esc(target_id)}">查看草稿</a> · <a href="/reviews">进入评审队列</a></p></section>"""
+    return shell(f"草稿已建立 · {target_id}", content)
 
 
 def _thesis_page(repo: DashboardRepository, thesis_id: str) -> str:
@@ -2093,7 +2217,7 @@ def _reports_page(repo: DashboardRepository) -> str:
 <div class="eyebrow">产业情报 → 报告</div><h2>研究报告</h2>
 <p>基于证据库产出的正式研究报告。</p>
 </div><div><div class="eyebrow">报告总数</div><h2>{len(reports)}</h2>
-<p class="muted">最新优先</p></div></section>
+<p><a href="/reports/new">新建报告</a></p></div></section>
 {_intel_tabs("reports")}
 <section class="panel" style="margin-top:1rem">{table(["报告", "类型", "状态", "更新"], rows)}</section>"""
     return shell("研究报告", content)
@@ -3360,9 +3484,15 @@ def create_app(root: Path) -> FastAPI:
             ) from exc
         with result_lock:
             mutation_results[result["mutation_id"]] = result
-        location = (
-            f"/sources/{result['target_id']}/mutations/{result['mutation_id']}"
-        )
+        if operation in {"event.create", "report.create"}:
+            location = (
+                f"/research-drafts/{result['target_id']}/mutations/"
+                f"{result['mutation_id']}"
+            )
+        else:
+            location = (
+                f"/sources/{result['target_id']}/mutations/{result['mutation_id']}"
+            )
         return RedirectResponse(location, status_code=303)
 
     @app.get("/static/styles.css", response_class=PlainTextResponse)
@@ -4300,6 +4430,114 @@ def create_app(root: Path) -> FastAPI:
         ):
             raise HTTPException(status_code=404, detail="unknown mutation result")
         return HTMLResponse(_source_result_page(result))
+
+    def research_form_response(
+        request: Request,
+        renderer: Callable[[DashboardRepository, str], str],
+    ) -> HTMLResponse:
+        identity = load_web_identity(repo.root)
+        if identity is None:
+            raise HTTPException(
+                status_code=503, detail="Web mutation identity is unavailable"
+            )
+        session_id, csrf_token = sessions.issue()
+        response = HTMLResponse(renderer(repo, csrf_token))
+        response.set_cookie(
+            _SESSION_COOKIE,
+            session_id,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            max_age=3600,
+            path="/",
+        )
+        return response
+
+    @app.get("/evidence/events/new", response_class=HTMLResponse)
+    def event_create_form(request: Request) -> HTMLResponse:
+        return research_form_response(request, _event_create_page)
+
+    @app.post("/evidence/events/new/preview", response_class=HTMLResponse)
+    async def event_create_preview(request: Request) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"spec_json", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare_event_creation(
+                repo.root,
+                actor=identity.researcher_id,
+                spec_json=form["spec_json"],
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="invalid Event draft") from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant, form["csrf_token"], "/evidence/events/new/commit"
+            )
+        )
+
+    @app.post("/evidence/events/new/commit", response_class=HTMLResponse)
+    async def event_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="event.create",
+            target_id=None,
+        )
+
+    @app.get("/reports/new", response_class=HTMLResponse)
+    def report_create_form(request: Request) -> HTMLResponse:
+        return research_form_response(request, _report_create_page)
+
+    @app.post("/reports/new/preview", response_class=HTMLResponse)
+    async def report_create_preview(request: Request) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"spec_json", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare_report_creation(
+                repo.root,
+                actor=identity.researcher_id,
+                spec_json=form["spec_json"],
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="invalid Report draft") from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant, form["csrf_token"], "/reports/new/commit"
+            )
+        )
+
+    @app.post("/reports/new/commit", response_class=HTMLResponse)
+    async def report_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="report.create",
+            target_id=None,
+        )
+
+    @app.get(
+        "/research-drafts/{target_id}/mutations/{mutation_id}",
+        response_class=HTMLResponse,
+    )
+    def research_draft_result(target_id: str, mutation_id: str) -> HTMLResponse:
+        with result_lock:
+            result = mutation_results.get(mutation_id)
+        if (
+            result is None
+            or result.get("target_id") != target_id
+            or result.get("mutation_id") != mutation_id
+            or result.get("operation") not in {"event.create", "report.create"}
+        ):
+            raise HTTPException(status_code=404, detail="unknown mutation result")
+        return HTMLResponse(_research_draft_result_page(result))
 
     @app.get("/sources/{source_id}", response_class=HTMLResponse)
     def source(source_id: str) -> HTMLResponse:

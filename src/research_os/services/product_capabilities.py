@@ -211,19 +211,30 @@ PRODUCT_CAPABILITIES = (
         authority="operational_human",
         feature="F-028",
     ),
-    *_capabilities(
-        ("new-event", "workflow.event"),
-        owner="evidence",
-        route="/evidence/events/new",
-        authority="named_human",
-        feature="F-027",
+    *(
+        ProductCapability(
+            key,
+            "evidence",
+            "web",
+            (
+                "/evidence/events/new/preview",
+                "/evidence/events/new/commit",
+            ),
+            "named_human",
+            "F-027",
+        )
+        for key in ("new-event", "workflow.event")
     ),
-    *_capabilities(
-        ("new-report", "workflow.report"),
-        owner="reports",
-        route="/reports/new",
-        authority="named_human",
-        feature="F-027",
+    *(
+        ProductCapability(
+            key,
+            "reports",
+            "web",
+            ("/reports/new/preview", "/reports/new/commit"),
+            "named_human",
+            "F-027",
+        )
+        for key in ("new-report", "workflow.report")
     ),
     *_capabilities(
         ("new-entity", "workflow.company-update"),

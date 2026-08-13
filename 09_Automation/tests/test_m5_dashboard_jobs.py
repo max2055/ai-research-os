@@ -222,6 +222,8 @@ class DashboardTests(unittest.TestCase):
             )
             self.assertEqual(
                 [
+                    "/evidence/events/new/commit",
+                    "/evidence/events/new/preview",
                     "/llm/config",
                     "/llm/models",
                     "/llm/test",
@@ -231,6 +233,8 @@ class DashboardTests(unittest.TestCase):
                     "/pipeline/queue/{candidate_id}/promote/preview",
                     "/pipeline/queue/{candidate_id}/restore/commit",
                     "/pipeline/queue/{candidate_id}/restore/preview",
+                    "/reports/new/commit",
+                    "/reports/new/preview",
                     "/sources/new/commit",
                     "/sources/new/preview",
                     "/sources/{source_id}/confirm-date/commit",
@@ -244,7 +248,9 @@ class DashboardTests(unittest.TestCase):
             )
             for route in app.routes:
                 methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
-                if route.path.startswith(("/llm", "/sources/")) or any(
+                if route.path.startswith(
+                    ("/llm", "/sources/", "/evidence/events/new/", "/reports/new/")
+                ) or any(
                     route.path.startswith(
                         f"/pipeline/queue/{{candidate_id}}/{operation}/"
                     )
@@ -1638,6 +1644,8 @@ class IndustryHomeTests(unittest.TestCase):
             )
             self.assertEqual(
                 [
+                    "/evidence/events/new/commit",
+                    "/evidence/events/new/preview",
                     "/llm/config",
                     "/llm/models",
                     "/llm/test",
@@ -1647,6 +1655,8 @@ class IndustryHomeTests(unittest.TestCase):
                     "/pipeline/queue/{candidate_id}/promote/preview",
                     "/pipeline/queue/{candidate_id}/restore/commit",
                     "/pipeline/queue/{candidate_id}/restore/preview",
+                    "/reports/new/commit",
+                    "/reports/new/preview",
                     "/sources/new/commit",
                     "/sources/new/preview",
                     "/sources/{source_id}/confirm-date/commit",
