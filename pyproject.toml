@@ -31,9 +31,6 @@ dev = [
   "ruff>=0.9,<1",
 ]
 
-[project.scripts]
-research-os = "research_os.cli:main"
-
 [tool.setuptools.packages.find]
 where = ["src"]
 

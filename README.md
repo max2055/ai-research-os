@@ -78,10 +78,10 @@ operational-hardening MVP 已合并，F-023 当前 16/21 checks 通过，仍未�
 - [x] 阶段 5：反馈与复盘机制。
 - [x] 阶段 6：规模化和 Ontology 升级。
 
-产品入口：
+唯一产品入口：网站：
 
 ```bash
-research-os ui
+python -m research_os.ui
 ```
 
 打开 `http://127.0.0.1:8765/home`。根据 RCP-v03-011，网站是唯一用户产品界面。
@@ -90,7 +90,7 @@ promote 的“预览 → 明确确认 → 提交 → 结果页”流程；promot
 约束的 Source/asset 内容。研究对象创建与人工审核、Thesis 变更、运维、备份、恢复和发布
 检查仍待后续 F-027/F-028 补齐；这些产品缺口不应通过要求研究者使用 CLI 来隐藏。
 
-内部工程兼容入口（迁移期，非用户产品界面）：
+开发/恢复兼容入口（非用户产品界面，不提供产品工作流）：
 
 ```bash
 python3 -m venv /tmp/ai-research-os-dev-venv

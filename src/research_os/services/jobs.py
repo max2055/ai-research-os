@@ -184,7 +184,11 @@ def _execute_job(
         return message
     if job_name == "expire":
         expired = expire_candidates(root, apply=True)
-        return f"retention sweep: {len(expired['expired'])} expired"
+        purged = purge_candidates(root, apply=True)
+        return (
+            f"retention sweep: {len(expired['expired'])} expired, "
+            f"{len(purged['purged'])} purged"
+        )
     if job_name == "purge":
         purged = purge_candidates(root, apply=True)
         return f"retention purge: {len(purged['purged'])} purged"

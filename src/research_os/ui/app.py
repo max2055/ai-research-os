@@ -4123,7 +4123,7 @@ def create_app(root: Path) -> FastAPI:
             ) from exc
         body = (
             '<section class="hero"><div><div class="eyebrow">Pipeline</div>'
-            "<h2>Source Channels</h2></div></section>"
+            "<h2>Source Channels</h2><p>通道与指标 · 可调度</p></div></section>"
             f'<section class="panel">{table(["ID", "Name", "Type", "License", "Review", "Enabled"], [[esc(row["id"]), esc(row["name"]), esc(row["channel_type"]), esc(row["license_status"]), esc(row["review_status"]), esc(row["enabled"])] for row in rows])}</section>'
         )
         return HTMLResponse(shell("Source Channels", body))
