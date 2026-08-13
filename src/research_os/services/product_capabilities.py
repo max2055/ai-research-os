@@ -236,19 +236,38 @@ PRODUCT_CAPABILITIES = (
         )
         for key in ("new-report", "workflow.report")
     ),
-    *_capabilities(
-        ("new-entity", "workflow.company-update"),
-        owner="entities",
-        route="/universe/entities/new",
-        authority="named_human",
-        feature="F-027",
+    ProductCapability(
+        "new-entity",
+        "entities",
+        "web",
+        (
+            "/universe/entities/new/preview",
+            "/universe/entities/new/commit",
+        ),
+        "named_human",
+        "F-027",
     ),
-    *_capabilities(
-        ("new-assertion",),
-        owner="ontology",
-        route="/ontology/assertions/new",
-        authority="named_human",
-        feature="F-027",
+    ProductCapability(
+        "workflow.company-update",
+        "entities",
+        "web",
+        (
+            "/companies/{company_id}/update-proposals/new/preview",
+            "/companies/{company_id}/update-proposals/new/commit",
+        ),
+        "named_human",
+        "F-027",
+    ),
+    ProductCapability(
+        "new-assertion",
+        "ontology",
+        "web",
+        (
+            "/ontology/assertions/new/preview",
+            "/ontology/assertions/new/commit",
+        ),
+        "named_human",
+        "F-027",
     ),
     *_capabilities(
         ("project.list", "project.status"),
@@ -257,19 +276,24 @@ PRODUCT_CAPABILITIES = (
         authority="read",
         feature="F-027",
     ),
-    *_capabilities(
-        ("project.create",),
-        owner="projects",
-        route="/projects/new",
-        authority="named_human",
-        feature="F-027",
+    ProductCapability(
+        "project.create",
+        "projects",
+        "web",
+        ("/projects/new/preview", "/projects/new/commit"),
+        "named_human",
+        "F-027",
     ),
-    *_capabilities(
-        ("project.advance-review",),
-        owner="projects",
-        route="/projects/{project_id}/advance/preview",
-        authority="named_human",
-        feature="F-027",
+    ProductCapability(
+        "project.advance-review",
+        "projects",
+        "web",
+        (
+            "/projects/{project_id}/advance/preview",
+            "/projects/{project_id}/advance/commit",
+        ),
+        "named_human",
+        "F-027",
     ),
     *_capabilities(
         ("review.queue",),
@@ -293,12 +317,27 @@ PRODUCT_CAPABILITIES = (
         authority="read",
         feature="F-027",
     ),
-    *_capabilities(
-        ("actions.create", "actions.close"),
-        owner="actions",
-        route="/operations/actions/change/preview",
-        authority="named_human",
-        feature="F-027",
+    ProductCapability(
+        "actions.create",
+        "actions",
+        "web",
+        (
+            "/operations/actions/new/preview",
+            "/operations/actions/new/commit",
+        ),
+        "named_human",
+        "F-027",
+    ),
+    ProductCapability(
+        "actions.close",
+        "actions",
+        "web",
+        (
+            "/operations/actions/{action_id}/close/preview",
+            "/operations/actions/{action_id}/close/commit",
+        ),
+        "named_human",
+        "F-027",
     ),
     *_capabilities(
         ("impact.graph", "impact.queue"),

@@ -191,6 +191,26 @@ def close_action(
     closed_at: str | None = None,
     success_evidence: str,
 ) -> Path:
+    target, content = prepare_action_close(
+        root,
+        action_id,
+        closed_at=closed_at,
+        success_evidence=success_evidence,
+    )
+    transaction = FileTransaction(root)
+    transaction.stage_replace(target, content)
+    return transaction.commit()[0]
+
+
+def prepare_action_close(
+    root: Path,
+    action_id: str,
+    *,
+    closed_at: str | None = None,
+    success_evidence: str,
+) -> tuple[Path, str]:
+    """Prepare an Action close without changing the repository."""
+
     closed_at = closed_at or date.today().isoformat()
     if not is_iso_date(closed_at):
         raise ValueError("closed_at must be YYYY-MM-DD")
@@ -217,6 +237,4 @@ def close_action(
     document.set_metadata("success_evidence", success_evidence)
     body = document.body.rstrip()
     document.set_body(f"{body}\n\n- {closed_at}: closed; {success_evidence}\n")
-    transaction = FileTransaction(root)
-    transaction.stage_replace(target.path, document.render())
-    return transaction.commit()[0]
+    return target.path, document.render()

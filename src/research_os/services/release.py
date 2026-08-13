@@ -156,6 +156,7 @@ QUALITY_PATHS = (
 )
 SECURITY_PATHS = (
     "src/research_os/repositories/transaction.py",
+    "src/research_os/services/actions.py",
     "src/research_os/services/candidate_db.py",
     "src/research_os/services/mutation_audit.py",
     "src/research_os/services/mutation_gateway.py",
@@ -164,6 +165,7 @@ SECURITY_PATHS = (
     "src/research_os/services/web_candidate_mutations.py",
     "src/research_os/services/web_identity.py",
     "src/research_os/services/web_repository_mutations.py",
+    "src/research_os/services/web_registry_mutations.py",
     "src/research_os/services/web_research_drafts.py",
     "src/research_os/services/web_review_mutations.py",
     "src/research_os/services/web_source_workflows.py",
@@ -173,6 +175,7 @@ SECURITY_PATHS = (
     "09_Automation/tests/test_web_candidate_parity.py",
     "09_Automation/tests/test_web_mutation.py",
     "09_Automation/tests/test_web_repository_mutations.py",
+    "09_Automation/tests/test_web_registry_parity.py",
     "09_Automation/tests/test_web_research_drafts.py",
     "09_Automation/tests/test_web_review_parity.py",
     "09_Automation/tests/test_web_source_parity.py",

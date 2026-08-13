@@ -88,6 +88,15 @@ from research_os.services.web_identity import (
     WebIdentity,
     load_web_identity,
 )
+from research_os.services.web_registry_mutations import (
+    prepare_action_close_mutation,
+    prepare_action_creation,
+    prepare_assertion_creation,
+    prepare_company_update_creation,
+    prepare_entity_creation,
+    prepare_project_creation,
+    prepare_project_review_advance,
+)
 from research_os.services.web_repository_mutations import (
     PreparedRepositoryMutation,
     RepositoryMutationPlan,
@@ -1144,6 +1153,37 @@ def _source_result_page(result: Mapping[str, str]) -> str:
 <section class="panel"><h3>审计标识</h3>
 {table(["Mutation", "Mutation audit", "Writes"], [[esc(result.get("mutation_id")), esc(result.get("audit_id")), esc(result.get("write_count"))]])}
 <p><a href="/sources/{esc(result.get("target_id"))}">返回来源详情</a></p></section>"""
+    return shell(f"已提交 · {result.get('target_id')}", content)
+
+
+def _structured_mutation_page(
+    *,
+    title: str,
+    eyebrow: str,
+    action: str,
+    csrf_token: str,
+    example: Mapping[str, Any],
+    back_path: str,
+) -> str:
+    spec = json.dumps(example, ensure_ascii=False, indent=2)
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">{esc(eyebrow)}</div><h2>{esc(title)}</h2>
+<p>字段在服务端验证，预览冻结后才可确认写入。</p></div></section>
+<section class="panel"><form class="mutation-form" method="post" action="{esc(action)}">
+<label>结构化字段<textarea name="spec_json" rows="22" required>{esc(spec)}</textarea></label>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<div class="mutation-actions"><button type="submit">预览</button>
+<a href="{esc(back_path)}">取消</a></div></form></section>"""
+    return shell(title, content)
+
+
+def _research_mutation_result_page(result: Mapping[str, str]) -> str:
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">研究操作完成</div><h2>{esc(result.get("target_id"))}</h2>
+<p>{badge("已提交")} · {esc(result.get("operation"))}</p></div></section>
+<section class="panel"><h3>审计标识</h3>
+{table(["Mutation", "Mutation audit", "Writes"], [[esc(result.get("mutation_id")), esc(result.get("audit_id")), esc(result.get("write_count"))]])}
+<p><a href="/home">返回产业首页</a></p></section>"""
     return shell(f"已提交 · {result.get('target_id')}", content)
 
 
@@ -3511,9 +3551,12 @@ def create_app(root: Path) -> FastAPI:
                 f"{result['mutation_id']}"
             )
         else:
-            location = (
-                f"/sources/{result['target_id']}/mutations/{result['mutation_id']}"
-            )
+            if operation.startswith("source."):
+                location = (
+                    f"/sources/{result['target_id']}/mutations/{result['mutation_id']}"
+                )
+            else:
+                location = f"/research-mutations/{result['mutation_id']}"
         return RedirectResponse(location, status_code=303)
 
     @app.get("/static/styles.css", response_class=PlainTextResponse)
@@ -4534,6 +4577,496 @@ def create_app(root: Path) -> FastAPI:
             path="/",
         )
         return response
+
+    def structured_form_response(
+        request: Request,
+        *,
+        title: str,
+        eyebrow: str,
+        action: str,
+        example: Mapping[str, Any],
+        back_path: str,
+    ) -> HTMLResponse:
+        return research_form_response(
+            request,
+            lambda _repo, csrf: _structured_mutation_page(
+                title=title,
+                eyebrow=eyebrow,
+                action=action,
+                csrf_token=csrf,
+                example=example,
+                back_path=back_path,
+            ),
+        )
+
+    async def structured_preview_response(
+        request: Request,
+        *,
+        prepare: Callable[[str, str], PreparedRepositoryMutation],
+        commit_path: str,
+        label: str,
+    ) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"spec_json", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare(identity.researcher_id, form["spec_json"])
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail=f"invalid {label} fields"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(grant, form["csrf_token"], commit_path)
+        )
+
+    @app.get("/projects", response_class=HTMLResponse)
+    def projects_page() -> HTMLResponse:
+        objects, _ = validate_repository(repo.root)
+        rows = [
+            [
+                f'<a href="/projects/{esc(obj.object_id)}">{esc(obj.object_id)}</a>',
+                esc(obj.metadata.get("title")),
+                esc(obj.metadata.get("status")),
+                esc(current_next_review_date(obj)),
+            ]
+            for obj in objects
+            if obj.object_type == "project"
+        ]
+        return HTMLResponse(
+            shell(
+                "研究项目",
+                '<section class="hero"><div><div class="eyebrow">研究治理</div>'
+                '<h2>研究项目</h2></div><a class="button-link" href="/projects/new">新建项目</a></section>'
+                f'<section class="panel">{table(["ID", "名称", "状态", "下次评审"], rows)}</section>',
+            )
+        )
+
+    @app.get("/projects/new", response_class=HTMLResponse)
+    def project_create_form(request: Request) -> HTMLResponse:
+        today = date.today().isoformat()
+        return structured_form_response(
+            request,
+            title="新建研究项目",
+            eyebrow="Project",
+            action="/projects/new/preview",
+            back_path="/projects",
+            example={
+                "title": "新研究项目",
+                "slug": "new-research-project",
+                "created_at": today,
+                "owner": "max",
+                "research_question": "待验证的研究问题是什么？",
+                "charter_path": "00_System/Phase_0_Research_Charter.md",
+                "queue_path": "01_Inbox",
+                "review_cadence": "Weekly",
+                "next_review_date": today,
+                "tags": [],
+            },
+        )
+
+    @app.post("/projects/new/preview", response_class=HTMLResponse)
+    async def project_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_project_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/projects/new/commit",
+            label="Project",
+        )
+
+    @app.post("/projects/new/commit", response_class=HTMLResponse)
+    async def project_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="project.create",
+        )
+
+    @app.get("/projects/{project_id}", response_class=HTMLResponse)
+    def project_detail_page(project_id: str, request: Request) -> HTMLResponse:
+        objects, _ = validate_repository(repo.root)
+        project = next(
+            (
+                obj
+                for obj in objects
+                if obj.object_type == "project" and obj.object_id == project_id
+            ),
+            None,
+        )
+        if project is None:
+            raise HTTPException(status_code=404, detail=project_id)
+        identity = load_web_identity(repo.root)
+        form = ""
+        response_session: tuple[str, str] | None = None
+        if identity is not None:
+            response_session = sessions.issue()
+            _, csrf = response_session
+            form = f"""<form class="mutation-form" method="post"
+action="/projects/{esc(project_id)}/advance/preview">
+<label>基准日期<input type="date" name="as_of" value="{date.today().isoformat()}" required></label>
+<input type="hidden" name="csrf_token" value="{esc(csrf)}">
+<button type="submit">预览推进评审日期</button></form>"""
+        page = HTMLResponse(
+            shell(
+                project_id,
+                f'<section class="hero"><div><div class="eyebrow">Project</div><h2>{esc(project.metadata.get("title"))}</h2>'
+                f"<p>{esc(project.metadata.get('research_question'))}</p></div></section>"
+                f'<section class="panel">{table(["字段", "值"], [["状态", esc(project.metadata.get("status"))], ["负责人", esc(project.metadata.get("owner"))], ["下次评审", esc(current_next_review_date(project))]])}{form}</section>',
+            )
+        )
+        if response_session is not None:
+            page.set_cookie(
+                _SESSION_COOKIE,
+                response_session[0],
+                httponly=True,
+                samesite="strict",
+                secure=request.url.scheme == "https",
+                max_age=3600,
+                path="/",
+            )
+        return page
+
+    @app.post("/projects/{project_id}/advance/preview", response_class=HTMLResponse)
+    async def project_advance_preview(
+        project_id: str, request: Request
+    ) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"as_of", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare_project_review_advance(
+                repo.root,
+                actor=identity.researcher_id,
+                project_id=project_id,
+                as_of=form["as_of"],
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail="invalid Project update"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant,
+                form["csrf_token"],
+                f"/projects/{project_id}/advance/commit",
+            )
+        )
+
+    @app.post("/projects/{project_id}/advance/commit", response_class=HTMLResponse)
+    async def project_advance_commit(
+        project_id: str, request: Request
+    ) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="project.advance-review",
+            target_id=project_id,
+        )
+
+    @app.get("/operations/actions", response_class=HTMLResponse)
+    def actions_page() -> HTMLResponse:
+        objects, _ = validate_repository(repo.root)
+        rows = [
+            [
+                f'<a href="/actions/{esc(obj.object_id)}">{esc(obj.object_id)}</a>',
+                esc(obj.metadata.get("title")),
+                esc(obj.metadata.get("owner")),
+                esc(obj.metadata.get("due_date")),
+                esc(obj.metadata.get("status")),
+                (
+                    f'<a href="/operations/actions/{esc(obj.object_id)}/close">关闭</a>'
+                    if obj.metadata.get("status") in {"open", "in_progress"}
+                    else "—"
+                ),
+            ]
+            for obj in objects
+            if obj.object_type == "action"
+        ]
+        return HTMLResponse(
+            shell(
+                "研究行动",
+                '<section class="hero"><div><div class="eyebrow">Operations</div>'
+                '<h2>研究行动</h2></div><a class="button-link" href="/operations/actions/new">新建行动</a></section>'
+                f'<section class="panel">{table(["ID", "行动", "负责人", "到期", "状态", "操作"], rows)}</section>',
+            )
+        )
+
+    @app.get("/operations/actions/new", response_class=HTMLResponse)
+    def action_create_form(request: Request) -> HTMLResponse:
+        today = date.today().isoformat()
+        return structured_form_response(
+            request,
+            title="新建研究行动",
+            eyebrow="Action",
+            action="/operations/actions/new/preview",
+            back_path="/operations/actions",
+            example={
+                "title": "验证研究结果",
+                "owner": "max",
+                "created_at": today,
+                "due_date": today,
+                "success_evidence": "记录可追溯的完成证据。",
+                "project_ids": ["PRJ-001"],
+                "source_review_id": None,
+            },
+        )
+
+    @app.post("/operations/actions/new/preview", response_class=HTMLResponse)
+    async def action_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_action_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/operations/actions/new/commit",
+            label="Action",
+        )
+
+    @app.post("/operations/actions/new/commit", response_class=HTMLResponse)
+    async def action_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="action.create"
+        )
+
+    @app.get("/operations/actions/{action_id}/close", response_class=HTMLResponse)
+    def action_close_form(action_id: str, request: Request) -> HTMLResponse:
+        identity = load_web_identity(repo.root)
+        if identity is None:
+            raise HTTPException(
+                status_code=503, detail="Web mutation identity is unavailable"
+            )
+        objects, _ = validate_repository(repo.root)
+        if not any(
+            obj.object_type == "action" and obj.object_id == action_id
+            for obj in objects
+        ):
+            raise HTTPException(status_code=404, detail=action_id)
+        session_id, csrf = sessions.issue()
+        content = f"""<section class="hero"><div><div class="eyebrow">Action</div>
+<h2>关闭 {esc(action_id)}</h2></div></section><section class="panel">
+<form class="mutation-form" method="post" action="/operations/actions/{esc(action_id)}/close/preview">
+<label>关闭日期<input type="date" name="closed_at" value="{date.today().isoformat()}" required></label>
+<label>完成证据<textarea name="success_evidence" rows="6" maxlength="4000" required></textarea></label>
+<input type="hidden" name="csrf_token" value="{esc(csrf)}"><button type="submit">预览关闭</button></form></section>"""
+        response = HTMLResponse(shell(f"关闭 {action_id}", content))
+        response.set_cookie(
+            _SESSION_COOKIE,
+            session_id,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            max_age=3600,
+            path="/",
+        )
+        return response
+
+    @app.post(
+        "/operations/actions/{action_id}/close/preview", response_class=HTMLResponse
+    )
+    async def action_close_preview(action_id: str, request: Request) -> HTMLResponse:
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"closed_at", "success_evidence", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = prepare_action_close_mutation(
+                repo.root,
+                actor=identity.researcher_id,
+                action_id=action_id,
+                closed_at=form["closed_at"],
+                success_evidence=form["success_evidence"],
+            )
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="invalid Action close") from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant,
+                form["csrf_token"],
+                f"/operations/actions/{action_id}/close/commit",
+            )
+        )
+
+    @app.post(
+        "/operations/actions/{action_id}/close/commit", response_class=HTMLResponse
+    )
+    async def action_close_commit(action_id: str, request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="action.close",
+            target_id=action_id,
+        )
+
+    @app.get("/universe/entities/new", response_class=HTMLResponse)
+    def entity_create_form(request: Request) -> HTMLResponse:
+        return structured_form_response(
+            request,
+            title="新建 Universe 实体",
+            eyebrow="Entity",
+            action="/universe/entities/new/preview",
+            back_path="/companies",
+            example={
+                "entity_type": "company",
+                "slug": "new-company",
+                "title": "New Company",
+                "created_at": date.today().isoformat(),
+                "definition": "",
+                "sector_ids": [],
+                "aliases": [],
+                "tags": [],
+                "project_ids": [],
+            },
+        )
+
+    @app.post("/universe/entities/new/preview", response_class=HTMLResponse)
+    async def entity_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_entity_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/universe/entities/new/commit",
+            label="Entity",
+        )
+
+    @app.post("/universe/entities/new/commit", response_class=HTMLResponse)
+    async def entity_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request, await _urlencoded_form(request), operation="entity.create"
+        )
+
+    @app.get("/ontology/assertions/new", response_class=HTMLResponse)
+    def assertion_create_form(request: Request) -> HTMLResponse:
+        today = date.today().isoformat()
+        return structured_form_response(
+            request,
+            title="新建本体断言",
+            eyebrow="Ontology",
+            action="/ontology/assertions/new/preview",
+            back_path="/impact",
+            example={
+                "subject_id": "COM-nvidia",
+                "predicate": "COMPETES_WITH",
+                "object_id": "COM-amd",
+                "created_at": today,
+                "valid_from": today,
+                "as_of": today,
+                "title": "",
+                "scope": "",
+                "confidence": 0.5,
+                "qualifiers": {},
+                "project_ids": [],
+            },
+        )
+
+    @app.post("/ontology/assertions/new/preview", response_class=HTMLResponse)
+    async def assertion_create_preview(request: Request) -> HTMLResponse:
+        return await structured_preview_response(
+            request,
+            prepare=lambda actor, raw: prepare_assertion_creation(
+                repo.root, actor=actor, spec_json=raw
+            ),
+            commit_path="/ontology/assertions/new/commit",
+            label="Ontology Assertion",
+        )
+
+    @app.post("/ontology/assertions/new/commit", response_class=HTMLResponse)
+    async def assertion_create_commit(request: Request) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="ontology-assertion.create",
+        )
+
+    @app.get(
+        "/companies/{company_id}/update-proposals/new", response_class=HTMLResponse
+    )
+    def company_update_form(company_id: str, request: Request) -> HTMLResponse:
+        return structured_form_response(
+            request,
+            title=f"公司更新提案 · {company_id}",
+            eyebrow="Knowledge proposal",
+            action=f"/companies/{company_id}/update-proposals/new/preview",
+            back_path=f"/companies/{company_id}",
+            example={
+                "company_id": company_id,
+                "event_ids": [],
+                "created_at": date.today().isoformat(),
+            },
+        )
+
+    @app.post(
+        "/companies/{company_id}/update-proposals/new/preview",
+        response_class=HTMLResponse,
+    )
+    async def company_update_preview(company_id: str, request: Request) -> HTMLResponse:
+        async def prepare_bound(actor: str, raw: str) -> PreparedRepositoryMutation:
+            try:
+                supplied = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise ValueError("invalid Company proposal JSON") from exc
+            if (
+                not isinstance(supplied, dict)
+                or supplied.get("company_id") != company_id
+            ):
+                raise ValueError("Company proposal target mismatch")
+            return prepare_company_update_creation(
+                repo.root, actor=actor, spec_json=raw
+            )
+
+        identity, active_gateway = mutation_gateway()
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"spec_json", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        try:
+            prepared = await prepare_bound(identity.researcher_id, form["spec_json"])
+            grant = issue_repository_plan(prepared, active_gateway)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail="invalid Company proposal"
+            ) from exc
+        return HTMLResponse(
+            _source_mutation_confirmation(
+                grant,
+                form["csrf_token"],
+                f"/companies/{company_id}/update-proposals/new/commit",
+            )
+        )
+
+    @app.post(
+        "/companies/{company_id}/update-proposals/new/commit",
+        response_class=HTMLResponse,
+    )
+    async def company_update_commit(
+        company_id: str, request: Request
+    ) -> RedirectResponse:
+        return source_commit_response(
+            request,
+            await _urlencoded_form(request),
+            operation="company-update-proposal.create",
+        )
+
+    @app.get("/research-mutations/{mutation_id}", response_class=HTMLResponse)
+    def research_mutation_result(mutation_id: str) -> HTMLResponse:
+        with result_lock:
+            result = mutation_results.get(mutation_id)
+        if (
+            result is None
+            or result.get("mutation_id") != mutation_id
+            or result.get("operation", "").startswith("source.")
+        ):
+            raise HTTPException(status_code=404, detail="unknown mutation result")
+        return HTMLResponse(_research_mutation_result_page(result))
 
     @app.get("/evidence/events/new", response_class=HTMLResponse)
     def event_create_form(request: Request) -> HTMLResponse:
