@@ -53,14 +53,27 @@ class ReleaseReadinessTests(unittest.TestCase):
     def test_dashboard_security_provenance_covers_web_mutation_boundary(self) -> None:
         self.assertEqual(
             {
+                "src/research_os/repositories/transaction.py",
                 "src/research_os/services/candidate_db.py",
                 "src/research_os/services/mutation_audit.py",
                 "src/research_os/services/mutation_gateway.py",
+                "src/research_os/services/product_capabilities.py",
                 "src/research_os/services/triage.py",
+                "src/research_os/services/web_candidate_mutations.py",
                 "src/research_os/services/web_identity.py",
+                "src/research_os/services/web_repository_mutations.py",
+                "src/research_os/services/web_research_drafts.py",
+                "src/research_os/services/web_review_mutations.py",
+                "src/research_os/services/web_source_workflows.py",
                 "src/research_os/ui/app.py",
                 "09_Automation/tests/test_m6_security.py",
+                "09_Automation/tests/test_product_capabilities.py",
+                "09_Automation/tests/test_web_candidate_parity.py",
                 "09_Automation/tests/test_web_mutation.py",
+                "09_Automation/tests/test_web_repository_mutations.py",
+                "09_Automation/tests/test_web_research_drafts.py",
+                "09_Automation/tests/test_web_review_parity.py",
+                "09_Automation/tests/test_web_source_parity.py",
             },
             set(SECURITY_PATHS),
         )
