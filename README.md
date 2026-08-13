@@ -85,10 +85,10 @@ research-os ui
 ```
 
 打开 `http://127.0.0.1:8765/home`。根据 RCP-v03-011，网站是唯一用户产品界面。
-F-026 已交付首个受控 Web mutation：研究者可在 Candidate 详情页按“预览驳回 → 明确确认
-→ 提交 → 结果页”完成 dismiss。Candidate promote/restore、研究对象创建与人工审核、Thesis
-变更、运维、备份、恢复和发布检查仍待 F-027/F-028 补齐；这些产品缺口不应通过要求
-研究者使用 CLI 来隐藏。
+F-027A 已完成 Candidate Web parity：研究者可在 Candidate 详情页完成 dismiss、restore 和
+promote 的“预览 → 明确确认 → 提交 → 结果页”流程；promote 只发布 preview 已冻结并签名
+约束的 Source/asset 内容。研究对象创建与人工审核、Thesis 变更、运维、备份、恢复和发布
+检查仍待后续 F-027/F-028 补齐；这些产品缺口不应通过要求研究者使用 CLI 来隐藏。
 
 内部工程兼容入口（迁移期，非用户产品界面）：
 

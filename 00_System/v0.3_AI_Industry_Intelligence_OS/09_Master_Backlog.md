@@ -260,7 +260,7 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-612 | F-019～020 | runbook/limitations | completed |
 | WP-620 | F-021～022 | 30-day Pilot/resolutions | **BLOCKED**（future-date dependent；real 30-day Pilot） |
 | WP-630 | F-023～025 | release check/human decision/tag | in_progress（F-023 completed；F-024 BLOCKED；F-025 waits for all Gates） |
-| WP-640 | F-026～029 | Web mutation/parity/operations/CLI retirement | in_progress（F-026 completed；F-027 next） |
+| WP-640 | F-026～029 | Web mutation/parity/operations/CLI retirement | in_progress（F-026 + F-027A completed；F-027B next） |
 
 Wave 6 原只读基线由 RCP-v03-010 批准并完成。RCP-v03-011 于 2026-08-12 取代其
 GET-only/CLI 产品边界，新增 WP-640：网站成为唯一用户产品界面，CLI 仅作迁移期内部
@@ -276,8 +276,27 @@ WP-640 progress（2026-08-12）：F-026 已完成首个端到端 Web mutation。
   Review、Thesis 和其他研究对象仍无 mutation adapter，自动任务仍无审批或 confidence 修改权。
 - **验证**：最终代码 Gate、10-route loopback GET smoke、一次 disposable mutation smoke、
   schema v3 recovery 和 10,000-row benchmark 均已记录；F-023 保持 16/21，五个既有 blocker 不变。
-- **下一步**：F-027 补 Candidate promote/restore 与研究工作流 parity；F-028 补运维/恢复
-  parity；F-029 在完整 parity 与 recovery rehearsal 后移除产品 CLI entry point。
+- **当时下一步（已由下方 2026-08-13 记录取代）**：F-027 补 Candidate promote/restore 与
+  研究工作流 parity；F-028 补运维/恢复 parity；F-029 在完整 parity 与 recovery rehearsal
+  后移除产品 CLI entry point。
+
+WP-640 progress（2026-08-13）：F-027A Candidate Web parity 已完成。
+- **Capability registry**：96/96 argparse leaf 均有 `web/internal/remove` disposition、owner、
+  authority、target route 与 delivery feature；新增 Web mutation route 若未登记会测试失败。
+- **Candidate restore**：dismissed/expired Candidate 经 preview/confirm/commit 恢复为 new；
+  Candidate row、action 与 redacted mutation audit 在一个 `BEGIN IMMEDIATE` transaction 提交。
+- **Candidate promote**：preview 只 capture 一次并签名约束 Source metadata、Source record hash
+  和两个 immutable asset hash；commit 不重新抓取，不接收 actor/captured content，成功创建
+  pending Source 并链接 Candidate。失败回滚 DB、补偿本次文件并写脱敏 recovery manifest。
+- **安全与审计**：exact non-GET allowlist 为 9；所有 Candidate commit 仅接受 session CSRF +
+  signed preview token，覆盖 Origin、replay、expiry、stale target、actor/operation/target mismatch。
+- **验证**：完整非本地集成套件零失败（1 skip）；branch coverage 80.85%；Ruff、184-file
+  format、126-source mypy、compileall 通过；strict validation 1164 objects、0 error/0 warning；
+  global index drift 0。真实 loopback disposable smoke 的 restore/promote 均 303、replay 409，
+  hostile Origin 403，各 1 条 action/committed audit，promote 产出 1 Source + 2 assets，Thesis/
+  Review digest 不变。详见 `00_System/v0.3_F027A_Candidate_Web_Parity_Verification_2026-08-13.md`。
+- **未完成**：F-027B research-object parity、F-028 operations/recovery parity 与 F-029 CLI
+  retirement；F-023 仍为 16/21，五个既有 blocker 不变，不能由本工程包关闭。
 
 WP-600 close-out（2026-08-09）：F-001~003 落地，Wave 6 第一个 WP。
 - **F-001**：`00_System/Dashboard_Design_v2.md`（Product IA v2——IA 树、页面→查询/边界表、read model 约定、GET-only 不变量、loopback、WP-600 范围；镜像 v1 先例 `Dashboard_and_Jobs_Design.md`）。

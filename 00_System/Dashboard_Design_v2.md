@@ -43,7 +43,7 @@ Industry Home
 | Daily Brief | Web + scheduled Markdown 产物 | `daily_brief` | 候选+通道+事件+失败 | 手动运行/审阅，自动任务无审批权 | §3 Industry Home |
 | Sector Map | `/sectors`（现有）| (WP-601/602) | 板块/公司/事件/影响 | none | §3 Sector |
 | Company Radar | `/companies`（现有）| (WP-601/602) | 实体/安全/证据/决策 | none | §3 Company |
-| Candidate Queue | `/pipeline/queue`（现有）| `queue_rows` | 候选 SQLite operational store | dismiss：`/{candidate_id}/dismiss/preview` → `/dismiss/commit`；promote/restore 待 F-027 | §3 Candidate Queue |
+| Candidate Queue | `/pipeline/queue`（现有）| `queue_rows` | 候选 SQLite operational store | dismiss/restore/promote：各自 `/{candidate_id}/{operation}/preview` → `/{operation}/commit` | §3 Candidate Queue |
 | Evidence Review Queue | `/reviews`（现有）| `render_review_queue` | reviewed/pending 对象 | none | — |
 | Impact Explorer | `/impact`（现有）| `render_impact` | 影响断言/路径 | none | — |
 | Analysis Workspace | `/analysis`（现有）| `analysis_*` services | mode/run 对象 | none | — |
@@ -63,23 +63,27 @@ Industry Home
 
 ## 4. Web mutation 不变量
 
-- 当前 exact non-GET allowlist 为 5 条 POST：3 条 `/llm/*` 本地配置路由，加 Candidate
-  dismiss 的 preview 与 commit。新增 route 必须显式更新 capability/security contract。
+- 当前 exact non-GET allowlist 为 9 条 POST：3 条 `/llm/*` 本地配置路由，加 Candidate
+  dismiss、restore、promote 各自的 preview 与 commit。新增 route 必须显式更新
+  capability/security contract。
 - 新 mutation route 必须调用既有领域 service，先返回 validation + diff preview，再由具名人工
   对明确 target version 提交；不得直接编辑浏览器副本或绕开 Markdown authority。
 - 每次提交记录 actor、decision、timestamp、target ID、before/after version、结果与失败原因，
   并具备防重复、并发冲突检测、原子失败和可验证回滚。
 - 自动任务、Agent 和模型输出只能产生 pending 草稿或 operational 更新，不能调用审批动作，
   不能改变 Thesis 结论或 confidence。
-- 路由回归测试固定当前 5 条 POST allowlist，并逐 route 校验 capability、CSRF/Origin、权限、
+- 路由回归测试固定当前 9 条 POST allowlist，并逐 route 校验 capability、CSRF/Origin、权限、
   audit 和 transaction contract。
 
 ## 5. Loopback + controlled mutation
 
 - `research-os ui` 默认 `127.0.0.1:8765`；只接受 loopback host（`run_ui` 拒绝非 loopback）。
-- F-026 已实现 Candidate dismiss：固定本地具名 identity、session-bound CSRF、10 分钟签名
-  preview token、单次 nonce、target-version 并发检查，以及 Candidate/action/audit 原子提交。
-  Candidate 是 operational state；Review、Thesis 与其他权威研究对象区域仍保持 GET-only。
+- F-026/F-027A 已实现 Candidate dismiss、restore 和 promote：固定本地具名 identity、
+  session-bound CSRF、10 分钟签名 preview token、单次 nonce、target-version 并发检查；
+  restore 的 Candidate/action/audit 在一个 SQLite transaction 内提交，promote 对 preview
+  冻结的 Source/assets、Candidate action 与 audit 做协调提交并留存失败补偿 manifest。
+  Candidate 是 operational state；promote 只创建 pending Source，不自动批准；Review、
+  Thesis 与其他权威研究对象区域仍保持 GET-only。
 - 仓库文本在 HTML 输出前 escape；Source asset 通过拥有它的 Source 与数组 index 解析，拒绝任意 path。
 - 当前不处理登录、账户或公网访问；远程/多用户能力必须另建身份认证、授权与部署 RCP。
 
@@ -94,7 +98,8 @@ Industry Home
 
 - F-026：已完成 Candidate dismiss 与共享 mutation preview/commit、具名 actor、审计、
   optimistic concurrency、schema v3 rollback 基础。
-- F-027：Candidate、Evidence、Impact、Analysis、Forecast、Decision 与 Thesis 人工流程 parity。
+- F-027A：已完成 96/96 CLI leaf capability registry 与 Candidate dismiss/restore/promote Web
+  parity；F-027 剩余 Evidence、Impact、Analysis、Forecast、Decision 与 Thesis 人工流程 parity。
 - F-028：Channel、scheduler、health、backup、restore、validation、index 和 release parity。
 - F-029：用户文档无 CLI 依赖且完整恢复演练通过后，删除产品 CLI entry point；后台内部
   adapter 必须最小权限、非交互，并直接复用 service/API。

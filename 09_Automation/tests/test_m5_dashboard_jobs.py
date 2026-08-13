@@ -210,7 +210,7 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual("PRJ-001", state.json()["project_id"])
             self.assertGreaterEqual(len(state.json()["objects"]), 4)
 
-            # Only the explicit LLM configuration and Candidate dismiss
+            # Only explicit LLM configuration and audited Candidate
             # preview/commit routes may accept writes.
             write_routes = sorted(
                 {
@@ -227,13 +227,20 @@ class DashboardTests(unittest.TestCase):
                     "/llm/test",
                     "/pipeline/queue/{candidate_id}/dismiss/commit",
                     "/pipeline/queue/{candidate_id}/dismiss/preview",
+                    "/pipeline/queue/{candidate_id}/promote/commit",
+                    "/pipeline/queue/{candidate_id}/promote/preview",
+                    "/pipeline/queue/{candidate_id}/restore/commit",
+                    "/pipeline/queue/{candidate_id}/restore/preview",
                 ],
                 write_routes,
             )
             for route in app.routes:
                 methods = set(getattr(route, "methods", set())) - {"HEAD", "OPTIONS"}
-                if route.path.startswith("/llm") or route.path.startswith(
-                    "/pipeline/queue/{candidate_id}/dismiss/"
+                if route.path.startswith("/llm") or any(
+                    route.path.startswith(
+                        f"/pipeline/queue/{{candidate_id}}/{operation}/"
+                    )
+                    for operation in ("dismiss", "promote", "restore")
                 ):
                     continue
                 self.assertEqual({"GET"}, methods, route.path)
@@ -1628,6 +1635,10 @@ class IndustryHomeTests(unittest.TestCase):
                     "/llm/test",
                     "/pipeline/queue/{candidate_id}/dismiss/commit",
                     "/pipeline/queue/{candidate_id}/dismiss/preview",
+                    "/pipeline/queue/{candidate_id}/promote/commit",
+                    "/pipeline/queue/{candidate_id}/promote/preview",
+                    "/pipeline/queue/{candidate_id}/restore/commit",
+                    "/pipeline/queue/{candidate_id}/restore/preview",
                 ],
                 write_routes,
             )

@@ -1,6 +1,6 @@
 # Phase 6：Web 产品、持续运行、规模化与 v0.3 发布
 
-状态：`in_progress / release blocked`（F-026 Candidate dismiss 已完成；F-027～029 待实施；F-023 当前 16/21）
+状态：`in_progress / release blocked`（F-027A Candidate parity 已完成；F-027B～029 待实施；F-023 当前 16/21）
 建议周期：5–8 周 + 30 天真实 Pilot  
 前置：Phase 2–5 工程 Gate  
 
@@ -242,7 +242,7 @@ Health 必须覆盖：
 | F-024 | human release packet | review doc | reviewer/date/decision |
 | F-025 | final tag/release | release engineering | 仅在全 Gate 后 |
 | F-026 | Web mutation foundation | service/UI/audit | ✅ Candidate dismiss + preview/confirm/actor/version/audit/rollback |
-| F-027 | research workflow parity | Web UI | Candidate→Evidence→Impact/Analysis→Decision |
+| F-027 | research workflow parity | Web UI | F-027A ✅ Candidate dismiss/restore/promote；其余 Evidence→Impact/Analysis→Decision |
 | F-028 | operations/recovery parity | Web UI/services | jobs/backup/restore/release 无用户 CLI 依赖 |
 | F-029 | CLI retirement | package/docs | Web parity + recovery Gate 后移除产品 entry point |
 
