@@ -14,7 +14,7 @@ from research_os.services.scoring import (
 
 class ScoringTests(unittest.TestCase):
     def test_version_and_weights_are_configurable(self) -> None:
-        self.assertEqual(1, SCORING_VERSION)
+        self.assertEqual(2, SCORING_VERSION)
         self.assertEqual(6, len(DEFAULT_WEIGHTS))
         self.assertAlmostEqual(1.0, sum(DEFAULT_WEIGHTS.values()))
 
@@ -33,7 +33,7 @@ class ScoringTests(unittest.TestCase):
         )
         self.assertGreater(result["priority_score"], 0.7)
         self.assertEqual(SCORING_VERSION, result["scoring_version"])
-        self.assertEqual("deterministic-v1", result["model"])
+        self.assertEqual("deterministic-v2", result["model"])
         # reasons explain every dimension
         self.assertTrue(result["reason_codes"])
 

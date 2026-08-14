@@ -269,6 +269,7 @@ class DashboardTests(unittest.TestCase):
                         "/research-mutations/",
                         "/research-drafts/",
                         "/impact/proposals/",
+                        "/setup",
                     )
                 ) or any(
                     route.path.startswith(
@@ -290,6 +291,26 @@ class DashboardTests(unittest.TestCase):
                 404,
                 client.get("/source-assets/SRC-20260729-001/0").status_code,
             )
+
+    def test_navigation_tables_focus_and_batch_route_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            client = TestClient(create_app(root))
+            impact = client.get("/impact")
+            self.assertEqual(1, impact.text.count('aria-current="page"'))
+            self.assertIn('href="/impact" aria-current="page"', impact.text)
+            self.assertIn('class="table-scroll"', impact.text)
+            self.assertIn('tabindex="0"', impact.text)
+
+            batch = client.get("/pipeline/queue/batch")
+            self.assertEqual(200, batch.status_code)
+            self.assertNotIn('"detail":"batch"', batch.text)
+
+            styles = client.get("/static/styles.css").text
+            self.assertIn(":focus-visible", styles)
+            self.assertIn(".button-link", styles)
+            self.assertIn("--ok:", styles)
+            self.assertIn(".table-scroll", styles)
             self.assertEqual(404, client.get("/sources/SRC-99999999-999").status_code)
 
     def _seed_channel_and_candidates(self, root: Path) -> None:
@@ -496,6 +517,12 @@ class ResearchWorkspaceSnapshotTests(unittest.TestCase):
         snapshot = impact_explorer_snapshot(self.root, max_depth=3)
         self.assertEqual(3, snapshot["max_depth"])
         self.assertIn("direct_assertions", snapshot)
+        self.assertEqual([], snapshot["direct_assertions"])
+        self.assertEqual([], snapshot["paths"])
+        self.assertLessEqual(len(snapshot["trigger_events"]), 50)
+        self.assertGreaterEqual(
+            snapshot["trigger_event_total"], len(snapshot["trigger_events"])
+        )
         self.assertTrue(
             all(
                 row["review_status"] == "reviewed"
@@ -513,6 +540,32 @@ class ResearchWorkspaceSnapshotTests(unittest.TestCase):
         for depth in (0, 4):
             with self.assertRaisesRegex(ValueError, "between 1 and 3"):
                 impact_explorer_snapshot(self.root, max_depth=depth)
+        for limit, offset in ((0, 0), (51, 0), (10, -1)):
+            with self.assertRaises(ValueError):
+                impact_explorer_snapshot(
+                    self.root,
+                    trigger_limit=limit,
+                    trigger_offset=offset,
+                )
+
+    def test_impact_page_is_bounded_until_a_trigger_is_selected(self) -> None:
+        client = TestClient(create_app(self.root))
+        page = client.get("/impact")
+        self.assertEqual(200, page.status_code)
+        self.assertLess(len(page.content), 200_000)
+        self.assertIn("选择触发事件", page.text)
+        self.assertNotIn("每跳机制与 Evidence", page.text)
+        self.assertLessEqual(page.text.count("<tr>"), 60)
+
+        snapshot = impact_explorer_snapshot(self.root)
+        if snapshot["trigger_events"]:
+            event_id = snapshot["trigger_events"][0]["event_id"]
+            selected = client.get(f"/impact?start={event_id}&depth=3")
+            self.assertEqual(200, selected.status_code)
+            self.assertIn("每跳机制与 Evidence", selected.text)
+
+        self.assertEqual(422, client.get("/impact?limit=51").status_code)
+        self.assertEqual(422, client.get("/impact?offset=-1").status_code)
 
     def test_analysis_workspace_contract_and_compare(self) -> None:
         all_runs = analysis_workspace_snapshot(self.root)
@@ -683,12 +736,35 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
             "host",
             "config",
             "model_cost",
+            "web_identity",
         ):
             self.assertIn(key, snapshot)
         self.assertNotIn(sentinel, repr(snapshot))
         self.assertEqual("present", snapshot["config"]["OPENAI_API_KEY"])
         self.assertIn("free_bytes", snapshot["host"]["disk"])
         self.assertTrue(snapshot["host"]["timezone"])
+        self.assertIn(snapshot["web_identity"]["status"], {"ready", "uninitialized"})
+
+    def test_health_reports_ready_web_identity_without_secret(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            path = root / "00_System" / "web.local.json"
+            path.write_text(
+                json.dumps(
+                    {"researcher_id": "max", "mutation_signing_secret": "s" * 64}
+                ),
+                encoding="utf-8",
+            )
+            path.chmod(0o600)
+            snapshot = health_snapshot(root)
+            page = TestClient(create_app(root)).get("/health")
+        self.assertEqual(
+            {"status": "ready", "researcher_id": "max"},
+            snapshot["web_identity"],
+        )
+        self.assertNotIn("s" * 64, repr(snapshot))
+        self.assertIn("本机写入", page.text)
+        self.assertIn("max", page.text)
 
     def test_health_preserves_local_backup_fields_and_alerts_when_durable_missing(
         self,
@@ -1362,7 +1438,7 @@ def _seed_home_candidates(root: Path) -> None:
             connection.execute(
                 "UPDATE candidates SET priority_score = ?, model_version = ? "
                 "WHERE candidate_id = ?",
-                (score, "1", candidate_id),
+                (score, "deterministic-v2", candidate_id),
             )
         connection.commit()
     finally:

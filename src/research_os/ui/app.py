@@ -104,6 +104,7 @@ from research_os.services.web_decision_mutations import (
 from research_os.services.web_identity import (
     BrowserSessionRegistry,
     WebIdentity,
+    initialize_web_identity,
     load_web_identity,
 )
 from research_os.services.web_operations_mutations import (
@@ -542,7 +543,11 @@ def table(headers: list[str], rows: list[list[str]]) -> str:
     body = "".join(
         "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows
     )
-    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+    return (
+        '<div class="table-scroll" tabindex="0" role="region" '
+        'aria-label="Scrollable table">'
+        f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>"
+    )
 
 
 def metadata_grid(obj: ResearchObject) -> str:
@@ -560,6 +565,56 @@ def metadata_grid(obj: ResearchObject) -> str:
 
 def shell(title: str, content: str, *, project_id: str | None = None) -> str:
     project_query = f"?project={project_id}" if project_id else ""
+    nav_items = (
+        ("home", "/home", "产业首页"),
+        ("overview", "/", "概览"),
+        ("reviews", "/reviews", "评审队列"),
+        ("sources", "/sources", "来源"),
+        ("metrics", "/metrics", "指标"),
+        ("operations", "/operations", "运营"),
+        ("pipeline", "/pipeline", "管线"),
+        ("intel", "/companies", "产业"),
+        ("impact", "/impact", "影响"),
+        ("analysis", "/analysis", "分析"),
+        ("decision", "/decision", "决策"),
+        ("llm", "/llm", "模型"),
+        ("health", "/health", "健康"),
+    )
+    title_key = (
+        "home"
+        if title == "产业首页"
+        else "reviews"
+        if "评审" in title
+        else "sources"
+        if "来源" in title or title.startswith("SRC-")
+        else "metrics"
+        if title == "指标"
+        else "pipeline"
+        if title.startswith(("管线", "CND-", "CAND-", "Candidate Batch"))
+        else "intel"
+        if any(word in title for word in ("企业", "板块", "研究报告", "雷达"))
+        else "impact"
+        if title.startswith("影响")
+        else "analysis"
+        if title.startswith("分析")
+        else "decision"
+        if title.startswith("决策")
+        else "llm"
+        if "模型" in title
+        else "health"
+        if "健康" in title or "Release" in title or title == "本机初始化"
+        else "operations"
+        if any(
+            word in title for word in ("运营", "Operations", "Backup", "Jobs", "行动")
+        )
+        else "overview"
+    )
+    nav = "".join(
+        f'<a href="{href}{project_query}"'
+        + (' aria-current="page" class="active"' if key == title_key else "")
+        + f">{label}</a>"
+        for key, href, label in nav_items
+    )
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -578,19 +633,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
       <span>本地 · 可审计 · 研究工作区</span>
     </div>
     <nav aria-label="Primary">
-      <a href="/home{project_query}">产业首页</a>
-      <a href="/{project_query}">概览</a>
-      <a href="/reviews{project_query}">评审队列</a>
-      <a href="/sources{project_query}">来源</a>
-      <a href="/metrics{project_query}">指标</a>
-      <a href="/operations{project_query}">运营</a>
-      <a href="/pipeline{project_query}">管线</a>
-      <a href="/companies{project_query}">产业</a>
-      <a href="/impact{project_query}">影响</a>
-      <a href="/analysis{project_query}">分析</a>
-      <a href="/decision{project_query}">决策</a>
-      <a href="/llm{project_query}">模型</a>
-      <a href="/health{project_query}">健康</a>
+      {nav}
     </nav>
   </div>
 </header>
@@ -598,8 +641,23 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
 <footer class="shell">
   数据在请求时实时重建。写操作必须经过具名预览、确认与审计。
 </footer>
+<script>
+  document.querySelector('nav[aria-label="Primary"] [aria-current]')
+    ?.scrollIntoView({{block: "nearest", inline: "center"}});
+</script>
 </body>
 </html>"""
+
+
+def _read_only_setup_page(title: str, back_path: str) -> str:
+    return shell(
+        title,
+        f"""<section class="hero"><div><div class="eyebrow">只读模式</div>
+<h2>本机写入尚未初始化</h2>
+<p>浏览与诊断仍可使用。初始化本机研究者后即可使用预览、确认和审计写入。</p>
+<p><a class="button-link" href="/setup">初始化本机写入</a> · <a href="{esc(back_path)}">返回</a></p>
+</div></section>""",
+    )
 
 
 class DashboardRepository:
@@ -1617,6 +1675,14 @@ def _suggestion_panel(detail: dict[str, Any]) -> str:
     )
 
 
+def _read_only_inline() -> str:
+    return (
+        '<section class="panel"><h3>只读模式</h3>'
+        '<p>本机写入尚未初始化。<a href="/setup">前往初始化</a>后可使用候选操作。</p>'
+        "</section>"
+    )
+
+
 def _reviewed_evidence(
     repo: DashboardRepository,
     entity: dict[str, Any],
@@ -1752,6 +1818,7 @@ def _pipeline_candidate(
 <div class="mutation-actions"><button type="submit">预览提升</button></div>
 </form></section>"""
     panels = f"""<section class="panel"><h3>候选区</h3>{_candidate_facts(detail)}</section>
+{_read_only_inline() if csrf_token is None else ""}
 <section class="grid" style="margin-top:1rem">
 <div class="panel"><h3>实体建议</h3>{table(["字段", "值"], _proposal_rows(entity))}</div>
 <div class="panel"><h3>板块建议</h3>{table(["字段", "值"], _proposal_rows(sector))}</div>
@@ -2140,6 +2207,7 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
     ]
     disk = snapshot["host"]["disk"]
     model_cost = snapshot["model_cost"]
+    web_identity = snapshot["web_identity"]
     attention = any(
         (
             validation["status"] != "ok",
@@ -2171,6 +2239,7 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
 <div class="panel"><h3>备份</h3>{_kv_table([["本地状态", badge(backup["status"], warning=backup["status"] != "fresh")], ["本地 Age hours", esc(backup["age_hours"] if backup["age_hours"] is not None else "—")], ["本地 Manifest", esc(backup["manifest"] or "—")], ["Durable 状态", badge(durable["status"], warning=durable["status"] != "fresh")], ["Durable Age hours", esc(durable["age_hours"] if durable["age_hours"] is not None else "—")], ["Durable Receipt", esc(durable["receipt"] or "—")]])}</div>
 <div class="panel"><h3>磁盘与时区</h3>{_kv_table([["Free bytes", esc(disk["free_bytes"])], ["Disk status", badge(disk["status"], warning=disk["status"] != "ok")], ["Timezone", esc(snapshot["host"]["timezone"])]])}</div>
 <div class="panel"><h3>配置存在性</h3>{table(["配置", "状态"], config_rows)}</div>
+<div class="panel"><h3>本机写入</h3>{_kv_table([["状态", badge(web_identity["status"], warning=web_identity["status"] != "ready")], ["研究者", esc(web_identity["researcher_id"] or "—")], ["入口", '<a href="/setup">查看初始化状态</a>']])}</div>
 <div class="panel"><h3>模型与成本</h3>{_kv_table([["状态", badge(model_cost["status"], warning=model_cost["status"] in {"unconfigured", "no_data", "warning"}, danger=model_cost["status"] in {"exceeded", "invalid"})], ["周期", f"{esc(model_cost['period_start'])} - {esc(model_cost['period_end'])}"], ["已知成本", esc(model_cost["known_total"] if model_cost["known_total"] is not None else "—")], ["记录数", esc(model_cost["record_count"])], ["未知记录", esc(model_cost["unknown_record_count"])], ["无效记录", esc(model_cost["invalid_record_count"])], ["利用率", esc(model_cost["utilization"] if model_cost["utilization"] is not None else "—")], ["预算配置", badge("present" if model_cost["budget_configured"] else "missing", warning=not model_cost["budget_configured"])]])}</div>
 </section>"""
     return shell("健康", content, project_id=selected)
@@ -2590,8 +2659,8 @@ def _sector_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
   <div class="panel"><h3>预测</h3>{table(["预测", "状态"], forecast_rows)}</div>
 </section>
 <section class="panel full"><h3>成员覆盖完整度</h3>
-<table><thead><tr><th>企业</th><th>身份</th><th>证据</th><th>关联</th></tr></thead>
-<tbody>{"".join("<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>" for row in member_flag_rows)}</tbody></table>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>企业</th><th>身份</th><th>证据</th><th>关联</th></tr></thead>
+<tbody>{"".join("<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>" for row in member_flag_rows)}</tbody></table></div>
 </section>"""
     )
     return shell(f"{obj.object_id} · 板块", content)
@@ -2602,11 +2671,15 @@ def _impact_page(
     *,
     start_id: str | None = None,
     max_depth: int = 3,
+    trigger_limit: int = 50,
+    trigger_offset: int = 0,
 ) -> str:
     snapshot = impact_explorer_snapshot(
         repo.root,
         start_id=start_id,
         max_depth=max_depth,
+        trigger_limit=trigger_limit,
+        trigger_offset=trigger_offset,
     )
     direct_rows = [
         [
@@ -2655,6 +2728,22 @@ def _impact_page(
         ]
         for row in snapshot["conflicts"]
     ]
+    trigger_rows = [
+        [
+            f'<a href="/impact?start={esc(row["event_id"])}&depth={max_depth}">{esc(row["event_id"])}</a>',
+            esc(row["event_date"] or "—"),
+            esc(row["title"]),
+        ]
+        for row in snapshot["trigger_events"]
+    ]
+    previous_offset = max(0, trigger_offset - trigger_limit)
+    next_offset = trigger_offset + trigger_limit
+    trigger_pager = '<nav class="pagination" aria-label="Impact pagination">'
+    if trigger_offset:
+        trigger_pager += f'<a href="/impact?offset={previous_offset}&limit={trigger_limit}&depth={max_depth}">上一页</a>'
+    if next_offset < snapshot["trigger_event_total"]:
+        trigger_pager += f'<a href="/impact?offset={next_offset}&limit={trigger_limit}&depth={max_depth}">下一页</a>'
+    trigger_pager += "</nav>"
 
     def text_list(values: list[str], empty: str) -> str:
         if not values:
@@ -2672,10 +2761,11 @@ def _impact_page(
 <div class="metric"><strong>{esc(len(snapshot["direct_assertions"]))}</strong><span>reviewed 直接断言</span></div>
 <div class="metric"><strong>{esc(len(snapshot["conflicts"]))}</strong><span>冲突</span></div>
 </section>
+{f'<section class="panel"><h3>选择触发事件</h3><p class="muted">共 {esc(snapshot["trigger_event_total"])} 个 reviewed 起点；选择后展开路径。</p>{table(["Event", "日期", "标题"], trigger_rows)}{trigger_pager}</section>' if start_id is None else '<p><a href="/impact">← 返回触发事件列表</a></p>'}
 <section class="panel"><h3>直接断言</h3>
 {table(["ID", "触发", "Target", "谓词/类型", "机制", "Evidence", "方向/Horizon", "置信度"], direct_rows) if direct_rows else "<p class='muted'>当前无 reviewed 直接断言；pending 断言未混入。</p>"}</section>
 <section class="panel"><h3>1–3 跳路径</h3>
-{table(["Event", "实体序列", "每跳机制与 Evidence", "最弱环节置信度", "变体"], path_rows) if path_rows else "<p class='muted'>当前 reviewed 关系未形成可展开路径。</p>"}</section>
+{table(["Event", "实体序列", "每跳机制与 Evidence", "最弱环节置信度", "变体"], path_rows) if start_id is not None and path_rows else "<p class='muted'>请选择一个 reviewed 触发事件后展开路径。</p>"}</section>
 <section class="grid">
 <div class="panel"><h3>剪枝原因</h3>{table(["原因", "位置", "详情"], pruning_rows) if pruning_rows else "<p class='muted'>无剪枝。</p>"}</div>
 <div class="panel"><h3>冲突信号</h3>{table(["Target", "方向", "Horizon", "冲突"], conflict_rows) if conflict_rows else "<p class='muted'>未检测到正负或多时间跨度冲突。</p>"}</div>
@@ -2951,7 +3041,7 @@ def _decision_detail(
 <div class="eyebrow">{esc(title)}</div><h2>{esc(object_id)}</h2>
 </div></section>
 <section class="panel"><h3>元数据</h3>
-<table><tbody>{meta_lines}</tbody></table></section>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><tbody>{meta_lines}</tbody></table></div></section>
 <section class="panel"><pre>{body}</pre></section>"""
     return shell(f"{title} · {object_id}", content)
 
@@ -3075,11 +3165,11 @@ def _analysis_mode_detail(repo: DashboardRepository, mode_id: str) -> str:
 <div class="panel"><h3>必答问题</h3><ul>{questions or "<li class='muted'>—</li>"}</ul>
 <h3>必输分区</h3><ul>{sections or "<li class='muted'>—</li>"}</ul></div>
 <div class="panel full"><h3>政策</h3>
-<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody>
 <tr><td>假设</td><td>{esc(meta["assumption_policy"] or "—")}</td></tr>
 <tr><td>证据</td><td>{esc(meta["evidence_policy"] or "—")}</td></tr>
 <tr><td>反证</td><td>{esc(meta["counterevidence_policy"] or "—")}</td></tr>
-</tbody></table></div>
+</tbody></table></div></div>
 <div class="panel full"><h3>禁止结论</h3><ul>{banned or "<li class='muted'>—</li>"}</ul></div>
 </section>"""
     return shell(f"分析 {mode_id}", content)
@@ -3588,6 +3678,42 @@ def create_app(root: Path) -> FastAPI:
         content = Path(__file__).with_name("styles.css").read_text(encoding="utf-8")
         return PlainTextResponse(content, media_type="text/css")
 
+    @app.get("/setup", response_class=HTMLResponse)
+    def setup_page() -> HTMLResponse:
+        identity = load_web_identity(repo.root)
+        if identity is not None:
+            content = f"""<section class="hero"><div><div class="eyebrow">本机单用户</div>
+<h2>已初始化</h2><p>当前研究者：{esc(identity.researcher_id)}</p>
+<p><a href="/health">查看系统健康</a></p></div></section>"""
+        else:
+            content = """<section class="hero"><div><div class="eyebrow">本机单用户</div>
+<h2>初始化写入功能</h2><p>配置仅保存在本机，不设置密码、账号或角色。</p>
+<form method="post" action="/setup">
+<label for="researcher-id">研究者名称</label>
+<input id="researcher-id" name="researcher_id" value="max" maxlength="128" required>
+<button type="submit">初始化</button></form></div></section>"""
+        return HTMLResponse(shell("本机初始化", content))
+
+    @app.post("/setup")
+    async def setup_initialize(request: Request) -> RedirectResponse:
+        host = request.url.hostname
+        expected_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
+        if (
+            host not in _LOOPBACK_HOSTS
+            or request.headers.get("origin") != expected_origin
+        ):
+            raise HTTPException(status_code=403, detail="setup request forbidden")
+        form = await _urlencoded_form(request)
+        if set(form) != {"researcher_id"}:
+            raise HTTPException(status_code=422, detail="invalid setup input")
+        try:
+            initialize_web_identity(repo.root, form["researcher_id"])
+        except FileExistsError as exc:
+            raise HTTPException(status_code=409, detail="already initialized") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="invalid setup input") from exc
+        return RedirectResponse("/health", status_code=303)
+
     @app.get("/", response_class=HTMLResponse)
     def overview(project: str | None = Query(default=None)) -> HTMLResponse:
         try:
@@ -3784,6 +3910,17 @@ def create_app(root: Path) -> FastAPI:
                 offset,
                 show_dups,
             )
+        )
+
+    @app.get("/pipeline/queue/batch", response_class=HTMLResponse)
+    def candidate_batch_form(request: Request) -> HTMLResponse:
+        return decision_form_response(
+            request,
+            title="Candidate Batch",
+            eyebrow="Operational human",
+            action="/pipeline/queue/batch/preview",
+            back_path="/pipeline/queue",
+            example={"job_name": "enrich", "as_of": date.today().isoformat()},
         )
 
     @app.get("/pipeline/queue/{candidate_id}", response_class=HTMLResponse)
@@ -4188,9 +4325,19 @@ def create_app(root: Path) -> FastAPI:
         project: str | None = Query(default=None),
         start: str | None = Query(default=None),
         depth: int = Query(default=3, ge=1, le=3),
+        limit: int = Query(default=50, ge=1, le=50),
+        offset: int = Query(default=0, ge=0),
     ) -> HTMLResponse:
         try:
-            return HTMLResponse(_impact_page(repo, start_id=start, max_depth=depth))
+            return HTMLResponse(
+                _impact_page(
+                    repo,
+                    start_id=start,
+                    max_depth=depth,
+                    trigger_limit=limit,
+                    trigger_offset=offset,
+                )
+            )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -4485,9 +4632,7 @@ def create_app(root: Path) -> FastAPI:
     def operations_jobs(request: Request) -> HTMLResponse:
         identity = load_web_identity(repo.root)
         if identity is None:
-            raise HTTPException(
-                status_code=503, detail="Web mutation identity is unavailable"
-            )
+            return HTMLResponse(_read_only_setup_page("Operations Jobs", "/operations"))
         rows = []
         try:
             from research_os.services.jobs import job_rows
@@ -4598,17 +4743,6 @@ def create_app(root: Path) -> FastAPI:
             f"/research-mutations/{result['target_id']}", status_code=303
         )
 
-    @app.get("/pipeline/queue/batch", response_class=HTMLResponse)
-    def candidate_batch_form(request: Request) -> HTMLResponse:
-        return decision_form_response(
-            request,
-            title="Candidate Batch",
-            eyebrow="Operational human",
-            action="/pipeline/queue/batch/preview",
-            back_path="/pipeline/queue",
-            example={"job_name": "enrich", "as_of": date.today().isoformat()},
-        )
-
     @app.post("/pipeline/queue/batch/preview", response_class=HTMLResponse)
     async def candidate_batch_preview(request: Request) -> HTMLResponse:
         return await structured_preview_response(
@@ -4675,9 +4809,7 @@ def create_app(root: Path) -> FastAPI:
     def source_create_form(request: Request) -> HTMLResponse:
         identity = load_web_identity(repo.root)
         if identity is None:
-            raise HTTPException(
-                status_code=503, detail="Web mutation identity is unavailable"
-            )
+            return HTMLResponse(_read_only_setup_page("创建来源", "/sources"))
         session_id, csrf_token = sessions.issue()
         response = HTMLResponse(_source_create_page(csrf_token))
         response.set_cookie(
@@ -4763,8 +4895,8 @@ def create_app(root: Path) -> FastAPI:
     def source_workbench(source_id: str, request: Request) -> HTMLResponse:
         identity = load_web_identity(repo.root)
         if identity is None:
-            raise HTTPException(
-                status_code=503, detail="Web mutation identity is unavailable"
+            return HTMLResponse(
+                _read_only_setup_page("来源工作台", f"/sources/{source_id}")
             )
         session_id, csrf_token = sessions.issue()
         try:
@@ -4935,9 +5067,7 @@ def create_app(root: Path) -> FastAPI:
     ) -> HTMLResponse:
         identity = load_web_identity(repo.root)
         if identity is None:
-            raise HTTPException(
-                status_code=503, detail="Web mutation identity is unavailable"
-            )
+            return HTMLResponse(_read_only_setup_page("写入入口", "/"))
         session_id, csrf_token = sessions.issue()
         response = HTMLResponse(renderer(repo, csrf_token))
         response.set_cookie(
@@ -5230,8 +5360,8 @@ action="/projects/{esc(project_id)}/advance/preview">
     def action_close_form(action_id: str, request: Request) -> HTMLResponse:
         identity = load_web_identity(repo.root)
         if identity is None:
-            raise HTTPException(
-                status_code=503, detail="Web mutation identity is unavailable"
+            return HTMLResponse(
+                _read_only_setup_page("关闭行动", "/operations/actions")
             )
         objects, _ = validate_repository(repo.root)
         if not any(

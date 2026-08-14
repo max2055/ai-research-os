@@ -11,7 +11,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-SCORING_VERSION = 1
+SCORING_VERSION = 2
+SCORING_MODEL = f"deterministic-v{SCORING_VERSION}"
 
 # Configurable, versioned weights (Phase 2 §5.3: 权重必须配置化、版本化).
 # Positive dimensions sum to 1.0; penalties are subtracted after weighting.
@@ -143,5 +144,5 @@ def score_candidate(
         "subscores": subscores,
         "priority_score": priority,
         "reason_codes": reasons,
-        "model": "deterministic-v1",
+        "model": SCORING_MODEL,
     }

@@ -550,11 +550,18 @@ def impact_explorer_snapshot(
     *,
     start_id: str | None = None,
     max_depth: int = 3,
+    trigger_limit: int = 50,
+    trigger_offset: int = 0,
+    objects: list[ResearchObject] | None = None,
 ) -> dict[str, Any]:
-    """Return reviewed direct assertions and explainable 1-3 hop paths."""
+    """Return a bounded trigger list or one event's explainable 1-3 hop paths."""
     if max_depth < 1 or max_depth > 3:
         raise ValueError("max_depth must be between 1 and 3")
-    objects = _validated_objects(root, "Impact Explorer")
+    if trigger_limit < 1 or trigger_limit > 50:
+        raise ValueError("trigger_limit must be between 1 and 50")
+    if trigger_offset < 0:
+        raise ValueError("trigger_offset must be non-negative")
+    objects = objects or _validated_objects(root, "Impact Explorer")
     by_id = {obj.object_id: obj for obj in objects}
     if start_id is not None:
         start = by_id.get(start_id)
@@ -575,22 +582,27 @@ def impact_explorer_snapshot(
         key=lambda obj: obj.object_id,
     )
     direct = [_impact_row(obj) for obj in assertions]
-    event_ids = (
-        [start_id]
-        if start_id is not None
-        else sorted(
-            {
-                str(evidence_id)
-                for obj in objects
-                if obj.object_type == "ontology_assertion"
-                and obj.metadata.get("review_status") == "reviewed"
-                for evidence_id in _str_list(obj.metadata.get("evidence_ids"))
-                if evidence_id in by_id
-                and by_id[evidence_id].object_type == "event"
-                and by_id[evidence_id].metadata.get("review_status") == "reviewed"
-            }
-        )
+    all_event_ids = sorted(
+        {
+            str(evidence_id)
+            for obj in objects
+            if obj.object_type == "ontology_assertion"
+            and obj.metadata.get("review_status") == "reviewed"
+            for evidence_id in _str_list(obj.metadata.get("evidence_ids"))
+            if evidence_id in by_id
+            and by_id[evidence_id].object_type == "event"
+            and by_id[evidence_id].metadata.get("review_status") == "reviewed"
+        }
     )
+    trigger_events = [
+        {
+            "event_id": event_id,
+            "title": str(by_id[event_id].metadata.get("title") or event_id),
+            "event_date": str(by_id[event_id].metadata.get("event_date") or ""),
+        }
+        for event_id in all_event_ids[trigger_offset : trigger_offset + trigger_limit]
+    ]
+    event_ids = [start_id] if start_id is not None else []
     paths: list[dict[str, Any]] = []
     pruning: list[dict[str, Any]] = []
     for event_id in event_ids:
@@ -657,6 +669,10 @@ def impact_explorer_snapshot(
     return {
         "start_id": start_id,
         "max_depth": max_depth,
+        "trigger_events": trigger_events,
+        "trigger_event_total": len(all_event_ids),
+        "trigger_limit": trigger_limit,
+        "trigger_offset": trigger_offset,
         "total_assertions": sum(
             1 for obj in objects if obj.object_type == "impact_assertion"
         ),

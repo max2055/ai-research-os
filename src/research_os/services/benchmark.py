@@ -804,7 +804,11 @@ def benchmark_dashboard(root: Path, *, repeats: int = 5) -> DashboardBenchmark:
         "candidate_queue": lambda: queue_rows(root, limit=200),
         "company": lambda: company_snapshot(root, companies[0]),
         "sector": lambda: sector_snapshot(root, sectors[0]),
-        "impact_3_hop": lambda: impact_explorer_snapshot(root, max_depth=3),
+        "impact_3_hop": lambda: impact_explorer_snapshot(
+            root,
+            max_depth=3,
+            objects=objects,
+        ),
         "validate": lambda: validate_repository(root),
         "index_render": lambda: (
             render_indexes(objects),

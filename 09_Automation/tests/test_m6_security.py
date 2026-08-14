@@ -150,6 +150,7 @@ class DashboardSecurityTests(unittest.TestCase):
                 "/pipeline/channels/{channel_id}/change/preview",
                 "/pipeline/queue/batch/preview",
                 "/pipeline/queue/batch/commit",
+                "/setup",
             },
             write_routes,
         )

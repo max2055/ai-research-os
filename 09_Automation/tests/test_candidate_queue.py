@@ -221,6 +221,61 @@ class CandidateQueueTests(unittest.TestCase):
             self.assertEqual([], rerun)
             self.assertEqual(first, self._priority(root, "CND-0000"))
 
+    def test_rescore_recomputes_only_new_candidates_and_dry_run_is_read_only(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(root, ["Test Co HBM Production", "Test Co HBM Production"])
+            enrich_candidates(root, apply=True)
+            db_path = candidate_db.candidate_db_path(root)
+            connection = sqlite3.connect(db_path)
+            try:
+                connection.execute(
+                    "UPDATE candidates SET priority_score = 0.999, "
+                    "entity_proposals_json = '{}', sector_proposals_json = '{}', "
+                    "model_version = 'deterministic-v1'"
+                )
+                connection.execute(
+                    "UPDATE candidates SET status = 'promoted' "
+                    "WHERE candidate_id = 'CND-0001'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            preview = enrich_candidates(root, apply=False, rescore=True)
+            self.assertEqual(["CND-0000"], [row["candidate_id"] for row in preview])
+            self.assertEqual(0.999, self._priority(root, "CND-0000"))
+
+            applied = enrich_candidates(root, apply=True, rescore=True)
+            self.assertEqual(["CND-0000"], [row["candidate_id"] for row in applied])
+            connection = sqlite3.connect(db_path)
+            try:
+                rows = connection.execute(
+                    "SELECT candidate_id, status, priority_score, model_version, "
+                    "entity_proposals_json FROM candidates ORDER BY candidate_id"
+                ).fetchall()
+            finally:
+                connection.close()
+            self.assertNotEqual(0.999, rows[0][2])
+            self.assertEqual("deterministic-v2", rows[0][3])
+            self.assertIn("COM-test", rows[0][4])
+            self.assertEqual(
+                ("CND-0001", "promoted", 0.999, "deterministic-v1", "{}"),
+                rows[1],
+            )
+
+    def test_current_model_version_exposes_score_breakdown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(root, ["Test Co HBM Production"])
+            enrich_candidates(root, apply=True)
+            detail = queue_show(root, "CND-0000")
+            assert detail is not None
+            self.assertIsNotNone(detail["scoring"])
+            self.assertEqual(detail["model_version"], detail["scoring"]["model"])
+
     def test_queue_sorts_by_priority_and_filters(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = self._make_root(temp)
@@ -474,6 +529,16 @@ class CandidateQueueTests(unittest.TestCase):
             self.assertIn("Second", result.stdout)
             self.assertNotIn("First", result.stdout)
             self.assertNotIn("Third", result.stdout)
+
+    def test_candidate_enrich_cli_accepts_rescore_preview(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._make_root(temp)
+            self._insert(root, ["Test Co HBM Production"])
+            enrich_candidates(root, apply=True)
+            result = run_cli(root, "candidates", "enrich", "--rescore")
+            self.assertEqual(0, result.returncode, result.stdout)
+            self.assertIn("CND-0000", result.stdout)
+            self.assertIn("DRY-RUN", result.stdout)
 
 
 if __name__ == "__main__":

@@ -23,6 +23,7 @@ class EntityResolutionTests(unittest.TestCase):
             _FakeCompany("COM-tsmc", {"title": "TSMC", "aliases": ["台积电"]}),
             _FakeCompany("COM-sk-hynix", {"title": "SK hynix", "aliases": []}),
             _FakeCompany("COM-microsoft", {"title": "Microsoft", "aliases": ["MSFT"]}),
+            _FakeCompany("COM-servicenow", {"title": "ServiceNow", "aliases": ["NOW"]}),
             _FakeCompany(
                 "COM-aliyun",
                 {"title": "Alibaba Cloud (阿里云)", "aliases": []},
@@ -41,6 +42,20 @@ class EntityResolutionTests(unittest.TestCase):
         result = resolve(index, title="MSFT Azure AI infrastructure investment")
         self.assertEqual("matched", result["status"])
         self.assertEqual("COM-microsoft", result["entity_id"])
+
+    def test_short_alias_requires_a_complete_token(self) -> None:
+        index = self._index()
+        result = resolve(
+            index,
+            title="Information Abundance Eliminates Parametric Knowledge",
+        )
+        self.assertEqual("unknown", result["status"])
+
+        ticker = resolve(index, title="NOW reports earnings")
+        self.assertEqual("COM-servicenow", ticker["entity_id"])
+
+        company_name = resolve(index, title="ServiceNow launches an AI agent platform")
+        self.assertEqual("COM-servicenow", company_name["entity_id"])
 
     def test_matched_by_chinese_name(self) -> None:
         index = self._index()

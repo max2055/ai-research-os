@@ -7,6 +7,7 @@ import hmac
 import json
 import os
 import secrets
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -22,6 +23,42 @@ _MIN_SIGNING_SECRET_LENGTH = 32
 class WebIdentity:
     researcher_id: str
     mutation_signing_secret: bytes
+
+
+def initialize_web_identity(root: Path, researcher_id: str) -> str:
+    """Create the one local Web identity atomically; never replace an existing one."""
+    normalized_id = " ".join(researcher_id.split())
+    if not 1 <= len(normalized_id) <= _MAX_RESEARCHER_ID_LENGTH:
+        raise ValueError("researcher_id must contain 1-128 characters")
+    path = root.resolve() / _CONFIG_PATH
+    if path.exists():
+        raise FileExistsError("Web identity is already initialized")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    value = {
+        "researcher_id": normalized_id,
+        "mutation_signing_secret": secrets.token_urlsafe(48),
+    }
+    descriptor, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temp_path = Path(temp_name)
+    try:
+        if os.name == "posix":
+            os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            temp_path.replace(path)
+        except OSError:
+            if path.exists():
+                raise FileExistsError("Web identity is already initialized") from None
+            raise
+        if os.name == "posix":
+            path.chmod(0o600)
+        return normalized_id
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
 
 
 def load_web_identity(root: Path) -> WebIdentity | None:

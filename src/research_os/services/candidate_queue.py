@@ -17,7 +17,7 @@ from typing import Any
 from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
 from research_os.services.entity_resolution import EntityIndex, resolve
-from research_os.services.scoring import SCORING_VERSION, score_candidate
+from research_os.services.scoring import SCORING_MODEL, score_candidate
 from research_os.services.sector_classification import SectorIndex, classify
 from research_os.services.validation import validate_repository
 
@@ -132,11 +132,13 @@ def enrich_candidates(
     db_path: Path | None = None,
     *,
     apply: bool = False,
+    rescore: bool = False,
 ) -> list[dict[str, Any]]:
     """Backfill entity/sector/priority proposals for unscored new candidates.
 
-    Deterministic and idempotent: only candidates with ``status='new'`` and
-    ``priority_score IS NULL`` are touched, so re-runs converge. Without
+    Deterministic and idempotent: normally only unscored ``new`` candidates are
+    touched. ``rescore`` recomputes every ``new`` candidate after a model or
+    classifier change, while preserving promoted/dismissed/expired rows. Without
     ``apply`` the computed proposals are returned (dry-run); with ``apply``
     they are written to the operational store. Proposals never change
     reviewed facts.
@@ -164,10 +166,11 @@ def enrich_candidates(
 
     connection = _connect(db_path)
     try:
+        scoring_filter = "" if rescore else "AND priority_score IS NULL "
         rows = connection.execute(
             "SELECT candidate_id, channel_id, title, publisher, "
             "duplicate_cluster_id, created_at FROM candidates "
-            "WHERE status = 'new' AND priority_score IS NULL "
+            f"WHERE status = 'new' {scoring_filter}"
             "ORDER BY created_at ASC, candidate_id ASC"
         ).fetchall()
         clusters = _cluster_stats(connection)
@@ -388,7 +391,7 @@ def _recompute_scoring(
     so recompute via :func:`score_candidate` when the stored model version
     matches the current scoring version; return ``None`` on mismatch.
     """
-    if str(detail.get("model_version") or "") != str(SCORING_VERSION):
+    if str(detail.get("model_version") or "") != SCORING_MODEL:
         return None
     channel = next(
         (

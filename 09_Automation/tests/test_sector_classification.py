@@ -33,7 +33,10 @@ class SectorClassificationTests(unittest.TestCase):
             ),
             _FakeSector(
                 "SEG-foundry-packaging-test",
-                {"in_scope": ["foundry", "advanced-packaging"], "definition": ""},
+                {
+                    "in_scope": ["foundry", "advanced-packaging", "test"],
+                    "definition": "edge, network",
+                },
             ),
         ]
         return SectorIndex.from_objects(sectors)
@@ -68,6 +71,14 @@ class SectorClassificationTests(unittest.TestCase):
         reasons = result["reasons"]["SEG-memory-storage"]
         self.assertIn("dram", reasons)
         self.assertIn("nand", reasons)
+
+    def test_keywords_require_complete_tokens(self) -> None:
+        index = self._index()
+        result = classify(
+            index,
+            title="Knowledge contest improves networking systems",
+        )
+        self.assertEqual([], result["sector_ids"])
 
 
 if __name__ == "__main__":

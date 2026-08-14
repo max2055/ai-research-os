@@ -20,6 +20,13 @@ def _normalize(text: str) -> str:
     return _NON_TEXT_RE.sub(" ", lowered).strip()
 
 
+def _contains_keyword(haystack: str, keyword: str) -> bool:
+    if re.search(r"[一-鿿]", keyword):
+        return keyword in haystack
+    phrase = r"\s+".join(re.escape(token) for token in keyword.split())
+    return bool(re.search(rf"(?<!\w){phrase}(?:\d+)?(?![a-z_\d])", haystack))
+
+
 @dataclass(frozen=True)
 class SectorIndex:
     """Keyword -> sector id lookup built from the Universe."""
@@ -47,13 +54,6 @@ class SectorIndex:
                 if not normalized:
                     continue
                 by_keyword[normalized] = sector_id
-                spaced = normalized.replace("-", " ")
-                if spaced != normalized:
-                    by_keyword[spaced] = sector_id
-                # "enterprise storage" -> also index each significant token
-                for token in normalized.split():
-                    if len(token) >= 3:
-                        by_keyword.setdefault(token, sector_id)
         return cls(by_keyword=by_keyword)
 
 
@@ -71,7 +71,7 @@ def classify(
     haystack = _normalize(f"{title} {publisher}")
     matched: dict[str, list[str]] = {}
     for keyword, sector_id in index.by_keyword.items():
-        if keyword and keyword in haystack:
+        if keyword and _contains_keyword(haystack, keyword):
             matched.setdefault(sector_id, []).append(keyword)
     return {
         "sector_ids": sorted(matched),

@@ -25,6 +25,7 @@ from research_os.services.mutation_gateway import (
 )
 from research_os.services.web_identity import (
     BrowserSessionRegistry,
+    initialize_web_identity,
     load_web_identity,
 )
 from research_os.ui.app import _commit_candidate_dismiss, create_app
@@ -82,6 +83,20 @@ class WebIdentityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             self.assertIsNone(load_web_identity(root))
+
+    def test_initialize_identity_is_private_generated_and_not_overwritten(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            researcher_id = initialize_web_identity(root, "  max  ")
+            self.assertEqual("max", researcher_id)
+            path = root / "00_System" / "web.local.json"
+            self.assertEqual(0, path.stat().st_mode & 0o077)
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual("max", raw["researcher_id"])
+            self.assertGreaterEqual(len(raw["mutation_signing_secret"]), 32)
+            self.assertNotIn(raw["mutation_signing_secret"], researcher_id)
+            with self.assertRaisesRegex(FileExistsError, "already initialized"):
+                initialize_web_identity(root, "other")
             path = self._write_config(root, signing_secret="short")
             self.assertIsNone(load_web_identity(root))
             path.write_text("{not-json", encoding="utf-8")
@@ -469,6 +484,7 @@ class CandidateDismissHttpTests(unittest.TestCase):
             detail = client.get("/pipeline/queue/CND-web-1")
             self.assertEqual(200, detail.status_code)
             self.assertNotIn("驳回候选", detail.text)
+            self.assertIn("/setup", detail.text)
             response = client.post(
                 "/pipeline/queue/CND-web-1/dismiss/preview",
                 data={"reason": "noise", "csrf_token": "missing"},
@@ -476,6 +492,54 @@ class CandidateDismissHttpTests(unittest.TestCase):
             )
             self.assertEqual(503, response.status_code)
             self.assertEqual(("new", 0, 0, 0), self._status_and_counts(root))
+
+    def test_setup_initializes_local_identity_and_write_entry_degrades_to_html(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._configured_root(temp, configured=False)
+            client = self._client(root)
+            setup = client.get("/setup")
+            self.assertEqual(200, setup.status_code)
+            self.assertIn('name="researcher_id"', setup.text)
+
+            source_form = client.get("/sources/new")
+            self.assertEqual(200, source_form.status_code)
+            self.assertIn("只读模式", source_form.text)
+            self.assertIn('href="/setup"', source_form.text)
+
+            initialized = client.post(
+                "/setup",
+                data={"researcher_id": "max"},
+                headers={"Origin": "http://127.0.0.1"},
+                follow_redirects=False,
+            )
+            self.assertEqual(303, initialized.status_code)
+            self.assertEqual("/health", initialized.headers["location"])
+            identity = load_web_identity(root)
+            self.assertIsNotNone(identity)
+            assert identity is not None
+            self.assertEqual("max", identity.researcher_id)
+
+            ready = client.get("/setup")
+            self.assertIn("已初始化", ready.text)
+            second = client.post(
+                "/setup",
+                data={"researcher_id": "other"},
+                headers={"Origin": "http://127.0.0.1"},
+            )
+            self.assertEqual(409, second.status_code)
+
+    def test_setup_rejects_non_loopback_request(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._configured_root(temp, configured=False)
+            hostile = TestClient(create_app(root), base_url="http://research.example")
+            response = hostile.post(
+                "/setup",
+                data={"researcher_id": "max"},
+                headers={"Origin": "http://research.example"},
+            )
+            self.assertEqual(403, response.status_code)
 
     def test_origin_host_session_and_csrf_are_all_required(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

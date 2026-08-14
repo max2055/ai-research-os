@@ -405,6 +405,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="backfill entity/sector/score proposals for unscored candidates",
     )
     candidates_enrich.add_argument("--apply", action="store_true")
+    candidates_enrich.add_argument(
+        "--rescore",
+        action="store_true",
+        help="recompute proposals for every new candidate",
+    )
     impact = subparsers.add_parser("impact", help="Impact Assertions (C-014)")
     impact_commands = impact.add_subparsers(dest="impact_command", required=True)
     impact_graph = impact_commands.add_parser(
@@ -1426,6 +1431,7 @@ def main() -> int:
             enriched = runtime.enrich_candidates(
                 args.root.resolve(),
                 apply=args.apply,
+                rescore=args.rescore,
             )
             print(runtime.render_enrichment(enriched, applied=args.apply), end="")
             return 0

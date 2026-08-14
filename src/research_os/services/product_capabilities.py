@@ -46,7 +46,7 @@ PRODUCT_CAPABILITIES = (
     *_capabilities(
         ("doctor", "validate", "index", "status", "scale"),
         owner="system_health",
-        route="/health",
+        route=("/health", "/setup"),
         authority="read",
         feature="F-028",
     ),

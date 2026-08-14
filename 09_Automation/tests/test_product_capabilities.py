@@ -109,6 +109,7 @@ class ProductCapabilityTests(unittest.TestCase):
                 "/pipeline/queue/batch/commit",
                 "/operations/discovery/run/preview",
                 "/operations/discovery/run/commit",
+                "/setup",
             },
             routes,
         )

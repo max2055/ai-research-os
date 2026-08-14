@@ -58,6 +58,14 @@ def _normalize(text: str) -> str:
     return _NON_TEXT_RE.sub(" ", lowered).strip()
 
 
+def _contains_name(haystack: str, name: str) -> bool:
+    """Match CJK names by substring and Latin names by complete token phrase."""
+    if re.search(r"[一-鿿]", name):
+        return name in haystack
+    phrase = r"\s+".join(re.escape(token) for token in name.split())
+    return bool(re.search(rf"(?<!\w){phrase}(?!\w)", haystack))
+
+
 def resolve(
     index: EntityIndex,
     *,
@@ -73,7 +81,7 @@ def resolve(
     haystack_norm = _normalize(haystack)
     matched: dict[str, str] = {}
     for name, entity_id in index.by_name.items():
-        if name and name in haystack_norm:
+        if name and _contains_name(haystack_norm, name):
             matched[name] = entity_id
 
     unique_entities = set(matched.values())

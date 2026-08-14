@@ -32,6 +32,7 @@ from research_os.services.ingestion import verify_source_assets
 from research_os.services.projects import objects_for_project
 from research_os.services.recommendation import recommendation_freshness
 from research_os.services.validation import validate_repository
+from research_os.services.web_identity import load_web_identity
 
 _SECRET_KEYS = (
     "OPENAI_API_KEY",
@@ -359,6 +360,7 @@ def health_snapshot(
         as_of=now_dt.date().isoformat(),
         budget=cost_budget,
     )
+    web_identity = load_web_identity(root)
     return {
         "generated_at": now_dt.isoformat(),
         "validation": {
@@ -403,6 +405,10 @@ def health_snapshot(
             "timezone": timezone,
         },
         "config": config,
+        "web_identity": {
+            "status": "ready" if web_identity is not None else "uninitialized",
+            "researcher_id": web_identity.researcher_id if web_identity else None,
+        },
         "model_cost": {
             "status": cost.status,
             "period_start": cost.period_start,
