@@ -1,7 +1,7 @@
 # Web-Hosted Worker Scheduler Design
 
 Date: 2026-08-17
-Status: draft - awaiting user review
+Status: approved by user on 2026-08-17
 Scope: Replace macOS launchd scheduling and Markdown runtime configuration with a
 website-hosted worker and database control plane.
 
