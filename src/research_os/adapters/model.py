@@ -19,6 +19,7 @@ or the ``DEEPSEEK_API_KEY`` env var, and its request/response handling lives in
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Protocol, cast
 
 from research_os.llm import llm_adapter, llm_config, provider_catalog
@@ -78,12 +79,14 @@ class DeepSeekAdapter:
         base_url: str | None = None,
         api_format: str | None = None,
         key: str | None = None,
+        config_path: Path | None = None,
         timeout: float | None = None,
     ) -> None:
         preset = provider_catalog.get_preset("deepseek")
         self.base_url = base_url or preset.base_url
         self.api_format = api_format or preset.api_format
         self.key = key
+        self.config_path = config_path
         self.timeout = timeout or preset.timeout
         self._default_model = preset.default_model
         self._default_params = dict(preset.default_params)
@@ -96,7 +99,7 @@ class DeepSeekAdapter:
         model_id: str | None = None,
         model_parameters: dict[str, Any] | None = None,
     ) -> str:
-        key = self.key or llm_config.get_api_key(provider="deepseek")
+        key = self.key or llm_config.get_api_key(self.config_path, provider="deepseek")
         if not key:
             raise ValueError(
                 "DeepSeek API key is not configured. Save it in the /llm "
@@ -139,8 +142,10 @@ MODEL_ADAPTERS: dict[str, type[Any]] = {
 }
 
 
-def build_adapter(provider: str) -> ModelAdapter:
+def build_adapter(provider: str, *, config_path: Path | None = None) -> ModelAdapter:
     adapter_type = MODEL_ADAPTERS.get(provider)
     if adapter_type is None:
         raise UnknownProvider(provider)
+    if adapter_type is DeepSeekAdapter:
+        return cast(ModelAdapter, adapter_type(config_path=config_path))
     return cast(ModelAdapter, adapter_type())

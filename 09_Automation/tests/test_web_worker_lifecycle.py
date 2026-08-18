@@ -56,7 +56,12 @@ def _start_server(root: Path, port: int) -> subprocess.Popen[str]:
 import sys
 from pathlib import Path
 from research_os.ui.app import run_ui
-run_ui(Path(sys.argv[1]), host='127.0.0.1', port=int(sys.argv[2]))
+run_ui(
+    Path(sys.argv[1]),
+    host='127.0.0.1',
+    port=int(sys.argv[2]),
+    enforce_runtime_preflight=False,
+)
 """
     env = os.environ.copy()
     env["PYTHONPATH"] = str(source_root)

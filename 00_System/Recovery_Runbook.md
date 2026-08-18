@@ -41,9 +41,9 @@ cd AI-Research-OS
 python3 -m venv ../ai-research-os-venv
 ../ai-research-os-venv/bin/pip install -e ".[dev,ui]"
 ../ai-research-os-venv/bin/pytest --cov=research_os --cov-fail-under=80
-../ai-research-os-venv/bin/research-os validate --strict
-../ai-research-os-venv/bin/research-os index --apply
-../ai-research-os-venv/bin/research-os index --check
+../ai-research-os-venv/bin/python -B 09_Automation/research_os.py validate --strict
+../ai-research-os-venv/bin/python -B 09_Automation/research_os.py index --apply
+../ai-research-os-venv/bin/python -B 09_Automation/research_os.py index --check
 ../ai-research-os-venv/bin/python -B 09_Automation/research_os.py validate
 ```
 
@@ -123,7 +123,7 @@ receipt。
 BACKUP_CONFIG=09_Automation/operational/durable_backup.json
 BACKUP_ID=$(jq -r .backup_id \
   09_Automation/operational/backups/durable/latest-success.json)
-research-os backup durable verify-remote --backup-id "$BACKUP_ID" \
+python3 09_Automation/research_os.py backup durable verify-remote --backup-id "$BACKUP_ID" \
   --config "$BACKUP_CONFIG"
 ```
 
@@ -146,13 +146,13 @@ receipt 到预期 ignored 路径。再选择 absent 或 empty disposable destina
 BACKUP_CONFIG=09_Automation/operational/durable_backup.json
 AGE_IDENTITY=/Users/max/.config/ai-research-os/backup/age-identity.txt
 RESTORE_DESTINATION=09_Automation/operational/restores/$BACKUP_ID
-research-os backup durable verify-remote --backup-id "$BACKUP_ID" \
+python3 09_Automation/research_os.py backup durable verify-remote --backup-id "$BACKUP_ID" \
   --config "$BACKUP_CONFIG"
-research-os backup durable restore --backup-id "$BACKUP_ID" \
+python3 09_Automation/research_os.py backup durable restore --backup-id "$BACKUP_ID" \
   --identity "$AGE_IDENTITY" \
   --destination "$RESTORE_DESTINATION" \
   --config "$BACKUP_CONFIG"
-research-os backup durable restore --backup-id "$BACKUP_ID" \
+python3 09_Automation/research_os.py backup durable restore --backup-id "$BACKUP_ID" \
   --identity "$AGE_IDENTITY" \
   --destination "$RESTORE_DESTINATION" \
   --config "$BACKUP_CONFIG" --apply
@@ -176,10 +176,10 @@ asset path。
 5. 运行完整 local Gate：
 
 ```bash
-research-os source verify-assets
-research-os validate --strict
-research-os index --apply
-research-os index --check
+python3 09_Automation/research_os.py source verify-assets
+python3 09_Automation/research_os.py validate --strict
+python3 09_Automation/research_os.py index --apply
+python3 09_Automation/research_os.py index --check
 python -m pytest 09_Automation/tests -q
 ruff check .
 ruff format --check src 09_Automation/tests

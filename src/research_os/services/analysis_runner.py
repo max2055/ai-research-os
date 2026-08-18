@@ -256,7 +256,9 @@ def prepare_run(
     except PromptError as exc:
         raise RunError("prompt-error", str(exc)) from exc
 
-    model = adapter or build_adapter(model_provider)
+    model = adapter or build_adapter(
+        model_provider, config_path=root / "00_System" / "llm.local.json"
+    )
     try:
         raw = model.generate(
             prompt,

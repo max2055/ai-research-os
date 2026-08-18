@@ -12,7 +12,7 @@ development environment and run the product doctor:
 ```bash
 python3 -m venv /tmp/ai-research-os-dev-venv
 /tmp/ai-research-os-dev-venv/bin/pip install -e ".[dev,ui]"
-/tmp/ai-research-os-dev-venv/bin/research-os doctor
+python3 09_Automation/research_os.py doctor
 source /tmp/ai-research-os-dev-venv/bin/activate
 ```
 
@@ -46,15 +46,15 @@ Markdown 管理运行状态。研究 Markdown 仍是研究事实权威，Worker 
 M2 product commands:
 
 ```bash
-research-os project list
-research-os project status --id PRJ-001
-research-os review queue --project PRJ-001 --status pending
-research-os review apply --targets <ID> --decision approve \
+python3 09_Automation/research_os.py project list
+python3 09_Automation/research_os.py project status --id PRJ-001
+python3 09_Automation/research_os.py review queue --project PRJ-001 --status pending
+python3 09_Automation/research_os.py review apply --targets <ID> --decision approve \
   --reviewer <name> --notes "<review note>" --apply
-research-os actions list --project PRJ-001
-research-os actions overdue --project PRJ-001
-research-os metrics --project PRJ-001
-research-os index --check --project PRJ-001
+python3 09_Automation/research_os.py actions list --project PRJ-001
+python3 09_Automation/research_os.py actions overdue --project PRJ-001
+python3 09_Automation/research_os.py metrics --project PRJ-001
+python3 09_Automation/research_os.py index --check --project PRJ-001
 ```
 
 Review apply is always a dry-run unless `--apply` is explicit. It creates an
@@ -63,15 +63,15 @@ immutable Review Decision and updates all targets in one transaction.
 M3 Source capture and bounded discovery commands:
 
 ```bash
-research-os source add --help
-research-os source fetch --help
-research-os source process --help
-research-os source confirm-date --help
-research-os source verify-assets
-research-os source discover rss --help
-research-os source discover github --help
-research-os source discover arxiv --help
-research-os source discover sec --help
+python3 09_Automation/research_os.py source add --help
+python3 09_Automation/research_os.py source fetch --help
+python3 09_Automation/research_os.py source process --help
+python3 09_Automation/research_os.py source confirm-date --help
+python3 09_Automation/research_os.py source verify-assets
+python3 09_Automation/research_os.py source discover rss --help
+python3 09_Automation/research_os.py source discover github --help
+python3 09_Automation/research_os.py source discover arxiv --help
+python3 09_Automation/research_os.py source discover sec --help
 ```
 
 Capture/write operations remain dry-run unless `--apply` is explicit. Discovery
@@ -81,11 +81,11 @@ repository, query or CIK/form allowlist.
 M4 reviewable generation:
 
 ```bash
-research-os workflow event --spec <event-spec.json>
-research-os workflow report --spec <report-spec.json>
-research-os workflow report --spec <weekly-spec.json> \
+python3 09_Automation/research_os.py workflow event --spec <event-spec.json>
+python3 09_Automation/research_os.py workflow report --spec <report-spec.json>
+python3 09_Automation/research_os.py workflow report --spec <weekly-spec.json> \
   --baseline <metrics-snapshot.json>
-research-os workflow company-update \
+python3 09_Automation/research_os.py workflow company-update \
   --company <COM-ID> --events <EVT-ID,...>
 ```
 

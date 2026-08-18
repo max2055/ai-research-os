@@ -172,6 +172,15 @@ class HostedCiWorkflowTests(unittest.TestCase):
                 for value in ("launchctl", ".plist", "run_daily.sh"):
                     self.assertNotIn(value, text)
 
+    def test_user_runbook_has_no_retired_product_cli(self) -> None:
+        text = (ROOT / "00_System" / "v0.3_User_Runbook.md").read_text(encoding="utf-8")
+        self.assertNotIn("python -m research_os --", text)
+        self.assertNotIn("research-os ", text)
+        self.assertNotIn("09_Automation/research_os.py", text)
+        self.assertIn("python -m research_os.ui", text)
+        self.assertIn("/health", text)
+        self.assertIn("/operations/schedules", text)
+
 
 class CiDashboardSmokeTests(unittest.TestCase):
     def test_fixture_dashboard_routes_return_200(self) -> None:

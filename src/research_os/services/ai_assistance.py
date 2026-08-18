@@ -142,7 +142,9 @@ def prepare_review_assistance(
         )
     if provider and provider != "echo" and supported_items:
         try:
-            adapter = build_adapter(provider)
+            adapter = build_adapter(
+                provider, config_path=root / "00_System" / "llm.local.json"
+            )
             output = adapter.generate(
                 _review_prompt(supported_items),
                 timeout=30,

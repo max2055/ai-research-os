@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from pathlib import Path
 
 from research_os.cli import cli_capability_keys
 from research_os.services.product_capabilities import (
@@ -17,8 +18,9 @@ class ProductCapabilityTests(unittest.TestCase):
         cli_keys = cli_capability_keys()
         registry_keys = {item.cli_key for item in PRODUCT_CAPABILITIES}
 
-        self.assertEqual(94, len(cli_keys))
-        self.assertEqual({"jobs.list", "jobs.run"}, registry_keys - cli_keys)
+        self.assertEqual(93, len(cli_keys))
+        self.assertNotIn("ui", cli_keys)
+        self.assertEqual({"jobs.list", "jobs.run", "ui"}, registry_keys - cli_keys)
         self.assertEqual(len(registry_keys), len(PRODUCT_CAPABILITIES))
         for item in PRODUCT_CAPABILITIES:
             self.assertTrue(item.owner)
@@ -27,6 +29,10 @@ class ProductCapabilityTests(unittest.TestCase):
             self.assertIn(item.delivery_feature, {"F-026", "F-027", "F-028", "F-029"})
             if item.disposition == "web":
                 self.assertTrue(item.web_routes, item.cli_key)
+
+    def test_package_has_no_user_cli_entry_point(self) -> None:
+        package = Path(__file__).resolve().parents[2] / "src" / "research_os"
+        self.assertFalse((package / "__main__.py").exists())
 
     def test_current_candidate_and_llm_mutation_routes_are_declared(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -1059,7 +1059,12 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "loopback"):
                 run_ui(root, host="0.0.0.0")
             with patch("uvicorn.run") as mocked:
-                run_ui(root, host="127.0.0.1", port=8876)
+                run_ui(
+                    root,
+                    host="127.0.0.1",
+                    port=8876,
+                    enforce_runtime_preflight=False,
+                )
             _, kwargs = mocked.call_args
             self.assertEqual("127.0.0.1", kwargs["host"])
             self.assertEqual(8876, kwargs["port"])

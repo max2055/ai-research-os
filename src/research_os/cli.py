@@ -906,10 +906,6 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_company.add_argument("--date", default=date.today().isoformat())
     workflow_company.add_argument("--apply", action="store_true")
 
-    ui = subparsers.add_parser("ui", help="start the local read-only Dashboard")
-    ui.add_argument("--host", default="127.0.0.1")
-    ui.add_argument("--port", type=int, default=8765)
-
     brief = subparsers.add_parser("brief", help="Daily Brief (B-022)")
     brief_commands = brief.add_subparsers(dest="brief_command", required=True)
     brief_daily = brief_commands.add_parser(
@@ -1789,19 +1785,6 @@ def main() -> int:
             print(f"CREATED: {target.relative_to(args.root.resolve())}")
             return 0
         except (FileExistsError, OSError, TransactionError, ValueError) as exc:
-            print(f"ERROR: {exc}")
-            return 2
-    if args.command == "ui":
-        try:
-            from research_os.ui.app import run_ui
-
-            run_ui(
-                args.root.resolve(),
-                host=args.host,
-                port=args.port,
-            )
-            return 0
-        except (ImportError, OSError, ValueError) as exc:
             print(f"ERROR: {exc}")
             return 2
     if args.command == "brief":

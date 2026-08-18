@@ -393,6 +393,23 @@ class ModelAdapterProtocolTests(unittest.TestCase):
                 adapter.generate("prompt", model_id="deepseek-chat")
         self.assertIn("API key", str(ctx.exception))
 
+    def test_deepseek_adapter_reads_explicit_repository_config(self) -> None:
+        build_adapter, _ = self._adapter()
+        with tempfile.TemporaryDirectory() as temp:
+            config_path = Path(temp) / "llm.local.json"
+            llm_config.save_config(
+                config_path,
+                provider="deepseek",
+                api_key="sk-repository",
+                model="deepseek-chat",
+            )
+            adapter = build_adapter("deepseek", config_path=config_path)
+            with mock.patch(
+                "research_os.llm.llm_adapter.chat_completion", return_value="ok"
+            ) as completion:
+                self.assertEqual("ok", adapter.generate("prompt"))
+            self.assertEqual("sk-repository", completion.call_args.kwargs["key"])
+
 
 class LlmDashboardTests(unittest.TestCase):
     def test_llm_page_renders(self) -> None:
@@ -447,22 +464,49 @@ class LlmDashboardTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            config_path = root / "llm.local.json"
-            with mock.patch.object(llm_config, "CONFIG_PATH", config_path):
-                client = TestClient(create_app(root))
-                client.post(
-                    "/llm/config",
-                    json={"provider": "deepseek", "api_key": "sk-keep", "model": "m1"},
-                )
-                client.post(
-                    "/llm/config",
-                    json={"provider": "deepseek", "api_key": "", "model": "m2"},
-                )
-                saved = llm_config.load_config(config_path)
-                self.assertEqual("sk-keep", saved["api_key"])
-                self.assertEqual("m2", saved["model"])
-                public = client.get("/llm/config").json()
-                self.assertNotIn("sk-keep", response_text(public))
+            config_path = root / "00_System" / "llm.local.json"
+            client = TestClient(create_app(root))
+            client.post(
+                "/llm/config",
+                json={"provider": "deepseek", "api_key": "sk-keep", "model": "m1"},
+            )
+            client.post(
+                "/llm/config",
+                json={"provider": "deepseek", "api_key": "", "model": "m2"},
+            )
+            saved = llm_config.load_config(config_path)
+            self.assertEqual("sk-keep", saved["api_key"])
+            self.assertEqual("m2", saved["model"])
+            public = client.get("/llm/config").json()
+            self.assertNotIn("sk-keep", response_text(public))
+
+    def test_config_endpoint_is_bound_to_app_repository_root(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from research_os.ui.app import create_app
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            app_config = root / "00_System" / "llm.local.json"
+            other_config = root / "other" / "llm.local.json"
+            llm_config.save_config(
+                app_config,
+                provider="deepseek",
+                api_key="sk-app-root",
+                model="deepseek-chat",
+            )
+            llm_config.save_config(
+                other_config,
+                provider="deepseek",
+                api_key="sk-other-root",
+                model="deepseek-reasoner",
+            )
+            with mock.patch.object(llm_config, "CONFIG_PATH", other_config):
+                response = TestClient(create_app(root)).get("/llm/config")
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual("deepseek-chat", response.json()["model"])
+            self.assertNotIn("sk-app-root", response.text)
 
 
 def response_text(public: dict) -> str:

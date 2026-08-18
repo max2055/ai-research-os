@@ -89,6 +89,10 @@ from research_os.services.read_model import (
     sector_snapshot,
 )
 from research_os.services.review_cadence import current_next_review_date
+from research_os.services.runtime_identity import (
+    RuntimeIdentity,
+    preflight_product_runtime,
+)
 from research_os.services.schedule_migration import migrate_operational_history
 from research_os.services.triage import dismiss_candidate
 from research_os.services.validation import validate_repository
@@ -2691,6 +2695,9 @@ def _health_page(
     disk = snapshot["host"]["disk"]
     model_cost = snapshot["model_cost"]
     web_identity = snapshot["web_identity"]
+    runtime = snapshot.get("runtime") or {}
+    runtime_candidate = runtime.get("candidate_db") or {}
+    runtime_operations = runtime.get("operations_db") or {}
     attention = any(
         (
             validation["status"] != "ok",
@@ -2712,6 +2719,7 @@ def _health_page(
 <div><div class="eyebrow">状态</div>
 <h2>{badge("注意", warning=True) if attention else badge("健康")}</h2>
 <p class="muted"><a href="#health-indexes">{esc(len(snapshot["indexes"]["drift"]))} 处漂移</a> · <a href="#health-assets">{esc(len(snapshot["assets"]["failures"]))} 个资产失败</a> · <a href="#health-failures">{esc(len(snapshot["failed_runs"]))} 个失败运行</a></p></div></section>
+<section class="panel"><h3>Runtime Identity</h3>{_kv_table([["状态", badge(runtime.get("status", "unverified"), warning=runtime.get("status") != "verified")], ["Root", esc(runtime.get("root", "unknown"))], ["Branch", esc(runtime.get("branch", "unknown"))], ["Commit", esc(runtime.get("commit", "unknown"))], ["Dirty", esc(runtime.get("dirty", "unknown"))], ["Interpreter", esc(runtime.get("interpreter", "unknown"))], ["Package", esc(runtime.get("package_path", "unknown"))], ["Candidate DB", esc(runtime_candidate.get("path", "unknown"))], ["Operations DB", esc(runtime_operations.get("path", "unknown"))]])}</section>
 <section class="panel"><h3>仓库校验</h3>
 {table(["级别", "编码", "路径", "消息"], finding_rows)}</section>
 <section class="panel" id="health-indexes"><h3>索引</h3><p>scope={esc(snapshot["indexes"]["scope"])} · {badge(snapshot["indexes"]["status"], warning=snapshot["indexes"]["status"] != "ok")}</p>{table(["Drift"], index_rows) if index_rows else "<p class='muted'>无索引漂移。</p>"}</section>
@@ -3864,8 +3872,8 @@ def _analysis_compare(
     return shell("分析 · 比较", content, project_id=project_id, active_key="analysis")
 
 
-def _llm_page() -> str:
-    config = llm_config.load_config()
+def _llm_page(config_path: Path) -> str:
+    config = llm_config.load_config(config_path)
     public = llm_config.public_config(config)
     current_provider = public["provider"]
     current_model = public["model"]
@@ -4074,18 +4082,21 @@ def _llm_page() -> str:
     return shell("模型配置", content)
 
 
-def _configured_model_defaults() -> tuple[str, str]:
+def _configured_model_defaults(config_path: Path) -> tuple[str, str]:
     """Use the saved local model for new Analysis forms, with Echo fallback."""
-    config = llm_config.public_config(llm_config.load_config())
+    config = llm_config.public_config(llm_config.load_config(config_path))
     provider = str(config.get("provider") or "echo")
     model = str(config.get("model") or "echo")
     return provider, model
 
 
 def create_app(
-    root: Path, worker_factory: Callable[[Path], Any] | None = None
+    root: Path,
+    worker_factory: Callable[[Path], Any] | None = None,
+    runtime_identity: RuntimeIdentity | None = None,
 ) -> FastAPI:
     repo = DashboardRepository(root)
+    llm_config_path = repo.root / "00_System" / "llm.local.json"
     sessions = BrowserSessionRegistry()
     gateway_lock = Lock()
     gateway_identity: WebIdentity | None = None
@@ -4133,6 +4144,7 @@ def create_app(
         openapi_url=None,
         lifespan=lifespan,
     )
+    app.state.runtime_identity = runtime_identity
 
     def review_ai_snapshot() -> dict[str, dict[str, Any]]:
         with review_ai_lock:
@@ -4164,7 +4176,7 @@ def create_app(
                 }
 
     def start_review_ai_jobs(target_ids: list[str]) -> dict[str, str]:
-        provider, model = _configured_model_defaults()
+        provider, model = _configured_model_defaults(llm_config_path)
         states: dict[str, str] = {}
         for target_id in target_ids:
             with review_ai_lock:
@@ -4420,7 +4432,7 @@ def create_app(
         _require_browser_boundary(request, form, sessions)
         if set(form) != {"target_ids", "csrf_token"}:
             raise HTTPException(status_code=422, detail="invalid assistance input")
-        provider, model = _configured_model_defaults()
+        provider, model = _configured_model_defaults(llm_config_path)
         try:
             packet = prepare_review_assistance(
                 repo.root,
@@ -5217,11 +5229,13 @@ def create_app(
 
     @app.get("/llm", response_class=HTMLResponse)
     def llm_config_page(project: str | None = Query(default=None)) -> HTMLResponse:
-        return HTMLResponse(_llm_page())
+        return HTMLResponse(_llm_page(llm_config_path))
 
     @app.get("/llm/config", response_class=JSONResponse)
     def llm_config_get() -> JSONResponse:
-        return JSONResponse(llm_config.public_config(llm_config.load_config()))
+        return JSONResponse(
+            llm_config.public_config(llm_config.load_config(llm_config_path))
+        )
 
     @app.post("/llm/config", response_class=JSONResponse)
     def llm_config_save(payload: dict[str, Any]) -> JSONResponse:
@@ -5232,6 +5246,7 @@ def create_app(
             return JSONResponse({"error": str(exc)})
         try:
             saved = llm_config.save_config(
+                llm_config_path,
                 provider=provider_id,
                 api_key=str(payload.get("api_key", "") or ""),
                 model=str(payload.get("model", "") or ""),
@@ -5248,7 +5263,7 @@ def create_app(
         except ValueError as exc:
             return JSONResponse({"error": str(exc)})
         key = str(payload.get("api_key", "") or "") or llm_config.get_api_key(
-            provider=provider_id
+            llm_config_path, provider=provider_id
         )
         if not key:
             return JSONResponse({"error": "请先填写 API Key"})
@@ -5268,7 +5283,7 @@ def create_app(
         except ValueError as exc:
             return JSONResponse({"error": str(exc)})
         key = str(payload.get("api_key", "") or "") or llm_config.get_api_key(
-            provider=provider_id
+            llm_config_path, provider=provider_id
         )
         model = str(payload.get("model", "") or "") or preset.default_model
         if not key:
@@ -5299,13 +5314,31 @@ def create_app(
         snapshot_method = getattr(supervisor, "snapshot", None)
         supervisor_snapshot = snapshot_method() if callable(snapshot_method) else None
         if refresh or cached is None or now - cached[0] > 5:
+            snapshot = health_snapshot(
+                repo.root,
+                project_id=project,
+                supervisor_snapshot=supervisor_snapshot,
+            )
+            snapshot["runtime"] = (
+                runtime_identity.as_dict()
+                if runtime_identity is not None
+                else {
+                    "status": "unverified",
+                    "root": str(repo.root),
+                    "branch": "test-or-embedded",
+                    "commit": "unknown",
+                    "dirty": None,
+                    "interpreter": "unknown",
+                    "package_path": "unknown",
+                    "candidate_db": {
+                        "path": str(candidate_db.candidate_db_path(repo.root))
+                    },
+                    "operations_db": {"path": str(operations_db_path(repo.root))},
+                }
+            )
             health_cache[cache_key] = (
                 now,
-                health_snapshot(
-                    repo.root,
-                    project_id=project,
-                    supervisor_snapshot=supervisor_snapshot,
-                ),
+                snapshot,
             )
         return HTMLResponse(
             _health_page(repo, project, snapshot=health_cache[cache_key][1])
@@ -6594,7 +6627,7 @@ action="/projects/{esc(project_id)}/advance/preview">
 
     @app.get("/analysis/runs/new", response_class=HTMLResponse)
     def analysis_create_form(request: Request) -> HTMLResponse:
-        model_provider, model_id = _configured_model_defaults()
+        model_provider, model_id = _configured_model_defaults(llm_config_path)
         return structured_form_response(
             request,
             title="运行 Analysis",
@@ -6634,7 +6667,7 @@ action="/projects/{esc(project_id)}/advance/preview">
 
     @app.get("/analysis/runs/{run_id}/replay", response_class=HTMLResponse)
     def analysis_replay_form(run_id: str, request: Request) -> HTMLResponse:
-        model_provider, model_id = _configured_model_defaults()
+        model_provider, model_id = _configured_model_defaults(llm_config_path)
         return structured_form_response(
             request,
             title=f"Replay Analysis · {run_id}",
@@ -7722,10 +7755,15 @@ def run_ui(
     *,
     host: str = "127.0.0.1",
     port: int = 8765,
+    enforce_runtime_preflight: bool = True,
 ) -> None:
     if host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("Dashboard v1 only binds to a loopback host")
     import uvicorn
+
+    identity = preflight_product_runtime(root) if enforce_runtime_preflight else None
+    if identity is not None:
+        print(f"RUNTIME_IDENTITY {identity.as_json()}", flush=True)
 
     # Uvicorn re-raises captured signals after lifespan shutdown. Keep the
     # outer handler benign so a Web-owned Worker can stop before process exit.
@@ -7739,7 +7777,7 @@ def run_ui(
         for signum in previous:
             signal.signal(signum, _shutdown_signal)
         uvicorn.run(
-            create_app(root),
+            create_app(root, runtime_identity=identity),
             host=host,
             port=port,
             log_level="info",

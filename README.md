@@ -95,50 +95,13 @@ python -m research_os.ui
 备份，`/health` 查看 Worker heartbeat、当前运行、计划状态和备份告警。网站 Worker
 只能执行 operational Job，不能批准研究对象或修改 Thesis conclusion/confidence。
 
-开发/恢复兼容入口（非用户产品界面，不提供产品工作流）：
+启动前会执行只读 Runtime preflight，拒绝 linked worktree、代码/数据根目录不一致、
+未解决合并冲突和损坏的 Candidate/Operations 数据库。`/health` 显示 root、branch、
+commit、dirty、interpreter、package path 和数据库路径；这些字段是确认当前运行版本的
+第一入口。产品 CLI entry point 已移除，开发、CI 和灾备适配器不属于用户产品面。
 
-```bash
-python3 -m venv /tmp/ai-research-os-dev-venv
-/tmp/ai-research-os-dev-venv/bin/pip install -e ".[dev,ui]"
-/tmp/ai-research-os-dev-venv/bin/research-os doctor
-python3 09_Automation/research_os.py validate
-python3 09_Automation/research_os.py index --check
-```
-
-这些命令只供开发、诊断和 disaster recovery 使用；不再新增用户专属
-CLI workflow，并在 F-027～029 Web parity 与恢复 Gate 完成后移除产品 CLI entry point。
-
-内部完整校验必须使用 strict 模式；它会读取 Git 外的真实 Source assets：
-
-```bash
-research-os validate --strict
-research-os index --check
-research-os index --check --project PRJ-001
-research-os index --check --project PRJ-002
-```
-
-私有 GitHub CI 因不接触 raw assets、Candidate DB 或 secrets，只运行显式的
-metadata-only 子集：
-
-```bash
-research-os validate --metadata-only
-research-os index --check --metadata-only
-```
-
-metadata-only 不能替代上述 strict local Gate。
-
-迁移期内部发布状态核验：
-
-```bash
-research-os release check
-research-os release check --version 0.3 --format json
-```
-
-默认命令保持 v0.2 的 18 Gate，当前结果为 18/18 Ready；显式 `--version 0.3`
-运行 F-023 机器检查，当前结果为 16/21。两者都只读。剩余 5 个 blocker 是
-WP-620 真实 Pilot、WP-530 自然 Resolution、两次 Weekly 加一次 Monthly cadence、
-Known Limitations 阅读确认和 F-024 人工发布批准。自动化不能代填真实 Source、
-Forecast outcome、Weekly/Monthly 运行或最终发布决定。
+当前 v0.3 发布状态仍由 `/health/release` 与具名人工决定共同控制。工程迁移完成不自动
+通过真实 Pilot、自然 Resolution、cadence、Known Limitations 阅读确认或最终发布批准。
 
 Durable backup 从 `/operations/backups` 预览并确认。浏览器不接收配置路径、recipient
 或 token；Worker 只读取固定的 ignored 服务端配置
@@ -147,8 +110,8 @@ SQLite snapshot、`operations.db` snapshot 及其 manifest，Source assets 仍�
 集合。密钥配置、24 小时 RPO、remote verify 与 disposable restore 步骤见
 `00_System/Recovery_Runbook.md`。
 
-调度相关的 `research-os jobs ...` 命令已移除，定时任务、手动 Job、备份与健康检查统一通过网站操作页完成。
-仓库校验、索引和恢复工具仍保留在 `research_os.cli`，仅供维护和 CI 使用；Worker 子进程入口是内部实现，不作为用户命令。
+定时任务、手动 Job、备份、恢复状态与健康检查统一通过网站操作页完成。
+内部维护和恢复 adapter 不安装产品命令；Worker 子进程入口也是内部实现。
 仓库位于 iCloud 时，开发 venv 应放在同步目录外。
 
 首轮建设完成审计见：`00_System/Implementation_Audit.md`。
