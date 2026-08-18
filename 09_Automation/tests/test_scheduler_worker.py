@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from threading import Event
 from unittest.mock import patch
 
+from research_os.runtime import worker as worker_runtime
+from research_os.services import scheduler_worker
 from research_os.services.jobs import JobExecutionResult
 from research_os.services.operations_db import (
     ScheduleSpec,
@@ -197,3 +200,87 @@ def test_stop_signal_prevents_claiming_another_queued_run(tmp_path: Path) -> Non
     assert calls == ["validate"]
     assert get_run(db, "RUN-manual-1").status == "queued"  # type: ignore[union-attr]
     assert get_run(db, "RUN-manual-2").status == "success"  # type: ignore[union-attr]
+
+
+def test_internal_worker_entrypoint_installs_signals_and_runs(
+    tmp_path: Path,
+) -> None:
+    installed: list[int] = []
+    observed: dict[str, object] = {}
+
+    class FakeWorker:
+        def __init__(self, root: Path, *, worker_id: str, parent_pid: int) -> None:
+            observed.update(root=root, worker_id=worker_id, parent_pid=parent_pid)
+
+        def run_forever(self, stop: Event) -> None:
+            observed["stop"] = stop
+
+    def install_signal(number: int, _handler: object) -> None:
+        installed.append(number)
+
+    argv = [
+        "research-os-worker",
+        "--root",
+        str(tmp_path),
+        "--parent-pid",
+        "1234",
+    ]
+    with (
+        patch.object(sys, "argv", argv),
+        patch.object(worker_runtime, "SchedulerWorker", FakeWorker),
+        patch.object(worker_runtime.signal, "signal", side_effect=install_signal),
+        patch.object(worker_runtime.os, "getpid", return_value=4321),
+    ):
+        worker_runtime.main()
+
+    assert installed == [worker_runtime.signal.SIGTERM, worker_runtime.signal.SIGINT]
+    assert observed["root"] == tmp_path
+    assert observed["worker_id"] == "worker-4321"
+    assert observed["parent_pid"] == 1234
+    assert isinstance(observed["stop"], Event)
+
+
+def test_parent_liveness_and_non_due_schedule_branches(tmp_path: Path) -> None:
+    assert scheduler_worker.parent_is_alive(1)
+    assert scheduler_worker.parent_is_alive(os.getpid())
+    with patch.object(scheduler_worker.os, "kill", side_effect=OSError):
+        assert not scheduler_worker.parent_is_alive(999999)
+
+    schedule_id = _schedule(tmp_path)
+    set_schedule_next_run(
+        operations_db_path(tmp_path), schedule_id, "2026-08-18T00:00:00Z"
+    )
+    worker = SchedulerWorker(
+        tmp_path,
+        worker_id="worker-test",
+        parent_pid=os.getpid(),
+        execute=lambda *_args, **_kwargs: JobExecutionResult("success", "done"),
+        clock=lambda: NOW,
+    )
+    assert worker.tick(now=NOW) == 0
+    assert latest_run(operations_db_path(tmp_path), schedule_id) is None
+
+
+def test_claim_race_is_ignored(tmp_path: Path) -> None:
+    db = operations_db_path(tmp_path)
+    create_run(
+        db,
+        run_id="RUN-race",
+        schedule_id=None,
+        job_name="validate",
+        target=None,
+        project_id=None,
+        request_kind="manual",
+        as_of=NOW,
+        queued_at=NOW,
+    )
+    worker = SchedulerWorker(
+        tmp_path,
+        worker_id="worker-test",
+        parent_pid=os.getpid(),
+        execute=lambda *_args, **_kwargs: JobExecutionResult("success", "done"),
+        clock=lambda: NOW,
+    )
+    with patch("research_os.services.scheduler_worker.claim_run", return_value=None):
+        assert worker.tick(now=NOW) == 0
+    assert get_run(db, "RUN-race").status == "queued"  # type: ignore[union-attr]

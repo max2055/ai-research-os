@@ -431,6 +431,70 @@ class DurableBackupTests(unittest.TestCase):
             self.assertIn("operations/operations.db.manifest.json", names)
             self.assertEqual(inner["operations"], operations_manifest)
 
+            durable_backup._verify_plaintext_archive(
+                archive_path,
+                "candidate",
+                backup_id="BKP-20260810T010203Z-aaaaaaaaaaaa",
+                created_at="2026-08-10T01:02:03Z",
+            )
+            receipt = DurableBackupReceipt(
+                backup_id="BKP-20260810T010203Z-aaaaaaaaaaaa",
+                created_at="2026-08-10T01:02:03Z",
+                status="verified",
+                sets=(),
+                remote_repository="example/private-research",
+                remote_release=DURABLE_BACKUP_RELEASE_TAG,
+            )
+            staging = base / "staging"
+            staging.mkdir()
+            with tarfile.open(archive_path) as archive:
+                members = durable_backup._validated_tar_members(archive)
+                inner = durable_backup._inner_manifest(archive, members)
+                candidate_sha256, candidate_schema_version = (
+                    durable_backup._restore_candidate_archive(
+                        archive, members, inner, receipt, staging
+                    )
+                )
+            self.assertRegex(candidate_sha256, r"^[0-9a-f]{64}$")
+            self.assertEqual(
+                inner["candidate"]["schema_version"], candidate_schema_version
+            )
+            restored_operations = staging / durable_backup.OPERATIONS_ARCHIVE_PATH
+            with sqlite3.connect(restored_operations) as connection:
+                self.assertEqual(
+                    "ok", connection.execute("PRAGMA integrity_check").fetchone()[0]
+                )
+
+    def test_operations_manifest_rejects_malformed_metadata(self) -> None:
+        valid = {
+            "sha256": "a" * 64,
+            "size_bytes": 1,
+            "schema_version": 1,
+            "created_at": "2026-08-10T01:02:03Z",
+        }
+        self.assertEqual(
+            valid,
+            durable_backup._validated_operations_manifest(
+                valid, created_at="2026-08-10T01:02:03Z"
+            ),
+        )
+        invalid_values = (
+            None,
+            {**valid, "extra": True},
+            {**valid, "sha256": "invalid"},
+            {**valid, "size_bytes": True},
+            {**valid, "schema_version": 0},
+            {**valid, "created_at": "2026-08-11T01:02:03Z"},
+        )
+        for value in invalid_values:
+            with (
+                self.subTest(value=value),
+                self.assertRaisesRegex(ValueError, "Operations manifest"),
+            ):
+                durable_backup._validated_operations_manifest(
+                    value, created_at="2026-08-10T01:02:03Z"
+                )
+
     @pytest.mark.local_integration
     def test_dry_run_preflights_without_local_or_remote_writes(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
