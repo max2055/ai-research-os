@@ -186,7 +186,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     @pytest.mark.local_integration
     def test_current_v03_has_only_the_five_time_and_human_blockers(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-13")
+        readiness = release_readiness_v03(root, as_of="2026-08-18")
         blockers = {check.key: check for check in readiness.blockers}
 
         self.assertFalse(readiness.ready)
@@ -205,7 +205,7 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertTrue(by_key["engineering.migration_recovery"].passed)
         self.assertTrue(by_key["engineering.recovery_boundaries"].passed)
         self.assertTrue(by_key["engineering.dashboard_security"].passed)
-        verification_path = "00_System/v0.3_Release_Gate_Verification_2026-08-13.md"
+        verification_path = "00_System/v0.3_Release_Gate_Verification_2026-08-18.md"
         self.assertIn(
             verification_path,
             by_key["engineering.quality_suite"].evidence_paths,
