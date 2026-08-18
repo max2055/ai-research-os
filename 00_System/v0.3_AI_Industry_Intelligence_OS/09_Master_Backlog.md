@@ -260,7 +260,7 @@ WP-530 不能用回填或合成 outcome 提前完成。
 | WP-612 | F-019～020 | runbook/limitations | completed |
 | WP-620 | F-021～022 | 30-day Pilot/resolutions | **BLOCKED**（future-date dependent；real 30-day Pilot） |
 | WP-630 | F-023～025 | release check/human decision/tag | in_progress（F-023 completed；F-024 BLOCKED；F-025 waits for all Gates） |
-| WP-640 | F-026～029 | Web mutation/parity/operations/CLI retirement | in_progress（F-026 + F-027A completed；F-027B next） |
+| WP-640 | F-026～029 | Web mutation/parity/operations/CLI retirement | completed（Web parity、网站托管 Worker、canonical runtime preflight、产品 CLI entry removal） |
 
 Wave 6 原只读基线由 RCP-v03-010 批准并完成。RCP-v03-011 于 2026-08-12 取代其
 GET-only/CLI 产品边界，新增 WP-640：网站成为唯一用户产品界面，CLI 仅作迁移期内部
@@ -295,8 +295,25 @@ WP-640 progress（2026-08-13）：F-027A Candidate Web parity 已完成。
   global index drift 0。真实 loopback disposable smoke 的 restore/promote 均 303、replay 409，
   hostile Origin 403，各 1 条 action/committed audit，promote 产出 1 Source + 2 assets，Thesis/
   Review digest 不变。详见 `00_System/v0.3_F027A_Candidate_Web_Parity_Verification_2026-08-13.md`。
-- **未完成**：F-027B research-object parity、F-028 operations/recovery parity 与 F-029 CLI
-  retirement；F-023 仍为 16/21，五个既有 blocker 不变，不能由本工程包关闭。
+- **当时未完成（已由 2026-08-18 记录取代）**：F-027B research-object parity、F-028
+  operations/recovery parity 与 F-029 CLI retirement。
+
+WP-640 close-out（2026-08-18）：F-026～F-029 工程迁移完成。
+- **F-027B/F-027C**：Source/Evidence/Review 与研究 workflow Web parity 已由具名预览、
+  确认、版本冲突、原子提交和审计合同覆盖；历史验收记录保留当时状态，当前实现以后续
+  release verification 为准。
+- **F-028**：网站 lifespan 监督唯一 Worker；`operations.db` 管理 24 个 schedules、lease、
+  heartbeat、run history 和 audit。canonical 数据已保留 516 个历史 Job 与 20 个数据库运行；
+  网站停止后 Worker 同步停止。
+- **F-029**：`src/research_os/__main__.py` 与内部 CLI 的 `ui` 叶已移除；唯一产品入口为
+  `python -m research_os.ui`。用户 Runbook 无产品 CLI，内部维护/灾备 adapter 不安装用户命令。
+- **运行身份**：入口不再读取 cwd；启动前拒绝 linked worktree、code/data root mismatch、
+  unresolved merge 和损坏的 Candidate/Operations DB；`/health` 显示完整 Runtime Identity。
+- **数据对账**：Candidate 合并按 canonical URL + content fingerprint，而非 ID union；保留
+  111 条新增记录（103 个新内容）和 21 个新增 Discovery Run，跳过 171 条语义重复记录。
+  canonical store 当前为 5,225 Candidates、477 Discovery Runs、335 actions、11 audit rows，
+  SQLite `quick_check=ok`；原始 Source、Thesis、Review 与 Job Markdown 未由对账改写。
+- **发布边界**：WP-640 完成不改变 F-023 的五个真实时间/具名人工 blocker，不批准 v0.3。
 
 WP-600 close-out（2026-08-09）：F-001~003 落地，Wave 6 第一个 WP。
 - **F-001**：`00_System/Dashboard_Design_v2.md`（Product IA v2——IA 树、页面→查询/边界表、read model 约定、GET-only 不变量、loopback、WP-600 范围；镜像 v1 先例 `Dashboard_and_Jobs_Design.md`）。

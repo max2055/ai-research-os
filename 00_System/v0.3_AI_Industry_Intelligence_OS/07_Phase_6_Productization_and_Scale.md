@@ -1,6 +1,6 @@
 # Phase 6：Web 产品、持续运行、规模化与 v0.3 发布
 
-状态：`in_progress / release blocked`（F-027A Candidate parity 已完成；F-027B～029 待实施；F-023 当前 16/21）
+状态：`engineering complete / release blocked`（F-026～029 Web-only migration 已完成；F-023 仍由真实时间与具名人工 Gate 阻断）
 建议周期：5–8 周 + 30 天真实 Pilot  
 前置：Phase 2–5 工程 Gate  
 

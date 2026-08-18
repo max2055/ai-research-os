@@ -98,8 +98,9 @@ Industry Home
 
 - F-026：已完成 Candidate dismiss 与共享 mutation preview/commit、具名 actor、审计、
   optimistic concurrency、schema v3 rollback 基础。
-- F-027A：已完成 96/96 CLI leaf capability registry 与 Candidate dismiss/restore/promote Web
-  parity；F-027 剩余 Evidence、Impact、Analysis、Forecast、Decision 与 Thesis 人工流程 parity。
-- F-028：Channel、scheduler、health、backup、restore、validation、index 和 release parity。
-- F-029：用户文档无 CLI 依赖且完整恢复演练通过后，删除产品 CLI entry point；后台内部
-  adapter 必须最小权限、非交互，并直接复用 service/API。
+- F-027：Candidate、Evidence、Impact、Analysis、Forecast、Decision、Review 与 Thesis
+  proposal 人工流程 Web parity 已完成。
+- F-028：Channel、website-hosted scheduler、health、backup、restore、validation、index 和
+  release parity 已完成；Worker 只在网站 lifespan 内运行。
+- F-029：用户文档无产品 CLI；包级 CLI entry point 与内部 `ui` 叶已删除。生产入口从
+  imported package 解析 canonical root，启动前执行 Runtime Identity preflight。
