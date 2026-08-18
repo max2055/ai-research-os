@@ -222,20 +222,15 @@ def render_valuation_rows(snapshots: list[ResearchObject]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def valuation_freshness(
-    root: Path,
+def valuation_freshness_from_objects(
+    objects: list[ResearchObject],
     *,
     val_id: str,
     as_of: str,
 ) -> dict[str, Any]:
-    """Check a ValuationSnapshot against its freshness_threshold (E-013 gate)."""
+    """Check valuation freshness from an already validated object snapshot."""
     if not is_iso_date(as_of):
         raise ValueError("as_of must be YYYY-MM-DD")
-    objects, findings = validate_repository(root)
-    if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before a valuation freshness check"
-        )
     by_id = {obj.object_id: obj for obj in objects}
     val = by_id.get(val_id)
     if val is None or val.object_type != "valuation_snapshot":
@@ -256,6 +251,21 @@ def valuation_freshness(
         "threshold_days": days,
         "fresh": age_days <= days,
     }
+
+
+def valuation_freshness(
+    root: Path,
+    *,
+    val_id: str,
+    as_of: str,
+) -> dict[str, Any]:
+    """Check a ValuationSnapshot against its freshness_threshold (E-013 gate)."""
+    objects, findings = validate_repository(root)
+    if any(finding.level == "error" for finding in findings):
+        raise ValueError(
+            "repository validation must pass before a valuation freshness check"
+        )
+    return valuation_freshness_from_objects(objects, val_id=val_id, as_of=as_of)
 
 
 def _valuation_meta(

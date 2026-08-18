@@ -611,9 +611,11 @@ def prepare_published_date_confirmation(
     )
 
 
-def verify_source_assets(root: Path) -> list[AssetVerification]:
+def verify_source_assets_from_objects(
+    root: Path, objects: list[ResearchObject]
+) -> list[AssetVerification]:
+    """Verify source assets using an already validated object snapshot."""
     root = root.resolve()
-    objects, _ = validate_repository(root)
     results: list[AssetVerification] = []
     for source in sorted(
         (obj for obj in objects if obj.object_type == "source"),
@@ -664,3 +666,10 @@ def verify_source_assets(root: Path) -> list[AssetVerification]:
             )
         )
     return results
+
+
+def verify_source_assets(root: Path) -> list[AssetVerification]:
+    """Validate the repository, then verify every registered source asset."""
+    root = root.resolve()
+    objects, _ = validate_repository(root)
+    return verify_source_assets_from_objects(root, objects)

@@ -28,7 +28,7 @@ from research_os.services.indexing import (
     render_indexes,
     render_project_indexes,
 )
-from research_os.services.ingestion import verify_source_assets
+from research_os.services.ingestion import verify_source_assets_from_objects
 from research_os.services.projects import objects_for_project
 from research_os.services.recommendation import recommendation_freshness
 from research_os.services.validation import validate_repository
@@ -313,7 +313,7 @@ def health_snapshot(
         else render_indexes(objects)
     )
     drift = index_drift(root, rendered)
-    assets = verify_source_assets(root)
+    assets = verify_source_assets_from_objects(root, objects)
     asset_failures = [
         {
             "source_id": item.source_id,

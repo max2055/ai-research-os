@@ -408,6 +408,9 @@ class LlmDashboardTests(unittest.TestCase):
                 self.assertEqual(200, page.status_code)
                 self.assertIn("模型供应商", page.text)
                 self.assertIn("deepseek", page.text)
+                self.assertIn("step-number", page.text)
+                self.assertIn("llm-config-panel", page.text)
+                self.assertIn("status-line", page.text)
 
     def test_models_endpoint_returns_sorted_no_key(self) -> None:
         from fastapi.testclient import TestClient

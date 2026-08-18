@@ -16,7 +16,7 @@ from research_os.services.actions import action_rows_from_objects
 from research_os.services.analysis_compare import compare_runs
 from research_os.services.analysis_evaluator import evaluate_run
 from research_os.services.brief import daily_brief_from_objects
-from research_os.services.calibration import calibration_report
+from research_os.services.calibration import calibration_report_from_objects
 from research_os.services.candidate_db import candidate_db_path
 from research_os.services.discovery import due_channels_from_objects
 from research_os.services.forecast_due import forecast_status_from_objects
@@ -31,9 +31,10 @@ from research_os.services.metrics import (
     universe_coverage_from_objects,
 )
 from research_os.services.mode_metrics import mode_metrics
-from research_os.services.recommendation import recommendation_freshness
+from research_os.services.projects import objects_for_project
+from research_os.services.recommendation import recommendation_freshness_from_objects
 from research_os.services.validation import validate_repository
-from research_os.services.valuation import valuation_freshness
+from research_os.services.valuation import valuation_freshness_from_objects
 
 RECENT_EVENT_DAYS = 30
 _ANALYSIS_INPUT_FIELDS = (
@@ -59,6 +60,12 @@ def _validated_objects(root: Path, label: str) -> list[ResearchObject]:
     if any(finding.level == "error" for finding in findings):
         raise ValueError(f"repository validation must pass before {label} queries")
     return objects
+
+
+def _scoped_objects(
+    objects: list[ResearchObject], project_id: str | None
+) -> list[ResearchObject]:
+    return objects_for_project(objects, project_id) if project_id else objects
 
 
 def _string_values(value: Any) -> list[str]:
@@ -553,6 +560,7 @@ def impact_explorer_snapshot(
     trigger_limit: int = 50,
     trigger_offset: int = 0,
     objects: list[ResearchObject] | None = None,
+    project_id: str | None = None,
 ) -> dict[str, Any]:
     """Return a bounded trigger list or one event's explainable 1-3 hop paths."""
     if max_depth < 1 or max_depth > 3:
@@ -561,7 +569,10 @@ def impact_explorer_snapshot(
         raise ValueError("trigger_limit must be between 1 and 50")
     if trigger_offset < 0:
         raise ValueError("trigger_offset must be non-negative")
-    objects = objects or _validated_objects(root, "Impact Explorer")
+    objects = (
+        _validated_objects(root, "Impact Explorer") if objects is None else objects
+    )
+    objects = _scoped_objects(objects, project_id)
     by_id = {obj.object_id: obj for obj in objects}
     if start_id is not None:
         start = by_id.get(start_id)
@@ -728,9 +739,15 @@ def analysis_workspace_snapshot(
     root: Path,
     *,
     run_ids: list[str] | None = None,
+    project_id: str | None = None,
+    run_limit: int | None = None,
+    metrics_run_limit: int | None = None,
+    include_evaluation: bool = True,
 ) -> dict[str, Any]:
     """Return immutable Run provenance, evaluation, metrics, and comparison."""
-    objects = _validated_objects(root, "Analysis Workspace")
+    objects = _scoped_objects(
+        _validated_objects(root, "Analysis Workspace"), project_id
+    )
     by_id = {obj.object_id: obj for obj in objects}
     available = sorted(
         (obj for obj in objects if obj.object_type == "analysis_run"),
@@ -749,6 +766,10 @@ def analysis_workspace_snapshot(
         if missing:
             raise KeyError(missing[0])
         selected = [by_id[run_id] for run_id in unique_ids]
+    if run_limit is not None:
+        if run_limit < 1:
+            raise ValueError("run_limit must be positive")
+        selected = selected[:run_limit]
 
     rows = []
     for run in selected:
@@ -781,7 +802,11 @@ def analysis_workspace_snapshot(
                 ),
                 "prompt_hash": str(run.metadata.get("prompt_hash") or ""),
                 "output_hash": str(run.metadata.get("output_hash") or ""),
-                "evaluator_scores": _evaluation_row(objects, run.object_id),
+                "evaluator_scores": (
+                    _evaluation_row(objects, run.object_id)
+                    if include_evaluation
+                    else None
+                ),
             }
         )
 
@@ -797,10 +822,20 @@ def analysis_workspace_snapshot(
             "evidence_omitted": report.evidence_omitted,
             "conflicting_signals": report.conflicting_signals,
         }
+    metric_objects = objects
+    if metrics_run_limit is not None:
+        if metrics_run_limit < 1:
+            raise ValueError("metrics_run_limit must be positive")
+        metric_runs = {run.object_id for run in available[:metrics_run_limit]}
+        metric_objects = [
+            obj
+            for obj in objects
+            if obj.object_type != "analysis_run" or obj.object_id in metric_runs
+        ]
     return {
         "runs": rows,
         "comparison": comparison,
-        "mode_metrics": mode_metrics(objects),
+        "mode_metrics": mode_metrics(metric_objects),
     }
 
 
@@ -812,12 +847,13 @@ def decision_desk_snapshot(
     root: Path,
     *,
     as_of: str | None = None,
+    project_id: str | None = None,
 ) -> dict[str, Any]:
     """Compose Forecast, calibration, valuation, and Recommendation state."""
     as_of = as_of or date.today().isoformat()
     if not is_iso_date(as_of):
         raise ValueError("as_of must be YYYY-MM-DD")
-    objects = _validated_objects(root, "Decision Desk")
+    objects = _scoped_objects(_validated_objects(root, "Decision Desk"), project_id)
     report = forecast_status_from_objects(objects, as_of=as_of)
     forecasts = sorted(
         (obj for obj in objects if obj.object_type == "forecast"),
@@ -835,7 +871,7 @@ def decision_desk_snapshot(
         if obj.metadata.get("status") == "open"
     ]
 
-    calibration = calibration_report(root)
+    calibration = calibration_report_from_objects(objects)
     calibration["status"] = (
         "insufficient_sample"
         if int(calibration.get("n_resolutions") or 0) < 10
@@ -848,7 +884,9 @@ def decision_desk_snapshot(
         if obj.object_type != "valuation_snapshot":
             continue
         valuation_by_id[obj.object_id] = obj
-        freshness = valuation_freshness(root, val_id=obj.object_id, as_of=as_of)
+        freshness = valuation_freshness_from_objects(
+            objects, val_id=obj.object_id, as_of=as_of
+        )
         valuations.append(
             {
                 **_object_metadata_row(obj),
@@ -865,8 +903,8 @@ def decision_desk_snapshot(
         (item for item in objects if item.object_type == "recommendation"),
         key=lambda item: item.object_id,
     ):
-        freshness = recommendation_freshness(
-            root,
+        freshness = recommendation_freshness_from_objects(
+            objects,
             rec_id=obj.object_id,
             as_of=as_of,
         )

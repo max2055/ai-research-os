@@ -198,7 +198,11 @@ PRODUCT_CAPABILITIES = (
         "source.review",
         "reviews",
         "web",
-        ("/reviews/apply/preview",),
+        (
+            "/reviews/apply/preview",
+            "/reviews/assist/preview",
+            "/reviews/assist/start",
+        ),
         "named_human",
         "F-027",
     ),

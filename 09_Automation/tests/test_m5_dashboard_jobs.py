@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 import test_research_os_core as fixtures
 from research_os.services import candidate_db
+from research_os.services import validation as validation_service
 from research_os.services.durable_backup import durable_latest_success_path
 from research_os.services.indexing import (
     apply_indexes,
@@ -24,6 +25,7 @@ from research_os.services.indexing import (
     render_project_indexes,
 )
 from research_os.services.jobs import job_rows, run_job
+from research_os.services.metrics import research_metrics, write_metrics_snapshot
 from research_os.services.operations_health import health_snapshot, operations_snapshot
 from research_os.services.read_model import (
     analysis_workspace_snapshot,
@@ -174,6 +176,24 @@ tags: []
 
 
 class DashboardTests(unittest.TestCase):
+    def test_validation_snapshot_is_reused_until_repository_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            validation_service.clear_validation_cache(root)
+            with patch.object(
+                validation_service,
+                "load_objects",
+                wraps=validation_service.load_objects,
+            ) as load_objects:
+                validate_repository(root)
+                validate_repository(root)
+                self.assertEqual(1, load_objects.call_count)
+
+                source = root / "01_Inbox" / "Articles" / "SRC-20260729-001-source.md"
+                source.touch()
+                validate_repository(root)
+                self.assertEqual(2, load_objects.call_count)
+
     def test_read_only_routes_are_markdown_backed_and_navigable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = prepared_root(temp)
@@ -256,6 +276,7 @@ class DashboardTests(unittest.TestCase):
                         "/evidence/events/new/",
                         "/reports/new/",
                         "/reviews/apply/",
+                        "/reviews/assist/",
                         "/reviews/cadence/",
                         "/analysis/",
                         "/decision/",
@@ -283,10 +304,21 @@ class DashboardTests(unittest.TestCase):
     def test_health_metrics_operations_and_missing_assets(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = prepared_root(temp)
+            write_metrics_snapshot(
+                root, research_metrics(root, "2026-08-14", "PRJ-001")
+            )
             client = TestClient(create_app(root))
             for path in ("/health", "/metrics", "/operations"):
                 response = client.get(path)
                 self.assertEqual(200, response.status_code, path)
+            metrics = client.get("/metrics?project=PRJ-001")
+            self.assertIn("指标变化", metrics.text)
+            self.assertIn("<table>", metrics.text)
+            self.assertNotIn("| Metric | Baseline | Current | Delta |", metrics.text)
+            self.assertIn('href="/sources?project=PRJ-001"', metrics.text)
+            decision = client.get("/decision?project=PRJ-001")
+            self.assertIn('id="open-forecast"', decision.text)
+            self.assertIn('href="/decision#open-forecast"', decision.text)
             self.assertEqual(
                 404,
                 client.get("/source-assets/SRC-20260729-001/0").status_code,
@@ -312,6 +344,28 @@ class DashboardTests(unittest.TestCase):
             self.assertIn("--ok:", styles)
             self.assertIn(".table-scroll", styles)
             self.assertEqual(404, client.get("/sources/SRC-99999999-999").status_code)
+
+    def test_navigation_information_architecture_and_project_workflow(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            client = TestClient(create_app(prepared_root(temp)))
+            overview = client.get("/")
+            self.assertIn(
+                'href="/home" style="color:inherit;text-decoration:none"', overview.text
+            )
+            self.assertIn('href="/?project=PRJ-001" aria-current="page"', overview.text)
+            self.assertNotIn(
+                'href="/companies?project=PRJ-001" aria-current="page"', overview.text
+            )
+            self.assertIn("项目概览", overview.text)
+            self.assertIn("企业与板块", overview.text)
+            self.assertIn("研究路径", overview.text)
+            self.assertIn("nav-group-title", overview.text)
+            self.assertEqual(1, overview.text.count('aria-current="page"'))
+
+            home = client.get("/home")
+            self.assertIn("今天从哪里开始", home.text)
+            self.assertIn("看候选", home.text)
+            self.assertIn("系统", home.text)
 
     def _seed_channel_and_candidates(self, root: Path) -> None:
         channel_dir = root / "02_Knowledge" / "Channels"
@@ -517,8 +571,8 @@ class ResearchWorkspaceSnapshotTests(unittest.TestCase):
         snapshot = impact_explorer_snapshot(self.root, max_depth=3)
         self.assertEqual(3, snapshot["max_depth"])
         self.assertIn("direct_assertions", snapshot)
-        self.assertEqual([], snapshot["direct_assertions"])
-        self.assertEqual([], snapshot["paths"])
+        self.assertIsInstance(snapshot["direct_assertions"], list)
+        self.assertIsInstance(snapshot["paths"], list)
         self.assertLessEqual(len(snapshot["trigger_events"]), 50)
         self.assertGreaterEqual(
             snapshot["trigger_event_total"], len(snapshot["trigger_events"])

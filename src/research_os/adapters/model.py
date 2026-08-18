@@ -33,7 +33,7 @@ class ModelAdapter(Protocol):
         *,
         timeout: float | None = None,
         model_id: str | None = None,
-        model_parameters: dict[str, str] | None = None,
+        model_parameters: dict[str, Any] | None = None,
     ) -> str:
         """Return raw model output; raise TimeoutError on provider timeout."""
         ...
@@ -54,7 +54,7 @@ class EchoAdapter:
         *,
         timeout: float | None = None,
         model_id: str | None = None,
-        model_parameters: dict[str, str] | None = None,
+        model_parameters: dict[str, Any] | None = None,
     ) -> str:
         del timeout, model_id, model_parameters
         return prompt
@@ -94,7 +94,7 @@ class DeepSeekAdapter:
         *,
         timeout: float | None = None,
         model_id: str | None = None,
-        model_parameters: dict[str, str] | None = None,
+        model_parameters: dict[str, Any] | None = None,
     ) -> str:
         key = self.key or llm_config.get_api_key(provider="deepseek")
         if not key:

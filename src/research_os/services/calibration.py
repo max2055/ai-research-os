@@ -198,20 +198,13 @@ def _forecast_sectors(forecast: ResearchObject) -> set[str]:
     }
 
 
-def calibration_report(
-    root: Path,
+def calibration_report_from_objects(
+    objects: list[ResearchObject],
     *,
     mode: str | None = None,
     sector: str | None = None,
 ) -> dict[str, Any]:
-    """Aggregate §9 calibration metrics over reviewed resolutions.
-
-    ``mode`` restricts to forecasts whose runs ran under that mode slug;
-    ``sector`` restricts to forecasts whose scope_ids include that SEG-*.
-    """
-    objects, findings = validate_repository(root)
-    if any(finding.level == "error" for finding in findings):
-        raise ValueError("repository validation must pass before a calibration report")
+    """Aggregate calibration metrics from an already validated object snapshot."""
     pairs = resolved_pairs(objects)
     if mode or sector:
         filtered: list[tuple[ResearchObject, ResearchObject]] = []
@@ -242,6 +235,23 @@ def calibration_report(
             for horizon, subset in sorted(by_horizon.items())
         },
     }
+
+
+def calibration_report(
+    root: Path,
+    *,
+    mode: str | None = None,
+    sector: str | None = None,
+) -> dict[str, Any]:
+    """Aggregate §9 calibration metrics over reviewed resolutions.
+
+    ``mode`` restricts to forecasts whose runs ran under that mode slug;
+    ``sector`` restricts to forecasts whose scope_ids include that SEG-*.
+    """
+    objects, findings = validate_repository(root)
+    if any(finding.level == "error" for finding in findings):
+        raise ValueError("repository validation must pass before a calibration report")
+    return calibration_report_from_objects(objects, mode=mode, sector=sector)
 
 
 def render_calibration_report(report: dict[str, Any]) -> str:

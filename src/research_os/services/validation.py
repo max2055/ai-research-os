@@ -6,6 +6,7 @@ import hashlib
 import re
 from collections.abc import Iterable
 from pathlib import Path
+from threading import RLock
 from typing import Literal
 
 from pydantic import ValidationError
@@ -26,6 +27,50 @@ from research_os.services.discovery_sandbox import validate_discovery_sandbox
 from research_os.services.red_team_enforcement import validate_red_team_enforcement
 
 ValidationMode = Literal["strict", "metadata-only"]
+
+# Validation is read-only but intentionally comprehensive. Keep the validated
+# snapshot for an unchanged repository so web navigation does not reparse all
+# Markdown objects on every request. The signature is cheap (about 15 ms for
+# the current repository) and detects edits, additions, and deletions.
+_VALIDATION_CACHE: dict[
+    tuple[Path, ValidationMode],
+    tuple[tuple[tuple[str, int, int], ...], tuple[list[ResearchObject], list[Finding]]],
+] = {}
+_VALIDATION_CACHE_LOCK = RLock()
+
+
+def _repository_signature(root: Path) -> tuple[tuple[str, int, int], ...]:
+    paths = object_paths(root)
+    signature: list[tuple[str, int, int]] = []
+    for path in paths:
+        try:
+            stat = path.stat()
+        except OSError:
+            # A concurrent write can remove a file after object_paths() found
+            # it. The next call will recompute the signature and load again.
+            signature.append((str(path), -1, -1))
+            continue
+        signature.append((str(path), stat.st_mtime_ns, stat.st_size))
+    taxonomy = root / "00_System" / "Taxonomy.md"
+    try:
+        stat = taxonomy.stat()
+    except OSError:
+        signature.append((str(taxonomy), -1, -1))
+    else:
+        signature.append((str(taxonomy), stat.st_mtime_ns, stat.st_size))
+    return tuple(signature)
+
+
+def clear_validation_cache(root: Path | None = None) -> None:
+    """Drop cached validation snapshots, optionally for one repository."""
+    with _VALIDATION_CACHE_LOCK:
+        if root is None:
+            _VALIDATION_CACHE.clear()
+            return
+        resolved = root.resolve()
+        for key in tuple(_VALIDATION_CACHE):
+            if key[0] == resolved:
+                _VALIDATION_CACHE.pop(key, None)
 
 
 def add(
@@ -1136,6 +1181,15 @@ def validate_repository(
     mode: ValidationMode = "strict",
 ) -> tuple[list[ResearchObject], list[Finding]]:
     root = root.resolve()
+    signature = _repository_signature(root)
+    cache_key = (root, mode)
+    with _VALIDATION_CACHE_LOCK:
+        cached = _VALIDATION_CACHE.get(cache_key)
+        if cached is not None and cached[0] == signature:
+            objects, findings = cached[1]
+            # Copy the outer lists so a caller can sort/filter without
+            # changing the snapshot shared by other requests.
+            return list(objects), list(findings)
     objects, findings = load_objects(root)
     by_id: dict[str, ResearchObject] = {}
     for obj in objects:
@@ -1178,6 +1232,8 @@ def validate_repository(
     findings.sort(
         key=lambda item: (str(item.path), item.level, item.code, item.message)
     )
+    with _VALIDATION_CACHE_LOCK:
+        _VALIDATION_CACHE[cache_key] = (signature, (objects, findings))
     return objects, findings
 
 

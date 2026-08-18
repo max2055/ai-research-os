@@ -104,6 +104,8 @@ class DashboardSecurityTests(unittest.TestCase):
                 "/reports/new/preview",
                 "/reviews/apply/commit",
                 "/reviews/apply/preview",
+                "/reviews/assist/preview",
+                "/reviews/assist/start",
                 "/reviews/cadence/commit",
                 "/reviews/cadence/preview",
                 "/projects/new/commit",

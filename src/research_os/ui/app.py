@@ -6,11 +6,13 @@ import html
 import json
 import sqlite3
 from collections.abc import Callable, Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, date, datetime, timedelta
 from email.parser import BytesParser
 from email.policy import default as email_policy
 from pathlib import Path
 from threading import Lock
+from time import monotonic
 from typing import Any
 from urllib.parse import parse_qs, urlencode
 
@@ -27,6 +29,13 @@ from research_os.domain.models import ResearchObject
 from research_os.llm import llm_adapter, llm_config, model_fetch, provider_catalog
 from research_os.repositories.transaction import TransactionError
 from research_os.services import candidate_db
+from research_os.services.ai_assistance import (
+    candidate_match_explanation as explain_candidate_match,
+)
+from research_os.services.ai_assistance import (
+    prepare_review_assistance,
+    source_review_assistance,
+)
 from research_os.services.analysis_compare import compare_runs
 from research_os.services.analysis_evaluator import (
     evaluate_run,
@@ -40,12 +49,12 @@ from research_os.services.analysis_registry import (
 )
 from research_os.services.candidate_queue import promoted_rows, queue_rows, queue_show
 from research_os.services.channels import channel_rows
-from research_os.services.drafts import SOURCE_GRADES, SOURCE_TYPES
+from research_os.services.drafts import SOURCE_GRADES, SOURCE_TYPES, split_values
 from research_os.services.ingestion import verify_source_assets
 from research_os.services.metrics import (
     load_metrics_snapshot,
+    metric_comparison_rows,
     pipeline_metrics,
-    render_metrics_comparison,
     research_metrics,
 )
 from research_os.services.mode_metrics import mode_metrics
@@ -505,6 +514,14 @@ def object_url(obj: ResearchObject) -> str:
         "report": "reports",
         "action": "actions",
         "project": "projects",
+        "impact_assertion": "impact",
+        "ontology_assertion": "impact",
+        "analysis_run": "analysis/runs",
+        "analysis_mode": "analysis/modes",
+        "forecast": "decision/forecast",
+        "valuation_snapshot": "decision/valuation",
+        "recommendation": "decision/recommendation",
+        "forecast_resolution": "decision/resolution",
     }.get(obj.object_type, "objects")
     return f"/{plural}/{obj.object_id}"
 
@@ -550,6 +567,14 @@ def table(headers: list[str], rows: list[list[str]]) -> str:
     )
 
 
+def metric_card(value: Any, label: str, href: str | None = None) -> str:
+    """Render a metric as a discoverable link when a destination exists."""
+    inner = f"<strong>{esc(value)}</strong><span>{esc(label)}</span>"
+    if href:
+        inner = f'<a class="metric-link" href="{esc(href)}">{inner}</a>'
+    return f'<div class="metric">{inner}</div>'
+
+
 def metadata_grid(obj: ResearchObject) -> str:
     hidden = {"title"}
     items = [(key, value) for key, value in obj.metadata.items() if key not in hidden]
@@ -563,24 +588,32 @@ def metadata_grid(obj: ResearchObject) -> str:
     )
 
 
-def shell(title: str, content: str, *, project_id: str | None = None) -> str:
+def shell(
+    title: str,
+    content: str,
+    *,
+    project_id: str | None = None,
+    active_key: str | None = None,
+) -> str:
     project_query = f"?project={project_id}" if project_id else ""
-    nav_items = (
+    primary_nav_items = (
         ("home", "/home", "产业首页"),
-        ("overview", "/", "概览"),
+        ("overview", "/", "项目概览"),
         ("reviews", "/reviews", "评审队列"),
         ("sources", "/sources", "来源"),
-        ("metrics", "/metrics", "指标"),
-        ("operations", "/operations", "运营"),
-        ("pipeline", "/pipeline", "管线"),
-        ("intel", "/companies", "产业"),
+        ("intel", "/companies", "企业与板块"),
         ("impact", "/impact", "影响"),
         ("analysis", "/analysis", "分析"),
         ("decision", "/decision", "决策"),
+    )
+    secondary_nav_items = (
+        ("metrics", "/metrics", "指标"),
+        ("pipeline", "/pipeline", "管线"),
+        ("operations", "/operations", "运营"),
         ("llm", "/llm", "模型"),
         ("health", "/health", "健康"),
     )
-    title_key = (
+    inferred_key = (
         "home"
         if title == "产业首页"
         else "reviews"
@@ -609,11 +642,26 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
         )
         else "overview"
     )
-    nav = "".join(
-        f'<a href="{href}{project_query}"'
-        + (' aria-current="page" class="active"' if key == title_key else "")
-        + f">{label}</a>"
-        for key, href, label in nav_items
+    current_key = active_key or inferred_key
+    scoped_nav_keys = {"overview", "reviews", "metrics", "operations", "health"}
+
+    def render_nav(items: tuple[tuple[str, str, str], ...]) -> str:
+        return "".join(
+            f'<a href="{href}{project_query if key in scoped_nav_keys else ""}"'
+            + (' aria-current="page" class="active"' if key == current_key else "")
+            + f">{label}</a>"
+            for key, href, label in items
+        )
+
+    nav = (
+        '<div class="nav-group nav-primary" aria-label="研究工作区">'
+        '<span class="nav-group-title">研究</span>'
+        + render_nav(primary_nav_items)
+        + '</div><div class="nav-divider" aria-hidden="true"></div>'
+        + '<div class="nav-group nav-secondary" aria-label="系统与运营">'
+        + '<span class="nav-group-title">系统</span>'
+        + render_nav(secondary_nav_items)
+        + "</div>"
     )
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -629,7 +677,7 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
 <header>
   <div class="shell">
     <div class="brand">
-      <h1><a href="/" style="color:inherit;text-decoration:none">AI Research OS</a></h1>
+      <h1><a href="/home" style="color:inherit;text-decoration:none">AI Research OS</a></h1>
       <span>本地 · 可审计 · 研究工作区</span>
     </div>
     <nav aria-label="Primary">
@@ -642,8 +690,14 @@ def shell(title: str, content: str, *, project_id: str | None = None) -> str:
   数据在请求时实时重建。写操作必须经过具名预览、确认与审计。
 </footer>
 <script>
-  document.querySelector('nav[aria-label="Primary"] [aria-current]')
-    ?.scrollIntoView({{block: "nearest", inline: "center"}});
+  const activeNavItem = document.querySelector('nav[aria-label="Primary"] [aria-current]');
+  const navScroller = activeNavItem?.closest('nav');
+  if (activeNavItem && navScroller) {{
+    const itemRight = activeNavItem.offsetLeft + activeNavItem.offsetWidth;
+    const viewRight = navScroller.scrollLeft + navScroller.clientWidth;
+    if (activeNavItem.offsetLeft < navScroller.scrollLeft) navScroller.scrollLeft = activeNavItem.offsetLeft;
+    else if (itemRight > viewRight) navScroller.scrollLeft = itemRight - navScroller.clientWidth;
+  }}
 </script>
 </body>
 </html>"""
@@ -663,9 +717,18 @@ def _read_only_setup_page(title: str, back_path: str) -> str:
 class DashboardRepository:
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
+        self._objects_cache: tuple[float, list[ResearchObject], list[Any]] | None = None
 
     def all(self) -> tuple[list[ResearchObject], list[Any]]:
-        return validate_repository(self.root)
+        now = monotonic()
+        if self._objects_cache is not None and now - self._objects_cache[0] < 1.5:
+            return self._objects_cache[1], self._objects_cache[2]
+        objects, findings = validate_repository(self.root)
+        self._objects_cache = (now, objects, findings)
+        return objects, findings
+
+    def invalidate(self) -> None:
+        self._objects_cache = None
 
     def scoped(
         self,
@@ -732,10 +795,20 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
   </div>
 </section>
 <section class="metrics">
-  <div class="metric"><strong>{len(by_type["source"])}</strong><span>来源</span></div>
-  <div class="metric"><strong>{len(by_type["event"])}</strong><span>事件</span></div>
-  <div class="metric"><strong>{len(pending)}</strong><span>待评审</span></div>
-  <div class="metric"><strong>{len(open_actions)}</strong><span>未决行动</span></div>
+  {metric_card(len(by_type["source"]), "来源", f"/sources?project={esc(selected)}")}
+  {metric_card(len(by_type["event"]), "事件", f"/impact?project={esc(selected)}")}
+  {metric_card(len(pending), "待评审", f"/reviews?project={esc(selected)}")}
+  {metric_card(len(open_actions), "未决行动", f"/operations?project={esc(selected)}")}
+</section>
+<section class="workflow-panel">
+  <div class="section-heading"><div><h3>研究路径</h3>
+  <p class="muted">按这个顺序推进一个项目，系统管理入口位于顶部“系统”组。</p></div></div>
+  <div class="workflow">
+    <a class="workflow-step" href="/reviews?project={esc(selected)}"><span>1</span><strong>先评审</strong><small>处理待审核对象</small></a>
+    <a class="workflow-step" href="/sources?project={esc(selected)}"><span>2</span><strong>补来源</strong><small>确认来源和证据</small></a>
+    <a class="workflow-step" href="/analysis?project={esc(selected)}"><span>3</span><strong>做分析</strong><small>比较运行和影响</small></a>
+    <a class="workflow-step" href="/decision?project={esc(selected)}"><span>4</span><strong>到决策</strong><small>跟踪 Forecast 与 Recommendation</small></a>
+  </div>
 </section>"""
     all_objects, _ = repo.all()
     all_runs = [o for o in all_objects if o.object_type == "analysis_run"]
@@ -812,7 +885,12 @@ def _project_overview(repo: DashboardRepository, project_id: str | None) -> str:
   </div>
 </section>"""
     )
-    return shell(str(project.metadata.get("title")), content, project_id=selected)
+    return shell(
+        str(project.metadata.get("title")),
+        content,
+        project_id=selected,
+        active_key="overview",
+    )
 
 
 def _heat_cell(value: int, color: str = "58, 110, 165") -> str:
@@ -852,13 +930,23 @@ def _industry_home(repo: DashboardRepository) -> str:
     <p class="muted">{due_forecasts} 到期预测 · {due_actions} 到期行动 · {failed_runs} 抓取失败 · {stale_count} stale 通道</p>
   </div>
 </section>
+<section class="workflow-panel">
+  <div class="section-heading"><div><h3>今天从哪里开始</h3>
+  <p class="muted">首页聚合全局状态；下面四个入口对应最常见的下一步。</p></div></div>
+  <div class="workflow">
+    <a class="workflow-step" href="/pipeline/queue"><span>1</span><strong>看候选</strong><small>处理高优先级发现</small></a>
+    <a class="workflow-step" href="/impact"><span>2</span><strong>看影响</strong><small>追踪事件传导路径</small></a>
+    <a class="workflow-step" href="/decision"><span>3</span><strong>看决策</strong><small>处理到期与过期事项</small></a>
+    <a class="workflow-step" href="/health"><span>4</span><strong>查异常</strong><small>确认数据和系统健康</small></a>
+  </div>
+</section>
 <section class="metrics">
-  <div class="metric"><strong>{len(high_priority)}</strong><span>高优先级候选</span></div>
-  <div class="metric"><strong>{today_updates}</strong><span>今日 reviewed 事件/影响</span></div>
-  <div class="metric"><strong>{due_forecasts}</strong><span>到期预测</span></div>
-  <div class="metric"><strong>{due_actions}</strong><span>到期行动</span></div>
-  <div class="metric"><strong>{stale_count}</strong><span>stale 通道</span></div>
-  <div class="metric"><strong>{failed_runs}</strong><span>抓取失败</span></div>
+  {metric_card(len(high_priority), "高优先级候选", "/pipeline/queue")}
+  {metric_card(today_updates, "今日 reviewed 事件/影响", "/impact")}
+  {metric_card(due_forecasts, "到期预测", "/decision")}
+  {metric_card(due_actions, "到期行动", "/operations")}
+  {metric_card(stale_count, "stale 通道", "/pipeline/channels")}
+  {metric_card(failed_runs, "抓取失败", "/health")}
 </section>"""
 
     candidate_rows = [
@@ -1016,14 +1104,40 @@ def _review_rows(
     project_id: str | None,
     object_type: str | None,
     review_status: str,
+    ai_cache: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> tuple[list[list[str]], str]:
     objects, _, selected = repo.scoped(project_id)
+    cache = ai_cache or {}
+
+    def ai_cell(object_id: str) -> str:
+        state = cache.get(object_id) or {}
+        status = str(state.get("state") or "未分析")
+        labels = {
+            "queued": "排队中",
+            "running": "分析中",
+            "completed": "查看建议",
+            "failed": "分析失败，重试",
+        }
+        if status == "completed":
+            recommendation = str(state.get("recommendation") or "AI 建议")
+            return (
+                f'<a class="ai-review-state" data-ai-state="completed" '
+                f'href="/reviews/assist/{esc(object_id)}">{esc(recommendation)}</a>'
+            )
+        return f'<span class="ai-review-state" data-ai-state="{esc(status)}">{esc(labels.get(status, status))}</span>'
+
     rows = [
         [
-            object_link(obj),
+            (
+                f'<label class="row-check"><input type="checkbox" '
+                f'class="review-target" value="{esc(obj.object_id)}" '
+                f'aria-label="选择 {esc(obj.object_id)}"></label>'
+                f"{object_link(obj)}"
+            ),
             esc(obj.object_type),
             badge(obj.metadata.get("review_status"), warning=True),
             esc(obj.metadata.get("updated_at")),
+            ai_cell(obj.object_id),
         ]
         for obj in sorted(
             (
@@ -1044,27 +1158,128 @@ def _review_queue(
     object_type: str | None,
     review_status: str,
     csrf_token: str | None = None,
+    ai_cache: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> str:
     rows, selected = _review_rows(
         repo,
         project_id,
         object_type,
         review_status,
+        ai_cache,
     )
     type_options = "".join(
         f'<option value="{value}"'
         f"{' selected' if object_type == value else ''}>{TYPE_LABELS.get(value, value or '全部')}</option>"
-        for value in ("", "source", "event", "thesis", "company", "report")
+        for value in (
+            "",
+            "source",
+            "event",
+            "impact_assertion",
+            "ontology_assertion",
+            "thesis",
+            "company",
+            "report",
+        )
     )
     status_options = "".join(
         f'<option value="{value}"'
         f"{' selected' if review_status == value else ''}>{STATUS_LABELS.get(value, value)}</option>"
         for value in ("pending", "reviewed", "rejected", "superseded")
     )
+    action_bar = ""
+    if csrf_token is not None:
+        action_bar = f"""<section class="panel review-action-bar" id="review-action-bar" aria-label="评审操作">
+<form class="mutation-form review-form" id="review-form" method="post" action="/reviews/apply/preview">
+<input type="hidden" id="review-target-ids" name="target_ids" required>
+<div class="review-toolbar"><div class="selection-toolbar"><strong>已选 <span id="review-selected-count">0</span> 项</strong>
+<button type="submit" form="review-ai-form" class="button-secondary" id="review-ai-submit">分析已选</button>
+<button type="button" class="button-secondary" id="review-select-page">选择当前页</button>
+<button type="button" class="button-secondary" id="review-clear-selection">清空</button>
+<label>决定<select name="decision"><option value="approve">批准</option><option value="edit">要求修改</option><option value="reject">拒绝</option></select></label>
+<label>评审日期<input name="reviewed_at" type="date" value="{date.today().isoformat()}" required></label>
+<button type="submit">预览评审</button></div>
+<details class="review-notes" id="review-notes">
+<summary>评审说明 <span class="muted" id="review-notes-hint">批准时可选</span></summary>
+<label><span class="sr-only">评审说明</span><textarea name="notes" rows="3" maxlength="2000"></textarea></label>
+</details></div>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<button type="submit" class="sr-only">预览评审</button>
+</form>
+<form id="review-ai-form" class="review-ai-form" method="post" action="/reviews/assist/start">
+<input type="hidden" id="review-ai-target-ids" name="target_ids" required>
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<span class="review-ai-status" id="review-ai-status" role="status" aria-live="polite"></span>
+</form>
+<p class="muted">仅提交已选对象；批次类型会在预览中明确列出。</p>
+<script>
+(() => {{
+  const boxes = () => [...document.querySelectorAll('.review-target')];
+  const ids = document.querySelector('#review-target-ids');
+  const aiIds = document.querySelector('#review-ai-target-ids');
+  const count = document.querySelector('#review-selected-count');
+  const decision = document.querySelector('#review-form select[name="decision"]');
+  const notesPanel = document.querySelector('#review-notes');
+  const notesHint = document.querySelector('#review-notes-hint');
+  const notes = document.querySelector('#review-form textarea[name="notes"]');
+  const aiForm = document.querySelector('#review-ai-form');
+  const aiButton = document.querySelector('#review-ai-submit');
+  const aiStatus = document.querySelector('#review-ai-status');
+  const sync = () => {{
+    const values = boxes().filter((box) => box.checked).map((box) => box.value);
+    ids.value = values.join(',');
+    aiIds.value = ids.value;
+    count.textContent = values.length;
+    ids.setCustomValidity(values.length ? '' : '请至少选择一个对象');
+  }};
+  const syncNotes = () => {{
+    const required = decision.value !== 'approve';
+    notes.required = required;
+    notesPanel.open = required;
+    notesHint.textContent = required ? '当前决定必填' : '批准时可选';
+  }};
+  document.addEventListener('change', (event) => {{
+    if (event.target.matches('.review-target')) sync();
+  }});
+  decision.addEventListener('change', syncNotes);
+  document.querySelector('#review-select-page')?.addEventListener('click', () => {{
+    boxes().forEach((box) => {{ box.checked = true; }}); sync();
+  }});
+  document.querySelector('#review-clear-selection')?.addEventListener('click', () => {{
+    boxes().forEach((box) => {{ box.checked = false; }}); sync();
+  }});
+  aiForm?.addEventListener('submit', async (event) => {{
+    event.preventDefault();
+    const values = boxes().filter((box) => box.checked).map((box) => box.value);
+    if (!values.length) {{ aiStatus.textContent = '请至少选择一个对象'; return; }}
+    aiButton.disabled = true;
+    aiStatus.textContent = '正在提交 AI 分析…';
+    try {{
+      const response = await fetch(aiForm.action, {{ method: 'POST', body: new URLSearchParams(new FormData(aiForm)), credentials: 'same-origin' }});
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail || '提交失败');
+      aiStatus.textContent = '已提交 ' + payload.accepted.length + ' 个对象，正在排队分析…';
+      const poll = async () => {{
+        const fragment = await fetch('/fragments/reviews?project={esc(selected)}&type={esc(object_type or "")}&status={esc(review_status)}', {{ credentials: 'same-origin' }});
+        const html = await fragment.text();
+        const table = document.querySelector('#review-table');
+        const current = table?.querySelector('.table-scroll');
+        const incoming = new DOMParser().parseFromString(html, 'text/html').querySelector('.table-scroll');
+        if (current && incoming) current.replaceWith(incoming);
+        const pending = [...document.querySelectorAll('.ai-review-state')].some((node) => ['queued', 'running'].includes(node.dataset.aiState));
+        if (pending) window.setTimeout(poll, 1500);
+        else {{ aiButton.disabled = false; aiStatus.textContent = 'AI 分析已完成，可点击列表中的建议查看详情'; sync(); }}
+      }};
+      window.setTimeout(poll, 350);
+    }} catch (error) {{ aiButton.disabled = false; aiStatus.textContent = '提交失败：' + error.message; }}
+  }});
+  syncNotes();
+}})();
+</script></section>"""
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>评审队列</h2>
 <p>筛选研究对象，并通过具名预览与确认记录人工评审决定。</p>
 <p><a class="button-link" href="/reviews/cadence">记录 Weekly / Monthly cadence review</a></p>
+<p><a href="/evidence/events/new">新建 Event</a> · <a href="/sources/new">新建 Source</a></p>
 </div><div><div class="eyebrow">{esc(STATUS_LABELS.get(review_status, review_status))}</div><h2>{len(rows)}</h2>
 <p class="muted">本页不会改变任何状态。</p></div></section>
 <section class="panel" style="margin-bottom:1rem">
@@ -1075,21 +1290,87 @@ def _review_queue(
 <select name="status">{status_options}</select></label>
 <button type="submit">筛选</button>
 </form></section>
+{action_bar}
 <section class="panel" id="review-table"
   hx-get="/fragments/reviews?project={esc(selected)}&type={esc(object_type or "")}&status={esc(review_status)}"
   hx-trigger="refresh">
-{table(["对象", "类型", "状态", "更新"], rows)}</section>"""
-    if csrf_token is not None:
-        content += f"""<section class="panel"><h3>记录评审决定</h3>
-<form class="mutation-form" method="post" action="/reviews/apply/preview">
-<label>目标 ID（逗号分隔）<input name="target_ids" required></label>
-<label>决定<select name="decision"><option value="approve">批准</option><option value="edit">要求修改</option><option value="reject">拒绝</option></select></label>
-<label>评审日期<input name="reviewed_at" type="date" value="{date.today().isoformat()}" required></label>
-<label>评审说明<textarea name="notes" rows="5" maxlength="2000"></textarea></label>
-<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
-<div class="mutation-actions"><button type="submit">预览评审</button></div>
-</form></section>"""
+{table(["选择 / 对象", "类型", "状态", "更新", "AI 建议"], rows)}</section>"""
     return shell("评审队列", content, project_id=selected)
+
+
+def _review_assistance_page(packet: Mapping[str, Any]) -> str:
+    def target_href(object_type: str, object_id: str) -> str:
+        paths = {
+            "source": "/sources/",
+            "event": "/events/",
+            "impact_assertion": "/impact/",
+        }
+        return paths.get(object_type, "/reviews") + esc(object_id)
+
+    item_rows = []
+    for item in packet.get("items", []):
+        item_rows.append(
+            [
+                f'<a href="{target_href(item["object_type"], item["object_id"])}">'
+                f'{esc(item["object_id"])}</a><br><span class="muted">{esc(item["title"])}</span>',
+                esc(TYPE_LABELS.get(item["object_type"], item["object_type"])),
+                esc(item["recommendation"]),
+                esc(item["reason"]),
+                esc("；".join(item["basis"]) or "无")
+                + "<br>缺失："
+                + esc(", ".join(item["missing_fields"]) or "无"),
+            ]
+        )
+    model_output = packet.get("model_output")
+    model_panel = (
+        f'<pre class="assistant-output">{esc(model_output)}</pre>'
+        if model_output
+        else '<p class="muted">当前没有模型文本，以上规则建议仍可供人工评审参考。</p>'
+    )
+    uncertainty = "".join(
+        f"<li>{esc(item)}</li>" for item in packet.get("uncertainties", [])
+    )
+    target_ids = [str(item) for item in packet.get("target_ids", [])]
+    csrf_token = str(packet.get("csrf_token") or "")
+    state = str(packet.get("state") or "completed")
+    decision_forms = []
+    for target_id in target_ids:
+        decision_forms.append(f'''<form class="review-decision-actions" method="post" action="/reviews/apply/preview">
+<input type="hidden" name="target_ids" value="{esc(target_id)}">
+<input type="hidden" name="reviewed_at" value="{date.today().isoformat()}">
+<input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
+<label class="sr-only" for="review-notes-{esc(target_id)}">评审说明</label>
+<textarea id="review-notes-{esc(target_id)}" name="notes" rows="2" maxlength="2000" placeholder="修改或拒绝时填写说明"></textarea>
+<button type="submit" name="decision" value="approve">批准</button>
+<button type="submit" name="decision" value="edit" class="button-secondary">修改</button>
+<button type="submit" name="decision" value="reject" class="button-danger">拒绝</button>
+</form>''')
+    actions = (
+        "".join(decision_forms)
+        if csrf_token
+        else '<p class="muted">返回评审队列后进行人工决定。</p>'
+    )
+    content = f"""<section class="hero"><div>
+<div class="eyebrow">评审工作台 · 只读辅助</div><h2>AI 辅助评审</h2>
+<p>AI 结果仅供参考，最终结论由研究者做出。人工决定会继续经过预览、确认和审计。</p>
+</div><div><div class="eyebrow">对象数</div><h2>{len(target_ids)}</h2>
+<p class="muted">状态：{esc({"queued": "排队中", "running": "分析中", "completed": "已完成", "failed": "失败"}.get(state, state))}</p></div></section>
+{f'<section class="panel"><p class="review-ai-status" role="status">{esc(packet.get("status_message") or "正在分析，请稍候…")}</p></section>' if state != "completed" else ""}
+<section class="panel"><h3>对象建议</h3>
+{table(["对象", "类型", "建议", "说明", "依据"], item_rows)}</section>
+<section class="panel"><h3>模型建议</h3>
+<p class="muted">{esc(packet.get("model_status"))}</p>{model_panel}</section>
+<section class="panel"><h3>人工最终决定</h3><p class="muted">不要把 AI 建议当作自动结论，请逐项选择批准、修改或拒绝。</p>{actions}</section>
+<section class="panel"><h3>不确定性与下一步</h3><ul>{uncertainty}</ul>
+<p><a class="button-link" href="/reviews">返回评审队列</a></p></section>
+<script>
+document.querySelectorAll('.review-decision-actions').forEach((form) => form.addEventListener('submit', (event) => {{
+  const decision = event.submitter?.value;
+  const notes = form.querySelector('textarea[name="notes"]');
+  if (notes) notes.required = decision !== 'approve';
+}}));
+</script>"""
+    return shell("AI 辅助评审", content, active_key="reviews")
 
 
 def _source_page(repo: DashboardRepository, source_id: str) -> str:
@@ -1138,14 +1419,46 @@ def _source_page(repo: DashboardRepository, source_id: str) -> str:
 <div class="panel"><h3>归档版本与提取</h3>
 {table(["资产", "类型"], asset_rows)}</div>
 <div class="panel"><h3>关联事件</h3>{table(["事件", "日期", "评审"], rows)}</div>
-<div class="panel"><h3>研究笔记</h3><pre>{esc(source.body)}</pre>
-<p><a href="/sources/{esc(source_id)}/workbench">打开来源操作</a></p></div>
+<div class="panel"><h3>研究笔记</h3><div class="document-body">{render_document_body(source.body)}</div>
+<p><a href="/sources/{esc(source_id)}/workbench">打开来源操作</a> · <a href="/sources/{esc(source_id)}/assistant">生成评审建议</a></p></div>
 </section>"""
-    return shell(source_id, content)
+    project_ids = source.metadata.get("project_ids") or []
+    project_id = (
+        str(project_ids[0]) if isinstance(project_ids, list) and project_ids else None
+    )
+    return shell(source_id, content, project_id=project_id, active_key="sources")
 
 
-def _source_list_page(repo: DashboardRepository) -> str:
-    objects, _ = repo.all()
+def _source_assistant_page(repo: DashboardRepository, source_id: str) -> str:
+    suggestion = source_review_assistance(repo.root, source_id)
+    rows = [
+        ["模式", esc(suggestion["mode"])],
+        [
+            "建议",
+            badge(
+                suggestion["recommendation"],
+                warning=suggestion["recommendation"] != "保持",
+            ),
+        ],
+        ["理由", esc(suggestion["reason"])],
+        ["缺失字段", esc(", ".join(suggestion["missing_fields"]) or "无")],
+        ["资产数量", esc(suggestion["asset_count"])],
+        ["处理状态", esc(suggestion["processing_status"])],
+        ["评审状态", esc(suggestion["review_status"])],
+    ]
+    uncertainty = "".join(
+        f"<li>{esc(item)}</li>" for item in suggestion["uncertainties"]
+    )
+    content = f"""<section class="hero"><div><div class="eyebrow">AI 辅助 · Source</div>
+<h2>{esc(source_id)}</h2><p>建议只读生成，需人工查看后再进入现有评审预览。</p></div></section>
+<section class="panel"><h3>评审建议</h3>{table(["项目", "结果"], rows)}</section>
+<section class="panel"><h3>不确定性与边界</h3><ul>{uncertainty}</ul>
+<p><a href="/sources/{esc(source_id)}">返回 Source</a> · <a href="/reviews?type=source&status=pending">打开评审队列</a></p></section>"""
+    return shell(f"Source 评审建议 · {source_id}", content, active_key="sources")
+
+
+def _source_list_page(repo: DashboardRepository, project_id: str | None = None) -> str:
+    objects = repo.scoped(project_id)[0] if project_id else repo.all()[0]
     sources = sorted(
         (obj for obj in objects if obj.object_type == "source"),
         key=lambda obj: str(obj.metadata.get("updated_at", "")),
@@ -1161,12 +1474,13 @@ def _source_list_page(repo: DashboardRepository) -> str:
         ]
         for obj in sources
     ]
+    selected = project_id or "全局"
     content = f"""<section class="hero"><div>
-<div class="eyebrow">研究来源</div><h2>来源工作台</h2>
+<div class="eyebrow">{esc(selected)} · 研究来源</div><h2>来源工作台</h2>
 <p>采集、归档、提取与核验保持独立状态。</p></div>
-<div><a class="button" href="/sources/new">新建来源</a></div></section>
+<div><a class="button-link" href="/sources/new">新建来源</a></div></section>
 <section class="panel">{table(["来源", "标题", "发布方", "处理", "评审"], rows)}</section>"""
-    return shell("来源工作台", content)
+    return shell("来源工作台", content, project_id=project_id)
 
 
 def _source_create_page(csrf_token: str) -> str:
@@ -1184,9 +1498,9 @@ def _source_create_page(csrf_token: str) -> str:
 <p>采集结果先冻结预览，确认后才写入仓库。</p></div></section>
 <section class="panel"><form class="mutation-form" method="post"
 action="/sources/new/preview" enctype="multipart/form-data">
-<label>采集方式<select name="capture_mode"><option value="url">URL</option><option value="upload">文件上传</option></select></label>
-<label>URL<input name="locator" type="url"></label>
-<label>本地文件<input name="source_file" type="file" accept=".html,.htm,.pdf,.txt,.json"></label>
+<label for="capture-mode">采集方式<select id="capture-mode" name="capture_mode"><option value="url">URL</option><option value="upload">文件上传</option></select></label>
+<label id="url-capture-field">URL<input name="locator" type="url"></label>
+<label id="upload-capture-field" hidden>本地文件<input name="source_file" type="file" accept=".html,.htm,.pdf,.txt,.json"></label>
 <label>标题<input name="title" required maxlength="300"></label>
 <label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*"></label>
 <label>创建日期<input name="created_at" type="date" value="{today}" required></label>
@@ -1202,7 +1516,20 @@ action="/sources/new/preview" enctype="multipart/form-data">
 <label>重复处理<select name="allow_duplicate"><option value="false">阻止重复</option><option value="true">明确保留并关联上游</option></select></label>
 <input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
 <div class="mutation-actions"><button type="submit">预览来源</button>
-<a href="/sources">取消</a></div></form></section>"""
+<a href="/sources">取消</a></div></form>
+<script>
+(() => {{
+  const mode = document.querySelector('#capture-mode');
+  const urlField = document.querySelector('#url-capture-field');
+  const uploadField = document.querySelector('#upload-capture-field');
+  const sync = () => {{
+    const upload = mode.value === 'upload';
+    urlField.hidden = upload;
+    uploadField.hidden = !upload;
+  }};
+  mode.addEventListener('change', sync); sync();
+}})();
+</script></section>"""
     return shell("新建来源", content)
 
 
@@ -1210,10 +1537,20 @@ def _source_mutation_confirmation(
     grant: PreviewGrant,
     csrf_token: str,
     commit_path: str,
+    cancel_path: str | None = None,
 ) -> str:
     preview = grant.preview
+    cancel_href = cancel_path or f"/sources/{preview.target_id}"
     summary_rows = [
-        [esc(key), esc(value)] for key, value in sorted(preview.summary.items())
+        [
+            esc(key),
+            esc(
+                json.dumps(value, ensure_ascii=False)
+                if isinstance(value, dict | list)
+                else value
+            ),
+        ]
+        for key, value in sorted(preview.summary.items())
     ]
     content = f"""<section class="hero"><div>
 <div class="eyebrow">来源变更确认</div><h2>{esc(preview.target_id)}</h2>
@@ -1224,7 +1561,7 @@ def _source_mutation_confirmation(
 <input type="hidden" name="preview_token" value="{esc(grant.token)}">
 <input type="hidden" name="csrf_token" value="{esc(csrf_token)}">
 <div class="mutation-actions"><button type="submit">确认写入</button>
-<a href="/sources/{esc(preview.target_id)}">取消</a></div></form></section>"""
+<a href="{esc(cancel_href)}">取消</a></div></form></section>"""
     return shell(f"确认 · {preview.target_id}", content)
 
 
@@ -1466,9 +1803,39 @@ def _thesis_page(repo: DashboardRepository, thesis_id: str) -> str:
 <section class="grid">
 <div class="panel"><h3>证据平衡</h3>
 {table(["事件", "关系", "日期"], evidence_rows)}</div>
-<div class="panel"><h3>观点说明</h3><pre>{esc(thesis.body)}</pre></div>
+<div class="panel"><h3>观点说明</h3><div class="document-body">{render_document_body(thesis.body)}</div></div>
 </section>"""
     return shell(thesis_id, content)
+
+
+def render_document_body(body: str) -> str:
+    """Render the common Markdown subset as readable HTML, keeping source view optional."""
+    lines = body.splitlines()
+    rendered: list[str] = []
+    paragraph: list[str] = []
+
+    def flush() -> None:
+        if paragraph:
+            rendered.append(f"<p>{esc(' '.join(paragraph))}</p>")
+            paragraph.clear()
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            flush()
+            continue
+        if line.startswith("#"):
+            flush()
+            level = min(len(line) - len(line.lstrip("#")), 4)
+            heading = line[level:].strip()
+            rendered.append(f"<h{level + 2}>{esc(heading)}</h{level + 2}>")
+        elif line.startswith(("- ", "* ")):
+            flush()
+            rendered.append(f"<ul><li>{esc(line[2:].strip())}</li></ul>")
+        else:
+            paragraph.append(line)
+    flush()
+    return "".join(rendered) or '<p class="muted">（无正文）</p>'
 
 
 def _generic_page(repo: DashboardRepository, object_id: str) -> str:
@@ -1480,7 +1847,7 @@ def _generic_page(repo: DashboardRepository, object_id: str) -> str:
 </div><div><div class="eyebrow">永久 ID</div><h2>{esc(obj.object_id)}</h2>
 <p><a href="/impact/{esc(obj.object_id)}">查看关系网络</a></p>
 </div></section><section class="panel">{metadata_grid(obj)}
-<pre>{esc(obj.body)}</pre></section>"""
+<div class="document-body">{render_document_body(obj.body)}</div></section>"""
     return shell(object_id, content)
 
 
@@ -1497,24 +1864,41 @@ def _metrics_page(repo: DashboardRepository, project_id: str | None) -> str:
         baseline_paths = sorted(
             (repo.root / "05_Research" / "Reviews" / "Snapshots").glob("METRICS-*.json")
         )
-    comparison = "暂无指标快照。"
+    comparison_rows: list[tuple[str, float, float]] = []
     baseline_label = "none"
     if baseline_paths:
         baseline = load_metrics_snapshot(baseline_paths[-1])
-        comparison = render_metrics_comparison(baseline, metrics)
+        comparison_rows = metric_comparison_rows(baseline, metrics)
         baseline_label = str(baseline.get("as_of"))
+    comparison_table = (
+        table(
+            ["指标", "基线", "当前", "变化"],
+            [
+                [
+                    esc(label),
+                    esc(f"{old:g}"),
+                    esc(f"{new:g}"),
+                    badge(f"{new - old:+g}", warning=new < old),
+                ]
+                for label, old, new in comparison_rows
+            ],
+        )
+        if comparison_rows
+        else '<p class="empty">暂无可比较的指标快照。</p>'
+    )
+    query = f"?project={esc(selected)}"
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>指标与变化</h2>
-<p>当前 Markdown 状态与快照 {esc(baseline_label)} 对比。</p>
+<p>当前研究状态与快照 {esc(baseline_label)} 对比。每个数字都可进入对应工作区。</p>
 </div><div><div class="eyebrow">评审队列</div>
-<h2>{esc(metrics["review_queue_total"])}</h2>
-<p class="muted">实时计算，非缓存。</p></div></section>
+<h2><a class="hero-link" href="/reviews{query}">{esc(metrics["review_queue_total"])}</a></h2>
+<p class="muted">实时计算 · 打开评审队列</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{counts["source"]["total"]}</strong><span>来源</span></div>
-<div class="metric"><strong>{counts["event"]["total"]}</strong><span>事件</span></div>
-<div class="metric"><strong>{metrics["source_quality"]["archived"]}</strong><span>已归档来源</span></div>
-<div class="metric"><strong>{metrics["thesis_health"]["without_contradicting"]}</strong><span>缺少反证的观点</span></div>
-</section><section class="panel"><pre>{esc(comparison)}</pre></section>"""
+{metric_card(counts["source"]["total"], "来源", f"/sources{query}")}
+{metric_card(counts["event"]["total"], "事件", f"/impact{query}")}
+{metric_card(metrics["source_quality"]["archived"], "已归档来源", f"/pipeline/sources{query}")}
+{metric_card(metrics["thesis_health"]["without_contradicting"], "缺少反证的观点", f"/reviews{query}")}
+</section><section class="panel"><div class="section-heading"><div><h3>指标变化</h3><p class="muted">基线：{esc(baseline_label)} · 共 {esc(len(comparison_rows))} 项</p></div></div>{comparison_table}</section>"""
     return shell("指标", content, project_id=selected)
 
 
@@ -1533,10 +1917,10 @@ def _pipeline_overview(repo: DashboardRepository) -> str:
 <h2>{esc(gate["days"])}/{esc(status["target_days"])}</h2>
 <p class="muted">自 {esc(status["since"])}</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(candidates["discovered_since"])}</strong><span>已发现</span></div>
-<div class="metric"><strong>{esc(candidates["promoted"])}</strong><span>已入库</span></div>
-<div class="metric"><strong>{esc(candidates["dismissed"])}</strong><span>已驳回</span></div>
-<div class="metric"><strong>{esc(gate["channels"])}</strong><span>通道就绪</span></div>
+{metric_card(candidates["discovered_since"], "已发现", "/pipeline/queue?status=new")}
+{metric_card(candidates["promoted"], "已入库", "/pipeline/sources")}
+{metric_card(candidates["dismissed"], "已驳回", "/pipeline/queue?status=dismissed")}
+{metric_card(gate["channels"], "通道就绪", "/pipeline/channels")}
 </section>
 <section class="grid">
 <div class="panel"><h3>候选队列</h3>
@@ -1553,8 +1937,15 @@ def _pipeline_overview(repo: DashboardRepository) -> str:
     return shell("管线", content)
 
 
-def _pipeline_sources(repo: DashboardRepository) -> str:
+def _pipeline_sources(repo: DashboardRepository, project_id: str | None = None) -> str:
     rows = promoted_rows(repo.root)
+    if project_id:
+        scoped_ids = {
+            obj.object_id
+            for obj in objects_for_project(repo.all()[0], project_id)
+            if obj.object_type == "source"
+        }
+        rows = [row for row in rows if row["promoted_source_id"] in scoped_ids]
     body_rows = [
         [
             f'<a href="/sources/{esc(row["promoted_source_id"])}">{esc(row["promoted_source_id"])}</a>'
@@ -1572,7 +1963,7 @@ def _pipeline_sources(repo: DashboardRepository) -> str:
 </div><div><div class="eyebrow">已入库</div><h2>{len(rows)}</h2>
 <p class="muted">链接回其来源通道</p></div></section>
 <section class="panel">{table(["来源", "通道", "发布方", "实体", "发现时间"], body_rows)}</section>"""
-    return shell("管线来源", content)
+    return shell("管线来源", content, project_id=project_id)
 
 
 def _candidate_facts(detail: dict[str, Any]) -> str:
@@ -1825,6 +2216,7 @@ def _pipeline_candidate(
 </section>
 {_scoring_panel(detail)}
 {_suggestion_panel(detail)}
+<p><a href="/pipeline/queue/{esc(candidate_id)}/match-explanation">查看匹配解释</a></p>
 {dismiss_form}
 {restore_form}
 {promote_form}
@@ -1837,6 +2229,36 @@ def _pipeline_candidate(
 {table(["时间", "操作", "操作者", "原因"], action_rows_html)}</div>
 </section>"""
     return shell(candidate_id, hero + panels)
+
+
+def _candidate_match_explanation_page(
+    repo: DashboardRepository, candidate_id: str
+) -> str:
+    detail = queue_show(repo.root, candidate_id)
+    if detail is None:
+        raise KeyError(candidate_id)
+    explanation = explain_candidate_match(detail)
+    rows = [
+        ["模式", esc(explanation["mode"])],
+        [
+            "实体候选",
+            esc(json.dumps(explanation["entity_candidates"], ensure_ascii=False)),
+        ],
+        [
+            "板块候选",
+            esc(json.dumps(explanation["sector_candidates"], ensure_ascii=False)),
+        ],
+        ["理由编码", esc(", ".join(explanation["reason_codes"]) or "无")],
+    ]
+    uncertainty = "".join(
+        f"<li>{esc(item)}</li>" for item in explanation["uncertainties"]
+    )
+    content = f"""<section class="hero"><div><div class="eyebrow">AI 辅助 · 候选匹配</div>
+<h2>{esc(candidate_id)}</h2><p>解释现有确定性匹配结果，不创建或修改实体 ID。</p></div></section>
+<section class="panel"><h3>匹配解释</h3>{table(["项目", "结果"], rows)}</section>
+<section class="panel"><h3>不确定性与下一步</h3><ul>{uncertainty}</ul>
+<p><a href="/pipeline/queue/{esc(candidate_id)}">返回候选详情</a></p></section>"""
+    return shell(f"匹配解释 · {candidate_id}", content, active_key="pipeline")
 
 
 def _pipeline_queue(
@@ -2057,10 +2479,10 @@ def _pipeline_channels(repo: DashboardRepository) -> str:
 <section class="panel"><h3>通道 ({len(channels)})</h3>
 {table(["ID", "名称", "类型", "许可", "评审", "启用", "可调度"], channel_body)}</section>
 <section class="metrics" style="margin-top:1rem">
-<div class="metric"><strong>{esc(discovered["total"])}</strong><span>累计发现</span></div>
-<div class="metric"><strong>{esc(discovered["today"])}</strong><span>今日发现</span></div>
-<div class="metric"><strong>{duplicate["rate"]:.0%}</strong><span>入队重复率(7天)</span></div>
-<div class="metric"><strong>{discovery["failure_rate"]:.0%}</strong><span>失败率</span></div>
+{metric_card(discovered["total"], "累计发现", "/pipeline/queue")}
+{metric_card(discovered["today"], "今日发现", "/pipeline/queue")}
+{metric_card(f"{duplicate['rate']:.0%}", "入队重复率(7天)", "/pipeline/queue?show_dups=true")}
+{metric_card(f"{discovery['failure_rate']:.0%}", "失败率", "/operations/discovery")}
 </section>
 <section class="grid" style="margin-top:1rem">
 <div class="panel"><h3>重复</h3>{_kv_table(duplicate_rows)}</div>
@@ -2081,6 +2503,12 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
         as_of=date.today().isoformat(),
         project_id=selected,
     )
+    object_by_id = {obj.object_id: obj for obj in repo.all()[0]}
+
+    def op_link(object_id: str) -> str:
+        obj = object_by_id.get(object_id)
+        return object_url(obj) if obj is not None else "#operations-queues"
+
     schedule_rows = [
         [
             esc(row["channel_id"]),
@@ -2092,7 +2520,7 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     ]
     job_rows_ = [
         [
-            esc(row["id"]),
+            f'<a href="{esc(op_link(row["id"]))}">{esc(row["id"])}</a>',
             esc(row["job_name"]),
             esc(row["started_at"]),
             badge(row["status"], warning=row["status"] == "failed"),
@@ -2102,7 +2530,7 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     ]
     action_rows_ = [
         [
-            esc(row["id"]),
+            f'<a href="{esc(op_link(row["id"]))}">{esc(row["id"])}</a>',
             esc(row["owner"]),
             esc(row["due_date"]),
             badge(row["timing"], warning=row["timing"] == "overdue"),
@@ -2111,7 +2539,7 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     ]
     review_rows = [
         [
-            esc(row["id"]),
+            f'<a href="{esc(op_link(row["id"]))}">{esc(row["id"])}</a>',
             esc(row["review_cadence"]),
             esc(row["next_review_date"]),
         ]
@@ -2119,7 +2547,7 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     ]
     forecast_rows = [
         [
-            esc(row["id"]),
+            f'<a href="{esc(op_link(row["id"]))}">{esc(row["id"])}</a>',
             esc(row["title"]),
             esc(row["resolution_date"]),
             badge(row["timing"], warning=True),
@@ -2128,7 +2556,7 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     ]
     recommendation_rows = [
         [
-            esc(row["id"]),
+            f'<a href="{esc(op_link(row["id"]))}">{esc(row["id"])}</a>',
             esc(row["company_id"]),
             esc(row["age_days"]),
             badge(row["freshness"], warning=True),
@@ -2138,9 +2566,10 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>运营</h2>
 <p>统一读取调度、Jobs、Actions、研究评审与决策到期项；页面不执行任务。</p>
-</div><div><div class="eyebrow">待处理</div><h2>{esc(len(snapshot["schedules"]) + len(snapshot["actions"]) + len(snapshot["reviews"]) + len(snapshot["forecasts"]) + len(snapshot["recommendations"]))}</h2>
+<p><a href="/operations/actions/new">新建 Action</a> · <a href="/operations/jobs">查看 Jobs</a> · <a href="/operations/discovery">查看通道</a></p>
+</div><div><div class="eyebrow">待处理</div><h2><a class="hero-link" href="#operations-queues">{esc(len(snapshot["schedules"]) + len(snapshot["actions"]) + len(snapshot["reviews"]) + len(snapshot["forecasts"]) + len(snapshot["recommendations"]))}</a></h2>
 <p class="muted">截至 {esc(snapshot["as_of"])}</p></div></section>
-<section class="panel"><h3>调度</h3>{table(["Channel", "Schedule", "Last run", "状态"], schedule_rows)}</section>
+<section class="panel" id="operations-queues"><h3>调度</h3>{table(["Channel", "Schedule", "Last run", "状态"], schedule_rows)}</section>
 <section class="panel"><h3>Jobs</h3>{table(["Job", "名称", "Started", "状态", "消息"], job_rows_)}</section>
 <section class="panel"><h3>Actions</h3>{table(["Action", "Owner", "Due", "时点"], action_rows_)}</section>
 <section class="panel"><h3>研究评审</h3>{table(["Project", "Cadence", "Next review"], review_rows)}</section>
@@ -2153,9 +2582,17 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     return shell("运营", content, project_id=selected)
 
 
-def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
-    _, _, selected = repo.scoped(project_id)
-    snapshot = health_snapshot(repo.root, project_id=selected)
+def _health_page(
+    repo: DashboardRepository,
+    project_id: str | None,
+    *,
+    snapshot: dict[str, Any] | None = None,
+) -> str:
+    if snapshot is None:
+        _, _, selected = repo.scoped(project_id)
+        snapshot = health_snapshot(repo.root, project_id=selected)
+    else:
+        selected = project_id or "全局"
     validation = snapshot["validation"]
     finding_rows = [
         [
@@ -2175,6 +2612,18 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
         [esc(row["source_id"]), esc(row["status"]), esc(row["message"])]
         for row in snapshot["assets"]["failures"]
     ]
+    health_objects = {obj.object_id: obj for obj in repo.all()[0]}
+
+    def failure_link(object_id: str, object_type: str) -> str:
+        obj = health_objects.get(object_id)
+        if obj is not None:
+            return object_url(obj)
+        return (
+            "/analysis/runs/" + object_id
+            if object_type == "analysis_run"
+            else "/operations/jobs"
+        )
+
     db = snapshot["candidate_db"]
     channel_rows_ = [
         [
@@ -2187,7 +2636,12 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
         for row in snapshot["channels"]
     ]
     failed_rows = [
-        [esc(row["id"]), esc(row["type"]), esc(row["status"]), esc(row["message"])]
+        [
+            f'<a href="{esc(failure_link(row["id"], row["type"]))}">{esc(row["id"])}</a>',
+            esc(row["type"]),
+            esc(row["status"]),
+            esc(row["message"]),
+        ]
         for row in snapshot["failed_runs"]
     ]
     config_rows = [
@@ -2226,14 +2680,14 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
 <p>仓库、operational store、许可、备份与主机状态均在请求时只读检查。</p></div>
 <div><div class="eyebrow">状态</div>
 <h2>{badge("注意", warning=True) if attention else badge("健康")}</h2>
-<p class="muted">{esc(len(snapshot["indexes"]["drift"]))} 处漂移 · {esc(len(snapshot["assets"]["failures"]))} 个资产失败 · {esc(len(snapshot["failed_runs"]))} 个失败运行</p></div></section>
+<p class="muted"><a href="#health-indexes">{esc(len(snapshot["indexes"]["drift"]))} 处漂移</a> · <a href="#health-assets">{esc(len(snapshot["assets"]["failures"]))} 个资产失败</a> · <a href="#health-failures">{esc(len(snapshot["failed_runs"]))} 个失败运行</a></p></div></section>
 <section class="panel"><h3>仓库校验</h3>
 {table(["级别", "编码", "路径", "消息"], finding_rows)}</section>
-<section class="panel"><h3>索引</h3><p>scope={esc(snapshot["indexes"]["scope"])} · {badge(snapshot["indexes"]["status"], warning=snapshot["indexes"]["status"] != "ok")}</p>{table(["Drift"], index_rows) if index_rows else "<p class='muted'>无索引漂移。</p>"}</section>
-<section class="panel"><h3>Source assets</h3>{table(["Source", "状态", "消息"], asset_rows) if asset_rows else "<p class='muted'>资产完整性通过。</p>"}</section>
+<section class="panel" id="health-indexes"><h3>索引</h3><p>scope={esc(snapshot["indexes"]["scope"])} · {badge(snapshot["indexes"]["status"], warning=snapshot["indexes"]["status"] != "ok")}</p>{table(["Drift"], index_rows) if index_rows else "<p class='muted'>无索引漂移。</p>"}</section>
+<section class="panel" id="health-assets"><h3>Source assets</h3>{table(["Source", "状态", "消息"], asset_rows) if asset_rows else "<p class='muted'>资产完整性通过。</p>"}</section>
 <section class="panel"><h3>Candidate DB</h3>{_kv_table([["状态", badge(db["status"], warning=db["status"] != "ok")], ["Integrity", esc(db["integrity"])], ["Schema", f"{esc(db['schema_version'])} / {esc(db['expected_schema_version'])}"], ["Size", esc(db["size_bytes"])], ["Modified", esc(db["modified_at"] or "—")]])}</section>
 <section class="panel"><h3>Channels / License</h3>{table(["Channel", "Enabled", "Review", "License", "Robots checked"], channel_rows_)}</section>
-<section class="panel"><h3>失败任务与失败运行</h3>{table(["ID", "Type", "状态", "消息"], failed_rows)}</section>
+<section class="panel" id="health-failures"><h3>失败任务与失败运行</h3>{table(["ID", "Type", "状态", "消息"], failed_rows)}</section>
 <section class="panel"><h3>P1 告警</h3>{table(["编码", "优先级", "状态", "消息"], alert_rows) if alert_rows else "<p class='muted'>无 P1 告警。</p>"}</section>
 <section class="grid">
 <div class="panel"><h3>备份</h3>{_kv_table([["本地状态", badge(backup["status"], warning=backup["status"] != "fresh")], ["本地 Age hours", esc(backup["age_hours"] if backup["age_hours"] is not None else "—")], ["本地 Manifest", esc(backup["manifest"] or "—")], ["Durable 状态", badge(durable["status"], warning=durable["status"] != "fresh")], ["Durable Age hours", esc(durable["age_hours"] if durable["age_hours"] is not None else "—")], ["Durable Receipt", esc(durable["receipt"] or "—")]])}</div>
@@ -2242,7 +2696,9 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
 <div class="panel"><h3>本机写入</h3>{_kv_table([["状态", badge(web_identity["status"], warning=web_identity["status"] != "ready")], ["研究者", esc(web_identity["researcher_id"] or "—")], ["入口", '<a href="/setup">查看初始化状态</a>']])}</div>
 <div class="panel"><h3>模型与成本</h3>{_kv_table([["状态", badge(model_cost["status"], warning=model_cost["status"] in {"unconfigured", "no_data", "warning"}, danger=model_cost["status"] in {"exceeded", "invalid"})], ["周期", f"{esc(model_cost['period_start'])} - {esc(model_cost['period_end'])}"], ["已知成本", esc(model_cost["known_total"] if model_cost["known_total"] is not None else "—")], ["记录数", esc(model_cost["record_count"])], ["未知记录", esc(model_cost["unknown_record_count"])], ["无效记录", esc(model_cost["invalid_record_count"])], ["利用率", esc(model_cost["utilization"] if model_cost["utilization"] is not None else "—")], ["预算配置", badge("present" if model_cost["budget_configured"] else "missing", warning=not model_cost["budget_configured"])]])}</div>
 </section>"""
-    return shell("健康", content, project_id=selected)
+    # "全局" is a display label, not a project id. Passing it to shell would
+    # create invalid links such as /reviews?project=全局.
+    return shell("健康", content, project_id=project_id)
 
 
 def _intel_tabs(active: str) -> str:
@@ -2669,6 +3125,7 @@ def _sector_detail(repo: DashboardRepository, obj: ResearchObject) -> str:
 def _impact_page(
     repo: DashboardRepository,
     *,
+    project_id: str | None = None,
     start_id: str | None = None,
     max_depth: int = 3,
     trigger_limit: int = 50,
@@ -2676,6 +3133,7 @@ def _impact_page(
 ) -> str:
     snapshot = impact_explorer_snapshot(
         repo.root,
+        project_id=project_id,
         start_id=start_id,
         max_depth=max_depth,
         trigger_limit=trigger_limit,
@@ -2751,29 +3209,30 @@ def _impact_page(
         return "<ul>" + "".join(f"<li>{esc(value)}</li>" for value in values) + "</ul>"
 
     content = f"""<section class="hero"><div>
-<div class="eyebrow">影响引擎</div><h2>Impact Explorer</h2>
+<div class="eyebrow">影响引擎</div><h2>影响路径</h2>
 <p>reviewed 直接断言与 1–3 跳解释路径分区展示；正反方向和不同 horizon 不静默合并。</p>
+<p><a class="button-link" href="/impact/proposals/new">新建影响提案</a></p>
 </div><div><div class="eyebrow">最弱环节置信度</div>
 <h2>{esc(len(snapshot["paths"]))}</h2><p class="muted">可解释路径</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(snapshot["total_assertions"])}</strong><span>全部断言</span></div>
-<div class="metric"><strong>{esc(snapshot["pending_assertions"])}</strong><span>pending</span></div>
-<div class="metric"><strong>{esc(len(snapshot["direct_assertions"]))}</strong><span>reviewed 直接断言</span></div>
-<div class="metric"><strong>{esc(len(snapshot["conflicts"]))}</strong><span>冲突</span></div>
+{metric_card(snapshot["total_assertions"], "全部断言", "/reviews?type=impact_assertion&status=pending")}
+{metric_card(snapshot["pending_assertions"], "pending", "/reviews?type=impact_assertion&status=pending")}
+{metric_card(len(snapshot["direct_assertions"]), "reviewed 直接断言", "/impact#direct-assertions")}
+{metric_card(len(snapshot["conflicts"]), "冲突", "/impact#impact-conflicts")}
 </section>
 {f'<section class="panel"><h3>选择触发事件</h3><p class="muted">共 {esc(snapshot["trigger_event_total"])} 个 reviewed 起点；选择后展开路径。</p>{table(["Event", "日期", "标题"], trigger_rows)}{trigger_pager}</section>' if start_id is None else '<p><a href="/impact">← 返回触发事件列表</a></p>'}
-<section class="panel"><h3>直接断言</h3>
+<section class="panel" id="direct-assertions"><h3>直接断言</h3>
 {table(["ID", "触发", "Target", "谓词/类型", "机制", "Evidence", "方向/Horizon", "置信度"], direct_rows) if direct_rows else "<p class='muted'>当前无 reviewed 直接断言；pending 断言未混入。</p>"}</section>
 <section class="panel"><h3>1–3 跳路径</h3>
 {table(["Event", "实体序列", "每跳机制与 Evidence", "最弱环节置信度", "变体"], path_rows) if start_id is not None and path_rows else "<p class='muted'>请选择一个 reviewed 触发事件后展开路径。</p>"}</section>
 <section class="grid">
 <div class="panel"><h3>剪枝原因</h3>{table(["原因", "位置", "详情"], pruning_rows) if pruning_rows else "<p class='muted'>无剪枝。</p>"}</div>
-<div class="panel"><h3>冲突信号</h3>{table(["Target", "方向", "Horizon", "冲突"], conflict_rows) if conflict_rows else "<p class='muted'>未检测到正负或多时间跨度冲突。</p>"}</div>
+<div class="panel" id="impact-conflicts"><h3>冲突信号</h3>{table(["Target", "方向", "Horizon", "冲突"], conflict_rows) if conflict_rows else "<p class='muted'>未检测到正负或多时间跨度冲突。</p>"}</div>
 <div class="panel"><h3>反向因素</h3>{text_list(snapshot["countervailing_factors"], "reviewed 断言暂无反向因素。")}</div>
 <div class="panel"><h3>替代解释</h3>{text_list(snapshot["alternative_explanations"], "reviewed 断言暂无替代解释。")}</div>
 </section>
 <p class="muted">C-018 已批准；路径查询只读，不自动提升 pending Assertion。</p>"""
-    return shell("影响", content)
+    return shell("影响", content, project_id=project_id)
 
 
 _ANALYSIS_INPUT_FIELDS = (
@@ -2792,7 +3251,9 @@ def _analysis_input_link(by_id: dict[str, ResearchObject], object_id: str) -> st
         "impact_assertion": "impact",
         "analysis_run": "analysis/runs",
         "analysis_mode": "analysis/modes",
-    }.get(obj.object_type, object_url(obj))
+    }.get(obj.object_type)
+    if plural is None:
+        return object_url(obj)
     return f'<a href="/{plural}/{obj.object_id}">{esc(obj.object_id)}</a>'
 
 
@@ -2825,14 +3286,29 @@ def _res_link(obj: ResearchObject) -> str:
 def _analysis_page(
     repo: DashboardRepository,
     *,
+    project_id: str | None = None,
     run_ids: list[str] | None = None,
 ) -> str:
     selected_ids = list(dict.fromkeys(run_ids or []))[:2]
     snapshot = analysis_workspace_snapshot(
         repo.root,
+        project_id=project_id,
         run_ids=selected_ids if selected_ids else None,
+        run_limit=None if selected_ids else 10,
+        metrics_run_limit=10,
+        include_evaluation=False,
     )
-    all_snapshot = analysis_workspace_snapshot(repo.root) if selected_ids else snapshot
+    all_snapshot = (
+        analysis_workspace_snapshot(
+            repo.root,
+            project_id=project_id,
+            run_limit=20,
+            metrics_run_limit=10,
+            include_evaluation=False,
+        )
+        if selected_ids
+        else snapshot
+    )
     selected = set(selected_ids)
     selector = "".join(
         "<label style='display:block'>"
@@ -2860,18 +3336,22 @@ def _analysis_page(
         scores = row["evaluator_scores"]
         evaluator_rows.append(
             [
-                esc(row["run_id"]),
-                f"{float(scores['overall']):.2f}",
+                f'<a href="/analysis/runs/{esc(row["run_id"])}">{esc(row["run_id"])}</a>',
+                f"{float(scores['overall']):.2f}" if scores else "—",
                 badge(
                     "pass" if scores["gate_pass"] else "review",
                     warning=not scores["gate_pass"],
-                ),
+                )
+                if scores
+                else badge("打开详情"),
                 esc(
                     ", ".join(
                         f"{item['label']}={item['score']:.2f}"
                         for item in scores["dimensions"]
                     )
-                ),
+                )
+                if scores
+                else "评估按需计算",
             ]
         )
     comparison = snapshot["comparison"] or {
@@ -2912,11 +3392,14 @@ def _analysis_page(
         + "</section>"
     )
     content = f"""<section class="hero"><div>
-<div class="eyebrow">分析工作区</div><h2>Analysis Workspace</h2>
+<div class="eyebrow">分析工作区</div><h2>分析工作台</h2>
 <p>冻结输入、版本、哈希与 Evaluator 结果均来自不可变 Run；比较不自动形成 Thesis 或 Recommendation。</p>
+<p><a class="button-link" href="/analysis/runs/new">新建 Analysis Run</a>
+ · <a href="/analysis/thesis-proposals/new">新建 Thesis 提案</a></p>
 </div><div><div class="eyebrow">Runs</div><h2>{esc(len(all_snapshot["runs"]))}</h2>
 <p class="muted">mode families {esc(metrics["overall"]["modes"])}</p></div></section>
 <section class="panel"><h3>选择 Runs 比较</h3><form method="get" action="/analysis">
+{f'<input type="hidden" name="project" value="{esc(project_id)}">' if project_id else ""}
 {selector}<button type="submit">比较所选</button></form><p class="muted">最多比较前两个所选 Run。</p></section>
 <section class="panel"><h3>冻结输入 · 版本与哈希</h3>
 {table(["Run", "冻结输入", "Mode", "版本", "输入 / Prompt / Output hashes", "评审"], run_rows) if run_rows else "<p class='muted'>尚无 Analysis Run。</p>"}</section>
@@ -2928,12 +3411,16 @@ def _analysis_page(
 <div class="panel"><h3>遗漏 Evidence</h3>{table(["Run", "其他 Run 使用但本 Run 遗漏"], omitted_rows) if omitted_rows else "<p class='muted'>选择两个 Run 后显示。</p>"}</div>
 <div class="panel"><h3>冲突信号</h3>{table(["Run A", "信号", "Run B", "信号"], conflict_rows) if conflict_rows else "<p class='muted'>未检测到相反结论信号，或尚未选择比较。</p>"}</div>
 </section>
-<p class="muted"><a href="/analysis/runs">全部运行</a> · <a href="/analysis/modes">全部模式</a> · <a href="/analysis/compare">模式比较</a> · <a href="/analysis/metrics">模式指标</a></p>"""
-    return shell("分析", content)
+<p class="muted"><a href="/analysis/runs{f"?project={esc(project_id)}" if project_id else ""}">全部运行</a> · <a href="/analysis/modes{f"?project={esc(project_id)}" if project_id else ""}">全部模式</a> · <a href="/analysis/compare{f"?project={esc(project_id)}" if project_id else ""}">模式比较</a> · <a href="/analysis/metrics{f"?project={esc(project_id)}" if project_id else ""}">模式指标</a></p>"""
+    return shell("分析", content, project_id=project_id)
 
 
-def _decision_page(repo: DashboardRepository) -> str:
-    snapshot = decision_desk_snapshot(repo.root, as_of=date.today().isoformat())
+def _decision_page(repo: DashboardRepository, project_id: str | None = None) -> str:
+    snapshot = decision_desk_snapshot(
+        repo.root,
+        as_of=date.today().isoformat(),
+        project_id=project_id,
+    )
     open_rows = [
         [
             f'<a href="/decision/forecast/{esc(row["id"])}">{esc(row["id"])}</a>',
@@ -2995,18 +3482,21 @@ def _decision_page(repo: DashboardRepository) -> str:
         else "仅作描述性校准"
     )
     content = f"""<section class="hero"><div>
-<div class="eyebrow">决策工作区</div><h2>Forecast &amp; Decision Desk</h2>
+<div class="eyebrow">决策工作区</div><h2>决策工作台</h2>
 <p>Forecast、估值和 Recommendation 只读组合；Resolution 只记录自然到期后的真实结果。</p>
+<p><a class="button-link" href="/decision/forecasts/new">新建 Forecast</a>
+ · <a href="/decision/valuations/new">新建估值</a>
+ · <a href="/decision/recommendations/new">新建 Recommendation</a></p>
 </div><div><div class="eyebrow">Open Forecast</div><h2>{esc(len(snapshot["open_forecasts"]))}</h2>
 <p class="muted">as of {esc(snapshot["as_of"])}</p></div></section>
 <section class="metrics">
-<div class="metric"><strong>{esc(len(snapshot["open_forecasts"]))}</strong><span>Open Forecast</span></div>
-<div class="metric"><strong>{esc(len(due_ids))}</strong><span>Due</span></div>
-<div class="metric"><strong>{esc(len(overdue_ids))}</strong><span>Overdue</span></div>
-<div class="metric"><strong>{esc(len(snapshot["resolution_history"]))}</strong><span>Resolution</span></div>
+{metric_card(len(snapshot["open_forecasts"]), "Open Forecast", "/decision#open-forecast")}
+{metric_card(len(due_ids), "Due", "/decision#due-forecast")}
+{metric_card(len(overdue_ids), "Overdue", "/decision#due-forecast")}
+{metric_card(len(snapshot["resolution_history"]), "Resolution", "/decision#resolution-history")}
 </section>
-<section class="panel"><h3>Open Forecast</h3>{table(["ID", "问题", "Horizon", "Resolution date"], open_rows)}</section>
-<section class="panel"><h3>到期提醒 · Due / Overdue</h3>{table(["Forecast", "Resolution date", "状态"], due_rows) if due_rows else "<p class='muted'>当前没有到期 Forecast。</p>"}</section>
+<section class="panel" id="open-forecast"><h3>Open Forecast</h3>{table(["ID", "问题", "Horizon", "Resolution date"], open_rows)}</section>
+<section class="panel" id="due-forecast"><h3>到期提醒 · Due / Overdue</h3>{table(["Forecast", "Resolution date", "状态"], due_rows) if due_rows else "<p class='muted'>当前没有到期 Forecast。</p>"}</section>
 <section class="panel"><h3>校准样本</h3><p><strong>{esc(calibration_label)}</strong></p>
 <p>reviewed Resolution n={esc(calibration["n_resolutions"])}；Brier/coverage/timeliness 仅在真实样本存在时解释。</p></section>
 <section class="panel"><h3>估值新鲜度</h3>{table(["Valuation", "公司", "年龄(天)", "阈值(天)", "状态"], valuation_rows)}</section>
@@ -3016,9 +3506,9 @@ def _decision_page(repo: DashboardRepository) -> str:
 <div class="panel"><h3>风险与未知</h3><p>风险和 unknowns 保留在每条 Recommendation 行内，不自动净额化。</p></div>
 <div class="panel"><h3>Scenario 引用</h3><p>只展示已记录引用；空值显示为 —，不推断情景。</p></div>
 </section>
-<section class="panel"><h3>Resolution 历史</h3>
+<section class="panel" id="resolution-history"><h3>Resolution 历史</h3>
 {table(["Resolution", "Forecast", "Resolved at", "Decision", "Sources"], resolution_rows) if resolution_rows else "<p class='muted'>尚无 Resolution；等待首批 Forecast 自然到期，不回填或合成 outcome。</p>"}</section>"""
-    return shell("决策", content)
+    return shell("决策", content, project_id=project_id)
 
 
 def _decision_detail(
@@ -3031,7 +3521,6 @@ def _decision_detail(
     obj = next((o for o in objects if o.object_id == object_id), None)
     if obj is None:
         raise HTTPException(status_code=404, detail=f"未知对象 {object_id}")
-    body = html.escape(obj.body)[:6000] or "（无正文）"
     meta_lines = "".join(
         f"<tr><td>{esc(key)}</td><td>{esc(value)}</td></tr>"
         for key, value in sorted(obj.metadata.items())
@@ -3042,8 +3531,8 @@ def _decision_detail(
 </div></section>
 <section class="panel"><h3>元数据</h3>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><tbody>{meta_lines}</tbody></table></div></section>
-<section class="panel"><pre>{body}</pre></section>"""
-    return shell(f"{title} · {object_id}", content)
+<section class="panel"><div class="document-body">{render_document_body(obj.body)}</div></section>"""
+    return shell(f"{title} · {object_id}", content, active_key="decision")
 
 
 def _analysis_metrics_panel(objects: list[ResearchObject]) -> str:
@@ -3084,8 +3573,10 @@ def _analysis_metrics_panel(objects: list[ResearchObject]) -> str:
     )
 
 
-def _analysis_modes(repo: DashboardRepository) -> str:
-    objects, _ = repo.all()
+def _analysis_modes(repo: DashboardRepository, project_id: str | None = None) -> str:
+    objects = (
+        objects_for_project(repo.all()[0], project_id) if project_id else repo.all()[0]
+    )
     modes = sorted(
         (o for o in objects if o.object_type == "analysis_mode"),
         key=lambda o: o.object_id,
@@ -3120,7 +3611,7 @@ def _analysis_modes(repo: DashboardRepository) -> str:
 <p>版本化契约：active + reviewed 方可产生新的权威运行。</p>
 </div></section>
 <section class="panel">{table(["模式", "名称", "范围", "状态", "评审", "运行", "版本"], rows) if rows else "<p class='muted'>尚无模式。</p>"}</section>"""
-    return shell("分析 · 模式", content)
+    return shell("分析 · 模式", content, project_id=project_id, active_key="analysis")
 
 
 def _analysis_mode_detail(repo: DashboardRepository, mode_id: str) -> str:
@@ -3172,11 +3663,13 @@ def _analysis_mode_detail(repo: DashboardRepository, mode_id: str) -> str:
 </tbody></table></div></div>
 <div class="panel full"><h3>禁止结论</h3><ul>{banned or "<li class='muted'>—</li>"}</ul></div>
 </section>"""
-    return shell(f"分析 {mode_id}", content)
+    return shell(f"分析 {mode_id}", content, active_key="analysis")
 
 
-def _analysis_runs(repo: DashboardRepository) -> str:
-    objects, _ = repo.all()
+def _analysis_runs(repo: DashboardRepository, project_id: str | None = None) -> str:
+    objects = (
+        objects_for_project(repo.all()[0], project_id) if project_id else repo.all()[0]
+    )
     runs = sorted(
         (o for o in objects if o.object_type == "analysis_run"),
         key=lambda o: o.object_id,
@@ -3200,7 +3693,7 @@ def _analysis_runs(repo: DashboardRepository) -> str:
 <p>每次运行冻结输入、模式版本、模型参数与输出哈希；失败不留半成品。</p>
 </div></section>
 <section class="panel">{table(["Run", "模式", "as-of", "状态", "评审", "事件数"], rows) if rows else "<p class='muted'>尚无分析运行。</p>"}</section>"""
-    return shell("分析 · 运行", content)
+    return shell("分析 · 运行", content, project_id=project_id, active_key="analysis")
 
 
 def _analysis_run_detail(repo: DashboardRepository, run_id: str) -> str:
@@ -3273,14 +3766,19 @@ def _analysis_run_detail(repo: DashboardRepository, run_id: str) -> str:
 <div class="panel"><h3>冻结元数据</h3>{_kv_table(rows)}</div>
 <div class="panel"><h3>输入引用</h3><dl>{input_block}</dl></div>
 <div class="panel full"><h3>确定性评分（D-017）</h3>{eval_block}</div>
-<div class="panel full"><h3>正文</h3><pre>{esc(run.body)}</pre></div>
+<div class="panel full"><h3>正文</h3><div class="document-body">{render_document_body(run.body)}</div></div>
 </section>
+<details class="source-view"><summary>查看原始 Markdown</summary><pre>{esc(run.body)}</pre></details>
 <p class="muted"><a href="/analysis/compare?runs={esc(run_id)}">与此运行比较</a></p>"""
-    return shell(f"分析 {run_id}", content)
+    return shell(f"分析 {run_id}", content, active_key="analysis")
 
 
-def _analysis_compare(repo: DashboardRepository, run_ids: list[str]) -> str:
-    objects, _ = repo.all()
+def _analysis_compare(
+    repo: DashboardRepository, run_ids: list[str], project_id: str | None = None
+) -> str:
+    objects = (
+        objects_for_project(repo.all()[0], project_id) if project_id else repo.all()[0]
+    )
     if not run_ids:
         run_ids = sorted(
             o.object_id for o in objects if o.object_type == "analysis_run"
@@ -3292,7 +3790,9 @@ def _analysis_compare(repo: DashboardRepository, run_ids: list[str]) -> str:
             "<section class='panel'><p class='muted'>没有可比较的运行。"
             "用 ?runs=ANL-x,ANL-y 指定，或先产生多个运行。</p></section>"
         )
-        return shell("分析 · 比较", content)
+        return shell(
+            "分析 · 比较", content, project_id=project_id, active_key="analysis"
+        )
     run_rows = [
         [
             _run_link(by_id[run.run_id]),
@@ -3325,7 +3825,7 @@ def _analysis_compare(repo: DashboardRepository, run_ids: list[str]) -> str:
 <div class="panel"><h3>证据遗漏（别 run 用了、本 run 没用）</h3><ul>{omitted or "<li class='muted'>—</li>"}</ul></div>
 <div class="panel full"><h3>冲突信号（启发式，需人工复核）</h3><ul>{conflicts or "<li class='muted'>无</li>"}</ul></div>
 </section>"""
-    return shell("分析 · 比较", content)
+    return shell("分析 · 比较", content, project_id=project_id, active_key="analysis")
 
 
 def _llm_page() -> str:
@@ -3343,6 +3843,11 @@ def _llm_page() -> str:
         f"（{esc('已配置' if public['has_api_key'] else '未配置')}）</span>"
         if public["has_api_key"]
         else '<span class="muted">尚未配置 API Key。</span>'
+    )
+    key_status_text = (
+        f"当前 Key：{public['key_masked']}（{'已配置' if public['has_api_key'] else '未配置'}）"
+        if public["has_api_key"]
+        else "尚未配置 API Key。"
     )
     model_selected = (
         f'<option value="{esc(current_model)}" selected>{esc(current_model)}</option>'
@@ -3362,35 +3867,34 @@ def _llm_page() -> str:
         ],
         ensure_ascii=False,
     )
-    content = f"""<section class="hero"><div>
+    content = f"""<section class="hero llm-hero"><div>
 <div class="eyebrow">LLM 配置</div><h2>模型供应商</h2>
-<p>Base URL 与 API 协议由供应商预设决定，无需手填；API Key 仅保存在服务端。</p>
-</div></section>
-<section class="panel">
+<p>按顺序完成供应商、凭证和模型选择。Base URL 与协议由供应商预设，API Key 仅保存在本机。</p>
+</div><div class="llm-hero-note"><strong>当前模型</strong><span>{esc(current_model or "尚未选择")}</span><small>保存后用于分析运行</small></div></section>
+<section class="panel llm-config-panel">
+<div class="llm-step"><div class="llm-step-title"><span class="step-number">1</span><div><h3>选择供应商</h3><p class="muted">先确定 API 兼容协议和默认端点。</p></div></div>
 <label for="llm-provider">供应商</label>
 <select id="llm-provider" name="provider">{provider_options}</select>
+<a class="field-help" id="llm-key-url" href="#" target="_blank" rel="noopener">打开供应商密钥页面 →</a></div>
 
+<div class="llm-step"><div class="llm-step-title"><span class="step-number">2</span><div><h3>配置凭证</h3><p class="muted">输入新 Key；留空会保留现有 Key。</p></div></div>
 <label for="llm-key">API Key</label>
-<div class="llm-row">
-  <input id="llm-key" type="password" autocomplete="off"
-         placeholder="sk-...（留空表示保留已有 Key）">
-  <button type="button" id="llm-key-toggle">显示</button>
-  <a id="llm-key-url" href="#" target="_blank" rel="noopener">获取 API Key</a>
+<div class="llm-row llm-key-row">
+  <input id="llm-key" type="password" autocomplete="off" placeholder="输入 API Key">
+  <button class="button-secondary" type="button" id="llm-key-toggle">显示</button>
 </div>
-<div id="llm-key-hint">{key_hint}</div>
+<div id="llm-key-hint" class="field-help">{key_hint}</div></div>
 
-<label for="llm-model">模型</label>
-<div class="llm-row">
-  <input id="llm-model-filter" type="text" placeholder="搜索模型…" disabled>
-  <select id="llm-model" disabled>{model_selected}</select>
-  <button type="button" id="llm-load" disabled>加载模型</button>
-</div>
+<div class="llm-step"><div class="llm-step-title"><span class="step-number">3</span><div><h3>选择模型</h3><p class="muted">在线加载模型列表，也可以按名称筛选。</p></div></div>
+<div class="llm-row llm-model-row">
+<label class="sr-only" for="llm-model-filter">筛选模型</label>
+<input id="llm-model-filter" type="search" placeholder="搜索模型…" disabled>
+<label class="sr-only" for="llm-model">模型</label>
+<select id="llm-model" disabled>{model_selected}</select>
+  <button class="button-secondary" type="button" id="llm-load" disabled>加载模型</button>
+</div></div>
 
-<div class="llm-row">
-  <button type="button" id="llm-test">测试连接</button>
-  <button type="button" id="llm-save">保存配置</button>
-  <span id="llm-status" class="muted"></span>
-</div>
+<div class="llm-actions"><button type="button" id="llm-test">测试连接</button><button type="button" id="llm-save">保存配置</button><span id="llm-status" class="status-line" role="status" aria-live="polite"></span></div>
 </section>
 <script>
 (function () {{
@@ -3403,6 +3907,9 @@ def _llm_page() -> str:
   const loadBtn = $("llm-load");
   const status = $("llm-status");
   const presets = {llm_provider_json};
+  const initialModel = modelSelect.value;
+  const initialProvider = provider.value;
+  const keyStatus = {json.dumps(key_status_text, ensure_ascii=False)};
 
   function setStatus(text, ok) {{
     status.textContent = text;
@@ -3425,7 +3932,9 @@ def _llm_page() -> str:
     keyUrl.href = p.api_key_url || "#";
     loadBtn.disabled = !p.id;
     resetModels();
-    $("llm-key-hint").textContent = "";
+    $("llm-key-hint").textContent = provider.value === initialProvider
+      ? keyStatus
+      : "切换供应商后请输入对应 API Key。";
   }}
 
   provider.addEventListener("change", () => {{
@@ -3445,12 +3954,17 @@ def _llm_page() -> str:
   }});
 
   async function post(path, body) {{
-    const response = await fetch(path, {{
-      method: "POST",
-      headers: {{"Content-Type": "application/json"}},
-      body: JSON.stringify(body),
-    }});
-    return response.json();
+    try {{
+      const response = await fetch(path, {{
+        method: "POST",
+        headers: {{"Content-Type": "application/json"}},
+        body: JSON.stringify(body),
+      }});
+      const result = await response.json();
+      return response.ok ? result : {{error: result.error || "请求失败"}};
+    }} catch (error) {{
+      return {{error: "服务暂时不可用，请稍后重试"}};
+    }}
   }}
 
   loadBtn.addEventListener("click", async () => {{
@@ -3510,13 +4024,26 @@ def _llm_page() -> str:
   }});
 
   providerChanged();
-  if (modelSelect.value) {{
+  if (initialModel) {{
+    modelSelect.innerHTML = "";
+    const option = document.createElement("option");
+    option.value = option.textContent = initialModel;
+    option.selected = true;
+    modelSelect.appendChild(option);
     modelFilter.disabled = false;
     modelSelect.disabled = false;
   }}
 }})();
 </script>"""
     return shell("模型配置", content)
+
+
+def _configured_model_defaults() -> tuple[str, str]:
+    """Use the saved local model for new Analysis forms, with Echo fallback."""
+    config = llm_config.public_config(llm_config.load_config())
+    provider = str(config.get("provider") or "echo")
+    model = str(config.get("model") or "echo")
+    return provider, model
 
 
 def create_app(root: Path) -> FastAPI:
@@ -3532,12 +4059,73 @@ def create_app(root: Path) -> FastAPI:
     repository_plans: dict[str, RepositoryMutationPlan] = {}
     repository_plan_tokens: dict[str, str] = {}
     repository_plan_lock = Lock()
+    review_ai_cache: dict[str, dict[str, Any]] = {}
+    review_ai_futures: dict[str, Future[None]] = {}
+    review_ai_lock = Lock()
+    review_ai_executor = ThreadPoolExecutor(
+        max_workers=2, thread_name_prefix="review-ai"
+    )
+    # Health is intentionally read-only but includes source-asset hashing. A
+    # short per-process cache keeps navigation responsive without hiding a
+    # durable change for more than a few seconds.
+    health_cache: dict[str, tuple[float, dict[str, Any]]] = {}
     app = FastAPI(
         title="AI Research OS",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
     )
+
+    def review_ai_snapshot() -> dict[str, dict[str, Any]]:
+        with review_ai_lock:
+            return {key: dict(value) for key, value in review_ai_cache.items()}
+
+    def run_review_ai(target_id: str, provider: str, model: str) -> None:
+        with review_ai_lock:
+            state = review_ai_cache.setdefault(target_id, {})
+            state.update({"state": "running", "status_message": "正在分析…"})
+        try:
+            packet = prepare_review_assistance(
+                repo.root, target_id, provider=provider, model=model
+            )
+            item = (packet.get("items") or [{}])[0]
+            with review_ai_lock:
+                review_ai_cache[target_id] = {
+                    **packet,
+                    "state": "completed",
+                    "recommendation": item.get("recommendation", "信息不足"),
+                    "completed_at": datetime.now(UTC).isoformat(),
+                }
+        except Exception as exc:  # assistance is best-effort and never mutates data
+            with review_ai_lock:
+                review_ai_cache[target_id] = {
+                    "target_ids": [target_id],
+                    "state": "failed",
+                    "status_message": f"分析失败：{type(exc).__name__}，可重试",
+                    "error": str(exc),
+                }
+
+    def start_review_ai_jobs(target_ids: list[str]) -> dict[str, str]:
+        provider, model = _configured_model_defaults()
+        states: dict[str, str] = {}
+        for target_id in target_ids:
+            with review_ai_lock:
+                current = review_ai_cache.get(target_id, {})
+                future = review_ai_futures.get(target_id)
+                if future is not None and not future.done():
+                    states[target_id] = str(current.get("state") or "running")
+                    continue
+                review_ai_cache[target_id] = {
+                    "target_ids": [target_id],
+                    "state": "queued",
+                    "status_message": "已排队，等待分析…",
+                }
+                future = review_ai_executor.submit(
+                    run_review_ai, target_id, provider, model
+                )
+                review_ai_futures[target_id] = future
+                states[target_id] = "queued"
+        return states
 
     def mutation_gateway() -> tuple[WebIdentity, MutationGateway]:
         nonlocal gateway_identity, gateway
@@ -3610,6 +4198,7 @@ def create_app(root: Path) -> FastAPI:
                 current_target_version=version,
                 execute=execute,
             )
+            repo.invalidate()
             preview_mutation_id = result["mutation_id"]
             return result
         except TransactionError:
@@ -3676,7 +4265,11 @@ def create_app(root: Path) -> FastAPI:
     @app.get("/static/styles.css", response_class=PlainTextResponse)
     def styles() -> PlainTextResponse:
         content = Path(__file__).with_name("styles.css").read_text(encoding="utf-8")
-        return PlainTextResponse(content, media_type="text/css")
+        return PlainTextResponse(
+            content,
+            media_type="text/css",
+            headers={"Cache-Control": "public, max-age=300"},
+        )
 
     @app.get("/setup", response_class=HTMLResponse)
     def setup_page() -> HTMLResponse:
@@ -3744,8 +4337,89 @@ def create_app(root: Path) -> FastAPI:
                 object_type or None,
                 review_status,
                 csrf_token if identity is not None else None,
+                review_ai_snapshot(),
             )
         )
+        response.set_cookie(
+            _SESSION_COOKIE,
+            session_id,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            max_age=3600,
+            path="/",
+        )
+        return response
+
+    @app.post("/reviews/assist/preview", response_class=HTMLResponse)
+    async def review_assistance_preview(request: Request) -> HTMLResponse:
+        if load_web_identity(repo.root) is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Web mutation identity is unavailable",
+            )
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"target_ids", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid assistance input")
+        provider, model = _configured_model_defaults()
+        try:
+            packet = prepare_review_assistance(
+                repo.root,
+                form["target_ids"],
+                provider=provider,
+                model=model,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        packet["csrf_token"] = form["csrf_token"]
+        return HTMLResponse(_review_assistance_page(packet))
+
+    @app.post("/reviews/assist/start")
+    async def review_assistance_start(request: Request) -> JSONResponse:
+        if load_web_identity(repo.root) is None:
+            raise HTTPException(
+                status_code=503, detail="Web mutation identity is unavailable"
+            )
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"target_ids", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid assistance input")
+        target_ids = split_values(form["target_ids"])
+        if not target_ids:
+            raise HTTPException(status_code=422, detail="请至少选择一个对象")
+        if len(target_ids) > 10:
+            raise HTTPException(status_code=422, detail="一次最多分析 10 个对象")
+        objects, findings = repo.all()
+        if any(finding.level == "error" for finding in findings):
+            raise HTTPException(
+                status_code=422,
+                detail="repository validation must pass before AI assistance",
+            )
+        known = {obj.object_id for obj in objects}
+        unknown = [target_id for target_id in target_ids if target_id not in known]
+        if unknown:
+            raise HTTPException(
+                status_code=422, detail="unknown review target: " + ", ".join(unknown)
+            )
+        states = start_review_ai_jobs(target_ids)
+        return JSONResponse({"accepted": target_ids, "states": states}, status_code=202)
+
+    @app.get("/reviews/assist/{object_id}", response_class=HTMLResponse)
+    def review_assistance_detail(request: Request, object_id: str) -> HTMLResponse:
+        identity = load_web_identity(repo.root)
+        if identity is None:
+            raise HTTPException(
+                status_code=503, detail="Web mutation identity is unavailable"
+            )
+        session_id, csrf_token = sessions.issue()
+        with review_ai_lock:
+            cached = dict(review_ai_cache.get(object_id) or {})
+        if not cached:
+            raise HTTPException(status_code=404, detail="AI 建议尚未生成")
+        cached.setdefault("target_ids", [object_id])
+        cached["csrf_token"] = csrf_token
+        response = HTMLResponse(_review_assistance_page(cached))
         response.set_cookie(
             _SESSION_COOKIE,
             session_id,
@@ -3829,7 +4503,10 @@ def create_app(root: Path) -> FastAPI:
             ) from exc
         return HTMLResponse(
             _source_mutation_confirmation(
-                grant, form["csrf_token"], "/reviews/apply/commit"
+                grant,
+                form["csrf_token"],
+                "/reviews/apply/commit",
+                cancel_path="/reviews",
             )
         )
 
@@ -3868,8 +4545,11 @@ def create_app(root: Path) -> FastAPI:
             project,
             object_type or None,
             review_status,
+            review_ai_snapshot(),
         )
-        return HTMLResponse(table(["Object", "Type", "Status", "Updated"], rows))
+        return HTMLResponse(
+            table(["选择 / 对象", "类型", "状态", "更新", "AI 建议"], rows)
+        )
 
     @app.get("/metrics", response_class=HTMLResponse)
     def metrics(project: str | None = Query(default=None)) -> HTMLResponse:
@@ -3884,8 +4564,8 @@ def create_app(root: Path) -> FastAPI:
         return HTMLResponse(_pipeline_overview(repo))
 
     @app.get("/pipeline/sources", response_class=HTMLResponse)
-    def pipeline_sources() -> HTMLResponse:
-        return HTMLResponse(_pipeline_sources(repo))
+    def pipeline_sources(project: str | None = Query(default=None)) -> HTMLResponse:
+        return HTMLResponse(_pipeline_sources(repo, project))
 
     @app.get("/pipeline/queue", response_class=HTMLResponse)
     def pipeline_queue(
@@ -3922,6 +4602,16 @@ def create_app(root: Path) -> FastAPI:
             back_path="/pipeline/queue",
             example={"job_name": "enrich", "as_of": date.today().isoformat()},
         )
+
+    @app.get(
+        "/pipeline/queue/{candidate_id}/match-explanation",
+        response_class=HTMLResponse,
+    )
+    def candidate_match_explanation(candidate_id: str) -> HTMLResponse:
+        try:
+            return HTMLResponse(_candidate_match_explanation_page(repo, candidate_id))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=candidate_id) from exc
 
     @app.get("/pipeline/queue/{candidate_id}", response_class=HTMLResponse)
     def pipeline_candidate(candidate_id: str, request: Request) -> HTMLResponse:
@@ -4332,13 +5022,14 @@ def create_app(root: Path) -> FastAPI:
             return HTMLResponse(
                 _impact_page(
                     repo,
+                    project_id=project,
                     start_id=start,
                     max_depth=depth,
                     trigger_limit=limit,
                     trigger_offset=offset,
                 )
             )
-        except KeyError as exc:
+        except (KeyError, ValueError) as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/analysis", response_class=HTMLResponse)
@@ -4347,13 +5038,16 @@ def create_app(root: Path) -> FastAPI:
         run: list[str] | None = None,
     ) -> HTMLResponse:
         try:
-            return HTMLResponse(_analysis_page(repo, run_ids=run))
-        except KeyError as exc:
+            return HTMLResponse(_analysis_page(repo, project_id=project, run_ids=run))
+        except (KeyError, ValueError) as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/decision", response_class=HTMLResponse)
     def decision_overview(project: str | None = Query(default=None)) -> HTMLResponse:
-        return HTMLResponse(_decision_page(repo))
+        try:
+            return HTMLResponse(_decision_page(repo, project_id=project))
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/decision/forecast/{object_id}", response_class=HTMLResponse)
     def decision_forecast(object_id: str) -> HTMLResponse:
@@ -4373,11 +5067,17 @@ def create_app(root: Path) -> FastAPI:
 
     @app.get("/analysis/modes", response_class=HTMLResponse)
     def analysis_modes(project: str | None = Query(default=None)) -> HTMLResponse:
-        return HTMLResponse(_analysis_modes(repo))
+        try:
+            return HTMLResponse(_analysis_modes(repo, project))
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/analysis/runs", response_class=HTMLResponse)
     def analysis_runs(project: str | None = Query(default=None)) -> HTMLResponse:
-        return HTMLResponse(_analysis_runs(repo))
+        try:
+            return HTMLResponse(_analysis_runs(repo, project))
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/analysis/compare", response_class=HTMLResponse)
     def analysis_compare(
@@ -4385,7 +5085,10 @@ def create_app(root: Path) -> FastAPI:
         project: str | None = Query(default=None),
     ) -> HTMLResponse:
         run_ids = [item.strip() for item in runs.split(",") if item.strip()]
-        return HTMLResponse(_analysis_compare(repo, run_ids))
+        try:
+            return HTMLResponse(_analysis_compare(repo, run_ids, project))
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/analysis/eval", response_class=HTMLResponse)
     def analysis_eval(
@@ -4404,7 +5107,14 @@ def create_app(root: Path) -> FastAPI:
 
     @app.get("/analysis/metrics", response_class=HTMLResponse)
     def analysis_metrics(project: str | None = Query(default=None)) -> HTMLResponse:
-        objects, _ = repo.all()
+        try:
+            objects = (
+                objects_for_project(repo.all()[0], project)
+                if project
+                else repo.all()[0]
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         metrics = mode_metrics(objects)
         mm_rows: list[list[str]] = []
         for slug, stats in metrics["modes"].items():
@@ -4430,7 +5140,9 @@ def create_app(root: Path) -> FastAPI:
 <p>edit=输出多样性（1 完全不同/0 完全相同）；一致性=同证据 run 对信号一致率；证据遗漏=他 mode 用过而本 mode 未用的证据。</p>
 </div></section>
 <section class="panel">{table(["模式", "运行", "已评审", "输出多样性", "一致性", "证据使用", "证据遗漏"], mm_rows) if mm_rows else "<p class='muted'>尚无 completed 运行。</p>"}</section>"""
-        return HTMLResponse(shell("分析 · 模式指标", content))
+        return HTMLResponse(
+            shell("分析 · 模式指标", content, project_id=project, active_key="analysis")
+        )
 
     @app.get("/analysis/modes/{mode_id}", response_class=HTMLResponse)
     def analysis_mode_detail(mode_id: str) -> HTMLResponse:
@@ -4513,8 +5225,26 @@ def create_app(root: Path) -> FastAPI:
         return JSONResponse(result)
 
     @app.get("/health", response_class=HTMLResponse)
-    def health(project: str | None = Query(default=None)) -> HTMLResponse:
-        return HTMLResponse(_health_page(repo, project))
+    def health(
+        project: str | None = Query(default=None),
+        refresh: int = Query(default=0, ge=0, le=1),
+    ) -> HTMLResponse:
+        if project:
+            try:
+                repo.scoped(project)
+            except ValueError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+        cache_key = project or "__global__"
+        now = monotonic()
+        cached = health_cache.get(cache_key)
+        if refresh or cached is None or now - cached[0] > 5:
+            health_cache[cache_key] = (
+                now,
+                health_snapshot(repo.root, project_id=project),
+            )
+        return HTMLResponse(
+            _health_page(repo, project, snapshot=health_cache[cache_key][1])
+        )
 
     @app.get("/health/release", response_class=HTMLResponse)
     def health_release() -> HTMLResponse:
@@ -4529,6 +5259,7 @@ def create_app(root: Path) -> FastAPI:
             shell(
                 "Release Health",
                 f'<section class="hero"><div><div class="eyebrow">Release</div><h2>{sum(check.passed for check in result.checks)}/{len(result.checks)}</h2></div></section><section class="panel">{table(["Check", "Status", "Detail"], rows)}</section>',
+                active_key="health",
             )
         )
 
@@ -4545,6 +5276,7 @@ def create_app(root: Path) -> FastAPI:
             shell(
                 "Discovery",
                 f'<section class="hero"><div><div class="eyebrow">Operational</div><h2>Discovery</h2></div></section><section class="panel">{table(["Channel", "Name", "Review", "Enabled"], [[esc(r["id"]), esc(r["name"]), esc(r["review_status"]), esc(r["enabled"])] for r in rows])}</section>',
+                active_key="operations",
             )
         )
 
@@ -4592,6 +5324,7 @@ def create_app(root: Path) -> FastAPI:
             shell(
                 "Backups",
                 '<section class="hero"><div><div class="eyebrow">Operational</div><h2>Backup</h2><p>Candidate and durable backup operations remain explicit and auditable.</p></div></section><section class="panel"><a class="button-link" href="/operations/jobs/run">Run backup job</a></section>',
+                active_key="operations",
             )
         )
 
@@ -4605,6 +5338,7 @@ def create_app(root: Path) -> FastAPI:
             shell(
                 "Benchmarks",
                 '<section class="hero"><div><div class="eyebrow">Operational</div><h2>Benchmarks</h2><p>Benchmark runs are operational evidence and do not change research authority.</p></div></section>',
+                active_key="operations",
             )
         )
 
@@ -4614,6 +5348,7 @@ def create_app(root: Path) -> FastAPI:
             shell(
                 "Exports",
                 '<section class="hero"><div><div class="eyebrow">Operational</div><h2>Exports</h2><p>Exports are generated from the current read model and retain source provenance.</p></div></section>',
+                active_key="operations",
             )
         )
 
@@ -4652,6 +5387,7 @@ def create_app(root: Path) -> FastAPI:
             shell(
                 "Operations Jobs",
                 f'<section class="hero"><div><div class="eyebrow">Operational</div><h2>Jobs</h2></div></section><section class="panel">{table(["ID", "Job", "Status", "Message"], rows)}</section>',
+                active_key="operations",
             )
         )
 
@@ -4802,8 +5538,11 @@ def create_app(root: Path) -> FastAPI:
         )
 
     @app.get("/sources", response_class=HTMLResponse)
-    def sources() -> HTMLResponse:
-        return HTMLResponse(_source_list_page(repo))
+    def sources(project: str | None = Query(default=None)) -> HTMLResponse:
+        try:
+            return HTMLResponse(_source_list_page(repo, project))
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/sources/new", response_class=HTMLResponse)
     def source_create_form(request: Request) -> HTMLResponse:
@@ -5623,6 +6362,7 @@ action="/projects/{esc(project_id)}/advance/preview">
 
     @app.get("/analysis/runs/new", response_class=HTMLResponse)
     def analysis_create_form(request: Request) -> HTMLResponse:
+        model_provider, model_id = _configured_model_defaults()
         return structured_form_response(
             request,
             title="运行 Analysis",
@@ -5637,8 +6377,8 @@ action="/projects/{esc(project_id)}/advance/preview">
                 "input_event_ids": ["EVT-20260225-034"],
                 "input_impact_ids": [],
                 "input_thesis_ids": [],
-                "model_provider": "echo",
-                "model_id": "echo",
+                "model_provider": model_provider,
+                "model_id": model_id,
                 "model_parameters": {},
             },
         )
@@ -5662,6 +6402,7 @@ action="/projects/{esc(project_id)}/advance/preview">
 
     @app.get("/analysis/runs/{run_id}/replay", response_class=HTMLResponse)
     def analysis_replay_form(run_id: str, request: Request) -> HTMLResponse:
+        model_provider, model_id = _configured_model_defaults()
         return structured_form_response(
             request,
             title=f"Replay Analysis · {run_id}",
@@ -5670,8 +6411,8 @@ action="/projects/{esc(project_id)}/advance/preview">
             back_path=f"/analysis/runs/{run_id}",
             example={
                 "run_id": run_id,
-                "model_provider": "echo",
-                "model_id": "echo",
+                "model_provider": model_provider,
+                "model_id": model_id,
                 "model_parameters": {},
             },
         )
@@ -6125,6 +6866,13 @@ action="/projects/{esc(project_id)}/advance/preview">
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=source_id) from exc
 
+    @app.get("/sources/{source_id}/assistant", response_class=HTMLResponse)
+    def source_assistant(source_id: str) -> HTMLResponse:
+        try:
+            return HTMLResponse(_source_assistant_page(repo, source_id))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=source_id) from exc
+
     @app.get("/source-assets/{source_id}/{asset_index}")
     def source_asset(source_id: str, asset_index: int) -> FileResponse:
         try:
@@ -6160,7 +6908,15 @@ action="/projects/{esc(project_id)}/advance/preview">
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=object_id) from exc
 
-    for prefix in ("events", "companies", "sectors", "reports", "actions", "projects"):
+    for prefix in (
+        "events",
+        "companies",
+        "sectors",
+        "reports",
+        "actions",
+        "projects",
+        "objects",
+    ):
         app.add_api_route(
             f"/{prefix}/{{object_id}}",
             generic_detail,

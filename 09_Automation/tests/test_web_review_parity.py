@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import urlencode
 
 from fastapi.testclient import TestClient
@@ -14,7 +15,7 @@ from research_os.repositories.markdown import MarkdownDocument
 from research_os.services.mutation_gateway import MutationGateway
 from research_os.services.web_repository_mutations import commit_repository_mutation
 from research_os.services.web_review_mutations import prepare_review_mutation
-from research_os.ui.app import create_app
+from research_os.ui.app import ResearchObject, create_app, object_url
 
 
 class ReviewWebAdapterTests(unittest.TestCase):
@@ -60,6 +61,27 @@ class ReviewWebAdapterTests(unittest.TestCase):
                 "max",
                 MarkdownDocument.read(decision).metadata["reviewer"],
             )
+
+    def test_object_url_uses_registered_routes_for_assertions_and_runs(self) -> None:
+        def obj(object_type: str, object_id: str) -> ResearchObject:
+            return ResearchObject(
+                path=Path(object_id),
+                metadata={"type": object_type, "id": object_id},
+                body="",
+            )
+
+        self.assertEqual(
+            "/impact/IMP-001",
+            object_url(obj("impact_assertion", "IMP-001")),
+        )
+        self.assertEqual(
+            "/impact/ONT-001",
+            object_url(obj("ontology_assertion", "ONT-001")),
+        )
+        self.assertEqual(
+            "/analysis/runs/ANL-001",
+            object_url(obj("analysis_run", "ANL-001")),
+        )
 
     def test_edit_and_reject_require_notes_and_unknown_targets_fail(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -179,6 +201,254 @@ class ReviewWebHttpTests(unittest.TestCase):
             )
             self.assertEqual(409, replay.status_code)
 
+    def test_review_preview_cancel_returns_to_review_queue(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            client = TestClient(
+                create_app(self._root(temp)), base_url="http://localhost"
+            )
+            queue = client.get("/reviews")
+            self.assertEqual(200, queue.status_code)
+            csrf = self._hidden(queue.text, "csrf_token")
+            preview = client.post(
+                "/reviews/apply/preview",
+                content=urlencode(
+                    {
+                        "target_ids": "EVT-20260729-001",
+                        "decision": "approve",
+                        "reviewed_at": "2026-08-13",
+                        "notes": "Checked.",
+                        "csrf_token": csrf,
+                    }
+                ),
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Origin": "http://localhost",
+                },
+            )
+            self.assertEqual(200, preview.status_code, preview.text)
+            self.assertIn('href="/reviews">取消</a>', preview.text)
+            self.assertNotIn("/sources/REV-", preview.text)
+
+    def test_review_action_bar_is_before_table_and_submits_existing_form(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            client = TestClient(
+                create_app(self._root(temp)), base_url="http://localhost"
+            )
+            page = client.get("/reviews")
+            self.assertEqual(200, page.status_code)
+            action_bar = page.text.index('id="review-action-bar"')
+            table = page.text.index('id="review-table"')
+            self.assertLess(action_bar, table)
+            self.assertIn(
+                '<form class="mutation-form review-form" id="review-form"',
+                page.text,
+            )
+            self.assertIn('<div class="review-toolbar">', page.text)
+            self.assertIn('<button type="submit">预览评审</button>', page.text)
+            self.assertNotIn(
+                '<div class="mutation-actions">'
+                '<button type="submit">预览评审</button></div>',
+                page.text,
+            )
+            table = page.text.index('id="review-table"')
+            self.assertLess(page.text.index('name="decision"'), table)
+            self.assertLess(page.text.index('name="reviewed_at"'), table)
+            self.assertLess(page.text.index('name="notes"'), table)
+            self.assertNotIn("<h3>记录评审决定</h3>", page.text)
+            self.assertIn("event.target.matches('.review-target')", page.text)
+
+    def test_review_queue_exposes_ai_assistance_action(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            client = TestClient(
+                create_app(self._root(temp)), base_url="http://localhost"
+            )
+            page = client.get("/reviews")
+            self.assertEqual(200, page.status_code)
+            self.assertIn('action="/reviews/assist/start"', page.text)
+            self.assertIn('id="review-ai-form"', page.text)
+            self.assertIn("分析已选", page.text)
+            self.assertIn("AI 建议", page.text)
+            self.assertIn("正在提交 AI 分析", page.text)
+
+    def test_review_ai_start_returns_accepted_background_work(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            with patch(
+                "research_os.ui.app._configured_model_defaults",
+                return_value=("echo", "echo"),
+            ):
+                client = TestClient(
+                    create_app(self._root(temp)), base_url="http://localhost"
+                )
+                queue = client.get("/reviews")
+                csrf = self._hidden(queue.text, "csrf_token")
+                response = client.post(
+                    "/reviews/assist/start",
+                    content=urlencode(
+                        {
+                            "target_ids": "EVT-20260729-001",
+                            "csrf_token": csrf,
+                        }
+                    ),
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Origin": "http://localhost",
+                    },
+                )
+            self.assertEqual(202, response.status_code, response.text)
+            payload = response.json()
+            self.assertEqual(["EVT-20260729-001"], payload["accepted"])
+            self.assertIn(
+                payload["states"]["EVT-20260729-001"],
+                {"queued", "running", "completed"},
+            )
+
+    def test_review_list_exposes_ai_state_and_detail_actions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            with patch(
+                "research_os.ui.app._configured_model_defaults",
+                return_value=("echo", "echo"),
+            ):
+                client = TestClient(
+                    create_app(self._root(temp)), base_url="http://localhost"
+                )
+                queue = client.get("/reviews")
+                csrf = self._hidden(queue.text, "csrf_token")
+                started = client.post(
+                    "/reviews/assist/start",
+                    content=urlencode(
+                        {"target_ids": "EVT-20260729-001", "csrf_token": csrf}
+                    ),
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Origin": "http://localhost",
+                    },
+                )
+                self.assertEqual(202, started.status_code, started.text)
+                detail = client.get("/reviews/assist/EVT-20260729-001")
+            self.assertEqual(200, detail.status_code, detail.text)
+            self.assertIn("AI 建议", detail.text)
+            self.assertIn("批准", detail.text)
+            self.assertIn("修改", detail.text)
+            self.assertIn("拒绝", detail.text)
+            self.assertIn("/reviews/apply/preview", detail.text)
+            self.assertNotIn("/reviews/apply/commit", detail.text)
+
+    def test_review_ai_assistance_requires_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            client = TestClient(
+                create_app(self._root(temp)), base_url="http://localhost"
+            )
+            queue = client.get("/reviews")
+            csrf = self._hidden(queue.text, "csrf_token")
+            response = client.post(
+                "/reviews/assist/preview",
+                content=urlencode({"target_ids": "", "csrf_token": csrf}),
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Origin": "http://localhost",
+                },
+            )
+            self.assertEqual(422, response.status_code)
+
+    def test_review_ai_assistance_is_read_only_and_degrades_without_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            with patch(
+                "research_os.ui.app._configured_model_defaults",
+                return_value=("echo", "echo"),
+            ):
+                client = TestClient(
+                    create_app(self._root(temp)), base_url="http://localhost"
+                )
+                queue = client.get("/reviews")
+                csrf = self._hidden(queue.text, "csrf_token")
+                response = client.post(
+                    "/reviews/assist/preview",
+                    content=urlencode(
+                        {"target_ids": "EVT-20260729-001", "csrf_token": csrf}
+                    ),
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Origin": "http://localhost",
+                    },
+                )
+            self.assertEqual(200, response.status_code, response.text)
+            self.assertIn("AI 辅助评审", response.text)
+            self.assertIn("EVT-20260729-001", response.text)
+            self.assertIn("规则预检查", response.text)
+            self.assertNotIn('name="preview_token"', response.text)
+            self.assertNotIn("确认写入", response.text)
+
+    def test_review_ai_assistance_provider_failure_does_not_block_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            with (
+                patch(
+                    "research_os.services.ai_assistance.build_adapter",
+                    side_effect=RuntimeError("provider down"),
+                ),
+                patch(
+                    "research_os.ui.app._configured_model_defaults",
+                    return_value=("deepseek", "deepseek-chat"),
+                ),
+            ):
+                client = TestClient(
+                    create_app(self._root(temp)), base_url="http://localhost"
+                )
+                queue = client.get("/reviews")
+                csrf = self._hidden(queue.text, "csrf_token")
+                response = client.post(
+                    "/reviews/assist/preview",
+                    content=urlencode(
+                        {"target_ids": "EVT-20260729-001", "csrf_token": csrf}
+                    ),
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Origin": "http://localhost",
+                    },
+                )
+            self.assertEqual(200, response.status_code, response.text)
+            self.assertIn("模型调用失败", response.text)
+            self.assertIn("仍可继续人工评审", response.text)
+
+    def test_review_ai_assistance_shows_configured_model_output(self) -> None:
+        class FakeAdapter:
+            def generate(self, prompt, **kwargs):
+                self.prompt = prompt
+                self.kwargs = kwargs
+                return "模型建议：先核验来源锚点，再决定。"
+
+        adapter = FakeAdapter()
+        with tempfile.TemporaryDirectory() as temp:
+            with (
+                patch(
+                    "research_os.services.ai_assistance.build_adapter",
+                    return_value=adapter,
+                ),
+                patch(
+                    "research_os.ui.app._configured_model_defaults",
+                    return_value=("deepseek", "deepseek-chat"),
+                ),
+            ):
+                client = TestClient(
+                    create_app(self._root(temp)), base_url="http://localhost"
+                )
+                queue = client.get("/reviews")
+                csrf = self._hidden(queue.text, "csrf_token")
+                response = client.post(
+                    "/reviews/assist/preview",
+                    content=urlencode(
+                        {"target_ids": "EVT-20260729-001", "csrf_token": csrf}
+                    ),
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Origin": "http://localhost",
+                    },
+                )
+            self.assertEqual(200, response.status_code, response.text)
+            self.assertIn("模型建议：先核验来源锚点，再决定。", response.text)
+            self.assertIn("已生成模型建议", response.text)
+            self.assertIn("EVT-20260729-001", adapter.prompt)
+            self.assertEqual(0.2, adapter.kwargs["model_parameters"]["temperature"])
+
     def test_review_rejects_browser_reviewer_and_missing_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = self._root(temp)
@@ -210,6 +480,7 @@ class ReviewWebHttpTests(unittest.TestCase):
             queue = client.get("/reviews")
             self.assertEqual(200, queue.status_code)
             self.assertNotIn("记录评审决定", queue.text)
+            self.assertNotIn('id="review-action-bar"', queue.text)
             response = client.post(
                 "/reviews/apply/preview",
                 content=urlencode(
@@ -227,6 +498,43 @@ class ReviewWebHttpTests(unittest.TestCase):
                 },
             )
             self.assertEqual(503, response.status_code)
+
+    def test_global_health_does_not_turn_display_label_into_project_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            client = TestClient(
+                create_app(self._root(temp)), base_url="http://localhost"
+            )
+            response = client.get("/health")
+            self.assertEqual(200, response.status_code)
+            self.assertNotIn("project=%E5%85%A8%E5%B1%80", response.text)
+            self.assertNotIn("project=全局", response.text)
+
+    def test_workspace_routes_forward_project_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = self._root(temp)
+            client = TestClient(create_app(root), base_url="http://localhost")
+            with patch(
+                "research_os.ui.app._impact_page", return_value="impact"
+            ) as impact_page:
+                response = client.get("/impact?project=PRJ-001")
+                self.assertEqual(200, response.status_code)
+                self.assertEqual("PRJ-001", impact_page.call_args.kwargs["project_id"])
+            with patch(
+                "research_os.ui.app._analysis_page", return_value="analysis"
+            ) as analysis_page:
+                response = client.get("/analysis?project=PRJ-001")
+                self.assertEqual(200, response.status_code)
+                self.assertEqual(
+                    "PRJ-001", analysis_page.call_args.kwargs["project_id"]
+                )
+            with patch(
+                "research_os.ui.app._decision_page", return_value="decision"
+            ) as decision_page:
+                response = client.get("/decision?project=PRJ-001")
+                self.assertEqual(200, response.status_code)
+                self.assertEqual(
+                    "PRJ-001", decision_page.call_args.kwargs["project_id"]
+                )
 
 
 if __name__ == "__main__":

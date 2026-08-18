@@ -253,20 +253,15 @@ def recommendation_gate(
     return {"problems": problems}
 
 
-def recommendation_freshness(
-    root: Path,
+def recommendation_freshness_from_objects(
+    objects: list[ResearchObject],
     *,
     rec_id: str,
     as_of: str,
 ) -> dict[str, Any]:
-    """Check a Recommendation's freshness_date against ``as_of``."""
+    """Check recommendation freshness from an already validated snapshot."""
     if not is_iso_date(as_of):
         raise ValueError("as_of must be YYYY-MM-DD")
-    objects, findings = validate_repository(root)
-    if any(finding.level == "error" for finding in findings):
-        raise ValueError(
-            "repository validation must pass before a recommendation freshness check"
-        )
     by_id = {obj.object_id: obj for obj in objects}
     rec = by_id.get(rec_id)
     if rec is None or rec.object_type != "recommendation":
@@ -282,6 +277,21 @@ def recommendation_freshness(
         "age_days": age_days,
         "fresh": age_days <= 90,  # default recommendation review window
     }
+
+
+def recommendation_freshness(
+    root: Path,
+    *,
+    rec_id: str,
+    as_of: str,
+) -> dict[str, Any]:
+    """Check a Recommendation's freshness_date against ``as_of``."""
+    objects, findings = validate_repository(root)
+    if any(finding.level == "error" for finding in findings):
+        raise ValueError(
+            "repository validation must pass before a recommendation freshness check"
+        )
+    return recommendation_freshness_from_objects(objects, rec_id=rec_id, as_of=as_of)
 
 
 def _recommendation_meta(
