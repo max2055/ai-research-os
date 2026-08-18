@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 import secrets
+import signal
 import sqlite3
 from collections.abc import AsyncIterator, Callable, Mapping
 from contextlib import asynccontextmanager
@@ -6975,9 +6976,23 @@ def run_ui(
         raise ValueError("Dashboard v1 only binds to a loopback host")
     import uvicorn
 
-    uvicorn.run(
-        create_app(root),
-        host=host,
-        port=port,
-        log_level="info",
-    )
+    # Uvicorn re-raises captured signals after lifespan shutdown. Keep the
+    # outer handler benign so a Web-owned Worker can stop before process exit.
+    def _shutdown_signal(_signum: int, _frame: object) -> None:
+        return None
+
+    previous = {
+        signum: signal.getsignal(signum) for signum in (signal.SIGINT, signal.SIGTERM)
+    }
+    try:
+        for signum in previous:
+            signal.signal(signum, _shutdown_signal)
+        uvicorn.run(
+            create_app(root),
+            host=host,
+            port=port,
+            log_level="info",
+        )
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)

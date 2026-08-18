@@ -55,14 +55,8 @@ def _start_server(root: Path, port: int) -> subprocess.Popen[str]:
     code = """
 import sys
 from pathlib import Path
-import uvicorn
-from research_os.ui.app import create_app
-uvicorn.run(
-    create_app(Path(sys.argv[1])),
-    host='127.0.0.1',
-    port=int(sys.argv[2]),
-    log_level='error',
-)
+from research_os.ui.app import run_ui
+run_ui(Path(sys.argv[1]), host='127.0.0.1', port=int(sys.argv[2]))
 """
     env = os.environ.copy()
     env["PYTHONPATH"] = str(source_root)
