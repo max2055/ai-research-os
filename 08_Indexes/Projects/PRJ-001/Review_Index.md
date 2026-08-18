@@ -2,7 +2,7 @@
 
 <!-- Generated from immutable Review Decision objects. -->
 
-更新时间：2026-08-11
+更新时间：2026-08-16
 
 | Review ID | Date | Decision | Targets | Reviewer | Projects |
 |---|---|---|---|---|---|
@@ -105,3 +105,5 @@
 | REV-20260809-005 | 2026-08-09 | approve | FCT-20260809-001, FCT-20260809-002, FCT-20260809-003, FCT-20260809-004, FCT-20260809-005, FCT-20260809-006, FCT-20260809-007, FCT-20260809-008, FCT-20260809-009, FCT-20260809-010 | max | PRJ-001 |
 | REV-20260809-006 | 2026-08-09 | approve | SRC-20260809-155, SRC-20260809-156, SRC-20260809-157 | max | PRJ-001 |
 | REV-20260809-008 | 2026-08-09 | approve | THS-009, THS-010, THS-011 | max | PRJ-001 |
+| REV-20260816-001 | 2026-08-16 | approve | IMP-20260807-001 | max | PRJ-001 |
+| REV-20260816-002 | 2026-08-16 | approve | IMP-20260807-002 | max | PRJ-001 |

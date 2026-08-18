@@ -2,7 +2,7 @@
 
 <!-- Generated from immutable Review Decision objects. -->
 
-更新时间：2026-08-11
+更新时间：2026-08-16
 
 | Review ID | Date | Decision | Targets | Reviewer | Projects |
 |---|---|---|---|---|---|
@@ -192,3 +192,5 @@
 | REV-20260809-007 | 2026-08-09 | approve | VAL-20260809-001, VAL-20260809-002, VAL-20260809-003 | max |  |
 | REV-20260809-008 | 2026-08-09 | approve | THS-009, THS-010, THS-011 | max | PRJ-001 |
 | REV-20260809-009 | 2026-08-09 | approve | REC-20260809-001, REC-20260809-002, REC-20260809-003 | max |  |
+| REV-20260816-001 | 2026-08-16 | approve | IMP-20260807-001 | max | PRJ-001 |
+| REV-20260816-002 | 2026-08-16 | approve | IMP-20260807-002 | max | PRJ-001 |
