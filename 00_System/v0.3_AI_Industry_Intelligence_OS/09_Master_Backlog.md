@@ -353,10 +353,10 @@ WP-611 close-out（2026-08-10）：F-015~018 完成许可、备份、恢复与�
 - **F-018**：`v0.3_Migration_Rehearsal.md` 在另一 disposable clone 对 8 个 v0.2 legacy Company 做 v1→v2 plan/apply；1027/1027 unowned objects apply 期间不变。故障注入触发 `rollback precondition changed` 且拒绝覆盖；修复 after-hash 后 1035/1035 正式对象字节级恢复，Candidate DB hash/schema v2 不变；forward/rollback 后 validate/index/full pytest 通过。
 
 WP-612 close-out（2026-08-10）：F-019~020 完成 operator 与决策边界文档。
-- **F-019**：`v0.3_User_Runbook.md` 已按 RCP-v03-011 改为 Web Product and Migration Runbook；现有命令只保留为内部兼容/恢复证据，Web parity 缺口显式披露。
+- **F-019**：`v0.3_User_Runbook.md` 已按 RCP-v03-011 改为 Web-only Product Runbook；网站工作流 parity 已完成，内部兼容/恢复 adapter 不进入用户文档。
 - **F-020**：`v0.3_Known_Limitations.md` 以 Facts/Inferences/Judgments 分离数据/时效、模型/provider retention、许可、SQLite/single-user、Web-only 目标与未完成 parity、metadata-only CI、strict local Gate、六态 cost、backup receipt/key custody、校准和投资行为边界；document contract tests 固化必备项与 blocked 状态。
 - **真实时间门不变**：WP-530 最早真实 Forecast resolution 仍为 2026-10-31；WP-620 仍需真实 30-day Pilot/natural resolutions；不生成 synthetic outcome、reviewer、date 或 approval。WP-630 继续等待这些 Gate 与 human release packet。
-- **release check 边界**：默认 `research-os release check` 仍是 v0.2 的 18 Gate，当前 18/18 Ready；显式 `--version 0.3` 已实现 WP-630/F-023 的 21-key read-only evaluator，当前 16/21。结果必须保持 BLOCKED，并独立显示 WP-530、WP-620、cadence、Known Limitations 阅读确认和 F-024；checker 不创建 packet、reviewer、date、approval、tag 或 release。
+- **release check 边界**：网站 `/health/release` 调用内部 versioned evaluator；v0.2 的 18 Gate 当前 18/18 Ready，v0.3 的 WP-630/F-023 21-key evaluator 当前 16/21。结果必须保持 BLOCKED，并独立显示 WP-530、WP-620、cadence、Known Limitations 阅读确认和 F-024；checker 不创建 packet、reviewer、date、approval、tag 或 release。
 - **private CI 边界**：hosted workflow 仅用 metadata-only validation/index、asset-independent tests、Ruff/mypy、10-route smoke 与预期 blocker assertion；权限 `contents: read`，不读取 raw assets、Candidate DB、secret、backup identity，不替代 strict local/full restore Gate。
 - **durable health/cost**：local snapshot 与 durable receipt age 分开；durable `missing/failed/invalid/stale (>24h)` 用稳定 `BKP_DURABLE_*` code 报 P1，Dashboard 正常 render 不联网。model/API cost 按 natural month 显示 `unconfigured/no_data/ok/warning/exceeded/invalid`，missing 不当作 zero，raw budget 不渲染。
 

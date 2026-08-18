@@ -1139,31 +1139,30 @@ class ReleaseReadinessTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         runbook = (root / "00_System/v0.3_User_Runbook.md").read_text(encoding="utf-8")
         for text in (
-            "Install and configure",
-            "Dashboard",
-            "Daily workflow",
-            "Weekly workflow",
-            "Monthly workflow",
-            "Candidate triage",
-            "Evidence review",
-            "Impact review",
-            "Analysis review",
-            "Forecast review",
-            "Decision review",
-            "Backup",
-            "Restore",
-            "Failure response",
-            "Secrets",
-            "Escalation",
+            "python -m research_os.ui",
+            "/pipeline/queue",
+            "/sources",
+            "/reviews",
+            "/impact",
+            "/analysis",
+            "/decision",
+            "/operations/schedules",
+            "/operations/jobs",
+            "/operations/backups",
+            "/health",
+            "Worker",
+            "Weekly",
+            "Monthly",
+            "备份与恢复",
+            "停止与故障处理",
             "P0",
             "P1",
             "P2",
             "P3",
-            "--dry-run",
-            "--apply",
-            "PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python",
         ):
             self.assertIn(text, runbook)
+        self.assertNotIn("research-os ", runbook)
+        self.assertNotIn("09_Automation/research_os.py", runbook)
 
     def test_v03_known_limitations_separate_claim_types_and_real_time_gates(
         self,
@@ -1183,9 +1182,9 @@ class ReleaseReadinessTests(unittest.TestCase):
             "license",
             "SQLite",
             "single-user",
-            "Candidate dismiss through preview",
-            "Web parity remains incomplete",
-            "No Review approval or Thesis mutation adapter exists",
+            "Candidate dismiss/restore only update operational candidate state",
+            "F-026～F-029 parity is complete",
+            "no automated path may change a Thesis conclusion or confidence",
             "calibration",
             "no automated investment action",
             "WP-530",
@@ -1225,14 +1224,15 @@ class ReleaseReadinessTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         for text in (
-            "research-os validate --strict",
-            "research-os validate --metadata-only",
-            "research-os release check --version 0.3 --format json",
+            "python -m research_os.ui",
+            "/health",
+            "/health/release",
             "metadata-only",
             "strict local",
         ):
             with self.subTest(document="readme", text=text):
                 self.assertIn(text, readme)
+        self.assertNotIn("research-os ", readme)
 
         combined = f"{runbook}\n{limitations}"
         for state in (

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility entry point for the packaged AI Research OS CLI."""
+"""Internal maintenance and recovery adapter; not a product entry point."""
 
 from __future__ import annotations
 

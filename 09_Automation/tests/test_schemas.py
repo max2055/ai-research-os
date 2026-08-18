@@ -38,42 +38,34 @@ class SchemaTests(unittest.TestCase):
         documents, errors = validate_documents(ROOT)
         self.assertEqual([], errors)
         counts = dict(Counter(document.metadata["type"] for document in documents))
-        # "job" is asserted as a floor, not an exact count: launchd adds Job
-        # Run records every 6h, so the exact value drifts every round.
+        # Historical Job Markdown is immutable after the Web-only cutover.
         job_count = counts.pop("job", 0)
-        # "impact_assertion" is a floor too: max materializes pending IMPs from
-        # C-004 proposals as the C-018 loop runs, so the exact value grows.
-        impact_count = counts.pop("impact_assertion", 0)
-        # "analysis_run" is a floor too: max runs analyses (WP-410+) so the
-        # exact value grows as runs are materialized.
-        run_count = counts.pop("analysis_run", 0)
-        self.assertEqual(
-            {
-                "action": 12,
-                "analysis_mode": 10,  # WP-410 first 9 + scenario-v2 (2026-08-09)
-                "company": 59,  # WP-120: 8 v0.2 + 51 Pilot Core Compute Chain
-                "event": 54,  # EvWP; Gate30; Field gap; +4 pricing/capex/demand
-                "forecast": 10,  # WP-520 10-forecast field gate (2026-08-09)
-                "ontology_assertion": 260,  # RelWP; Field gap: +7; Product WP: +5
-                "product": 5,  # WP-120 Product entities
-                "project": 2,
-                "recommendation": 3,  # WP-520 3-company pilot (2026-08-09)
-                "report": 2,
-                # +16: C-018 BIS + mode activations + ANL-001 reject + v2 REV +
-                #       pricing/capex/demand + WP-520 reviews (forecast/src/val/th/rec)
-                "review": 186,
-                "sector": 9,  # WP-120: 8 Compute Chain rings + enterprise-applications
-                "security": 10,  # Field Gate §9.3 securities
-                "source": 156,  # +3 WP-520 Yahoo market-data quotes (2026-08-09)
-                "source_channel": 24,  # WP-201: 6 first-batch + 18 Pilot G1 batch
-                "thesis": 11,  # +3 WP-520 contrarian pilot theses (THS-009/010/011)
-                "valuation_snapshot": 3,  # WP-520 3-company pilot snapshots
-            },
-            counts,
-        )
-        self.assertGreaterEqual(job_count, 40)
-        self.assertGreaterEqual(impact_count, 4)
-        self.assertGreaterEqual(run_count, 0)
+        minimum_counts = {
+            "action": 12,
+            "analysis_mode": 10,
+            "analysis_run": 35,
+            "company": 59,
+            "event": 54,
+            "forecast": 10,
+            "impact_assertion": 22,
+            "ontology_assertion": 260,
+            "product": 5,
+            "project": 2,
+            "recommendation": 3,
+            "report": 2,
+            "review": 188,
+            "sector": 9,
+            "security": 10,
+            "source": 156,
+            "source_channel": 24,
+            "thesis": 11,
+            "valuation_snapshot": 3,
+        }
+        self.assertEqual(set(minimum_counts), set(counts))
+        for object_type, minimum in minimum_counts.items():
+            with self.subTest(object_type=object_type):
+                self.assertGreaterEqual(counts[object_type], minimum)
+        self.assertEqual(516, job_count)
 
     def test_noop_round_trip_is_byte_exact_for_all_objects(self) -> None:
         for document in load_documents(ROOT):

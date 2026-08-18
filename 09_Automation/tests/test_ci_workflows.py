@@ -181,6 +181,59 @@ class HostedCiWorkflowTests(unittest.TestCase):
         self.assertIn("/health", text)
         self.assertIn("/operations/schedules", text)
 
+    def test_current_runtime_contracts_have_no_retired_entrypoint_drift(self) -> None:
+        self.assertFalse((ROOT / "src" / "research_os" / "__main__.py").exists())
+
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertNotIn("[project.scripts]", pyproject)
+        self.assertNotIn('"src/research_os/__main__.py"', pyproject)
+
+        design = (ROOT / "00_System" / "Dashboard_Design_v2.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("python -m research_os.ui", design)
+        self.assertNotIn("research-os ui", design)
+        self.assertNotIn("当前 exact non-GET allowlist 为 9", design)
+        self.assertNotIn("当前 9 条 POST allowlist", design)
+        self.assertNotIn("其他权威研究对象区域仍保持 GET-only", design)
+
+        protocol = (
+            ROOT
+            / "00_System"
+            / "v0.3_AI_Industry_Intelligence_OS"
+            / "08_Agent_Execution_Protocol.md"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("/bin/research-os", protocol)
+        self.assertIn("09_Automation/research_os.py", protocol)
+
+        migration = (ROOT / "00_System" / "Migration_Guide_v0.3.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("`research-os validate`", migration)
+        self.assertNotIn("`research-os index", migration)
+        self.assertIn("09_Automation/research_os.py", migration)
+
+        backlog = (
+            ROOT
+            / "00_System"
+            / "v0.3_AI_Industry_Intelligence_OS"
+            / "09_Master_Backlog.md"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("Web parity 缺口显式披露", backlog)
+        self.assertNotIn("- **release check 边界**：默认 `research-os", backlog)
+        self.assertIn("`/health/release`", backlog)
+
+        maintenance_adapter = (ROOT / "09_Automation" / "research_os.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Internal maintenance and recovery adapter", maintenance_adapter)
+        self.assertNotIn("packaged AI Research OS CLI", maintenance_adapter)
+
+        discovery = (ROOT / "src/research_os/services/discovery.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("launchd recovery after reboot", discovery)
+
 
 class CiDashboardSmokeTests(unittest.TestCase):
     def test_fixture_dashboard_routes_return_200(self) -> None:

@@ -50,7 +50,7 @@ spike 或 read-only audit，不得自行决定并写入生产 Schema。
 
 - 一个工作包建议 0.5–3 个工作日；
 - 一个工作包只包含一个主要业务能力；
-- Schema、migration、service、CLI、tests、docs 可以属于同一个垂直工作包；
+- Schema、migration、service、内部 maintenance adapter、tests、docs 可以属于同一个垂直工作包；
 - 不要把整个 Phase 交给单个 Agent 一次完成；
 - 同一时间同一文件只能有一个 owner；
 - 同一正式对象、同一 Thesis confidence、同一 Taxonomy 文件、同一 migration 不并行修改；
@@ -62,9 +62,9 @@ spike 或 read-only audit，不得自行决定并写入生产 Schema。
 ```bash
 git status --short --branch
 git log -5 --oneline
-/Users/max/.venvs/ai-research-os/bin/research-os doctor
-/Users/max/.venvs/ai-research-os/bin/research-os validate
-/Users/max/.venvs/ai-research-os/bin/research-os index --check
+PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python 09_Automation/research_os.py doctor
+PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python 09_Automation/research_os.py validate
+PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python 09_Automation/research_os.py index --check
 /Users/max/.venvs/ai-research-os/bin/pytest -q
 ```
 
@@ -176,10 +176,10 @@ git log -5 --oneline
 工作包完成至少运行：
 
 ```bash
-/Users/max/.venvs/ai-research-os/bin/research-os validate
-/Users/max/.venvs/ai-research-os/bin/research-os index --check
-/Users/max/.venvs/ai-research-os/bin/research-os index --check --project PRJ-001
-/Users/max/.venvs/ai-research-os/bin/research-os index --check --project PRJ-002
+PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python 09_Automation/research_os.py validate
+PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python 09_Automation/research_os.py index --check
+PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python 09_Automation/research_os.py index --check --project PRJ-001
+PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python 09_Automation/research_os.py index --check --project PRJ-002
 /Users/max/.venvs/ai-research-os/bin/pytest --cov=research_os --cov-report=term-missing
 /Users/max/.venvs/ai-research-os/bin/ruff check src 09_Automation/tests
 /Users/max/.venvs/ai-research-os/bin/mypy src/research_os
@@ -228,7 +228,7 @@ Final commit(s):
 Approved RCP(s):
 Files owned:
 Files changed:
-Schema/API/CLI changes:
+Schema/API/internal-adapter changes:
 Migration and rollback:
 Tests added:
 Commands run and exact result:
@@ -288,7 +288,7 @@ Work Package 可开始的条件：
 - 功能按批准语义完成；
 - 没有扩大范围；
 - 自动和真实 Gate 按阶段要求完成；
-- 文档、CLI help、Schema、UI 一致；
+- 文档、内部 adapter help、Schema、UI 一致；
 - validate/index/test/lint/type 通过；
 - worktree 变更可解释；
 - 没有 secret/受限资产；

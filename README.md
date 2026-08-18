@@ -103,6 +103,10 @@ commit、dirty、interpreter、package path 和数据库路径；这些字段是
 当前 v0.3 发布状态仍由 `/health/release` 与具名人工决定共同控制。工程迁移完成不自动
 通过真实 Pilot、自然 Resolution、cadence、Known Limitations 阅读确认或最终发布批准。
 
+托管 CI 只运行不依赖本地原始资产的 metadata-only 检查；它不能替代网站 `/health` 中的
+strict local 校验、真实 Source asset 检查或灾备恢复验收。开发、CI 与恢复所用的内部
+maintenance adapter 不安装为产品命令，也不构成第二个用户入口。
+
 Durable backup 从 `/operations/backups` 预览并确认。浏览器不接收配置路径、recipient
 或 token；Worker 只读取固定的 ignored 服务端配置
 `09_Automation/operational/durable_backup.json`。Candidate 加密集合同时包含 Candidate

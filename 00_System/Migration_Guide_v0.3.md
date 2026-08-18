@@ -86,8 +86,8 @@ v0.3 引入：
 
 ## 5. 验证 gate（每个 migration 完成）
 
-- `research-os validate` 0 error / 0 warning
-- `research-os index --check` global + per-project（PRJ-001/PRJ-002）无 drift
+- `PYTHONPATH=src /Users/max/.venvs/ai-research-os/bin/python 09_Automation/research_os.py validate` 0 error / 0 warning
+- 同一内部 adapter 的 `index --check` 对 global + per-project（PRJ-001/PRJ-002）无 drift
 - pytest 覆盖率不低于当前 80% Gate
 - ruff / mypy pass
 - v0.2 对象 166 个数量与 hash manifest 一致

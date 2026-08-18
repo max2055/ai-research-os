@@ -1,6 +1,6 @@
 # Dashboard Design v2（Product IA）
 
-版本：v2.1（Web-only migration contract）
+版本：v2.2（Web-only runtime contract）
 
 生效日期：2026-08-12
 
@@ -40,15 +40,15 @@ Industry Home
 |---|---|---|---|---|---|
 | 产业首页（Industry Home）| `/home` | `industry_home_snapshot`（F-002）| 候选+Universe+Evidence+Decision 聚合 | 导航到具名 workflow，不在聚合快照内直接写 | §3 Industry Home |
 | 概览（Project overview）| `/` | `_project_overview`（app.py）| 单 Project 作用域 | none | — |
-| Daily Brief | Web + scheduled Markdown 产物 | `daily_brief` | 候选+通道+事件+失败 | 手动运行/审阅，自动任务无审批权 | §3 Industry Home |
+| Daily Brief | `/operations/jobs` + 首页摘要 | `daily_brief` | 候选+通道+事件+失败 | 网站手动运行或内置 Worker 调度；自动任务无审批权 | §3 Industry Home |
 | Sector Map | `/sectors`（现有）| (WP-601/602) | 板块/公司/事件/影响 | none | §3 Sector |
-| Company Radar | `/companies`（现有）| (WP-601/602) | 实体/安全/证据/决策 | none | §3 Company |
+| Company Radar | `/companies`（现有）| (WP-601/602) | 实体/安全/证据/决策 | Company update proposal preview/commit | §3 Company |
 | Candidate Queue | `/pipeline/queue`（现有）| `queue_rows` | 候选 SQLite operational store | dismiss/restore/promote：各自 `/{candidate_id}/{operation}/preview` → `/{operation}/commit` | §3 Candidate Queue |
-| Evidence Review Queue | `/reviews`（现有）| `render_review_queue` | reviewed/pending 对象 | none | — |
-| Impact Explorer | `/impact`（现有）| `render_impact` | 影响断言/路径 | none | — |
-| Analysis Workspace | `/analysis`（现有）| `analysis_*` services | mode/run 对象 | none | — |
-| Forecast & Decision Desk | `/decision`（现有）| `forecast_status_report` 等 | forecast/valuation/rec | none | §3 Decision Desk |
-| Operations | `/operations`（现有）| `action_rows` 等 | action/review due | none | — |
+| Evidence Review Queue | `/reviews`（现有）| `render_review_queue` | reviewed/pending 对象 | assist、cadence、具名 review preview/commit | — |
+| Impact Explorer | `/impact`（现有）| `render_impact` | 影响断言/路径 | Impact proposal preview/commit | — |
+| Analysis Workspace | `/analysis`（现有）| `analysis_*` services | mode/run 对象 | run/replay/Thesis proposal preview/commit | — |
+| Forecast & Decision Desk | `/decision`（现有）| `forecast_status_report` 等 | forecast/valuation/rec | Forecast、Valuation、Scenario、Recommendation preview/commit | §3 Decision Desk |
+| Operations | `/operations`（现有）| `action_rows` 等 | action/review due | discovery、Job、backup、Action、Schedule 网站工作流 | — |
 | System Health | `/health`（现有）| `verify_source_assets` 等 | validation/index/asset/job | none | — |
 | 模型配置 | `/llm`（现有）| `llm_config` | 本地 config store | `/llm/config` `/llm/models` `/llm/test`（grandfather）| — |
 
@@ -63,27 +63,27 @@ Industry Home
 
 ## 4. Web mutation 不变量
 
-- 当前 exact non-GET allowlist 为 9 条 POST：3 条 `/llm/*` 本地配置路由，加 Candidate
-  dismiss、restore、promote 各自的 preview 与 commit。新增 route 必须显式更新
-  capability/security contract。
+- 所有 non-GET route 必须登记在 `product_capabilities` allowlist；该 registry 和路由集合由
+  CI 做精确一致性检查。新增 route 必须显式更新 capability/security contract，文档不复制
+  易漂移的路由数量。
 - 新 mutation route 必须调用既有领域 service，先返回 validation + diff preview，再由具名人工
   对明确 target version 提交；不得直接编辑浏览器副本或绕开 Markdown authority。
 - 每次提交记录 actor、decision、timestamp、target ID、before/after version、结果与失败原因，
   并具备防重复、并发冲突检测、原子失败和可验证回滚。
 - 自动任务、Agent 和模型输出只能产生 pending 草稿或 operational 更新，不能调用审批动作，
   不能改变 Thesis 结论或 confidence。
-- 路由回归测试固定当前 9 条 POST allowlist，并逐 route 校验 capability、CSRF/Origin、权限、
-  audit 和 transaction contract。
+- 路由回归测试逐 route 校验 capability、CSRF/Origin、权限、audit 和 transaction contract。
 
 ## 5. Loopback + controlled mutation
 
-- `research-os ui` 默认 `127.0.0.1:8765`；只接受 loopback host（`run_ui` 拒绝非 loopback）。
+- `python -m research_os.ui` 默认 `127.0.0.1:8765`；只接受 loopback host（`run_ui` 拒绝非 loopback）。
 - F-026/F-027A 已实现 Candidate dismiss、restore 和 promote：固定本地具名 identity、
   session-bound CSRF、10 分钟签名 preview token、单次 nonce、target-version 并发检查；
   restore 的 Candidate/action/audit 在一个 SQLite transaction 内提交，promote 对 preview
   冻结的 Source/assets、Candidate action 与 audit 做协调提交并留存失败补偿 manifest。
-  Candidate 是 operational state；promote 只创建 pending Source，不自动批准；Review、
-  Thesis 与其他权威研究对象区域仍保持 GET-only。
+  Candidate 是 operational state；promote 只创建 pending Source，不自动批准。其他研究对象
+  只能通过对应的具名 preview/commit workflow 写入；Worker、Agent 和模型均无审批权，也不能
+  改变 Thesis conclusion/confidence。
 - 仓库文本在 HTML 输出前 escape；Source asset 通过拥有它的 Source 与数组 index 解析，拒绝任意 path。
 - 当前不处理登录、账户或公网访问；远程/多用户能力必须另建身份认证、授权与部署 RCP。
 

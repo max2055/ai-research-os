@@ -543,9 +543,6 @@ raise SystemExit(2)
 
         for text in (
             "/operations/backups",
-            "09_Automation/operational/durable_backup.json",
-            'backup durable verify-remote --backup-id "$BACKUP_ID"',
-            'backup durable restore --backup-id "$BACKUP_ID"',
             "BKP_DURABLE_MISSING",
             "BKP_DURABLE_FAILED",
             "BKP_DURABLE_INVALID",
@@ -556,7 +553,20 @@ raise SystemExit(2)
             with self.subTest(document="user", text=text):
                 self.assertIn(text, user)
 
-        for text in ("Legacy launchd Rollback Artifact", "网站 Worker", "禁止"):
+        for text in (
+            "09_Automation/operational/durable_backup.json",
+            'backup durable verify-remote --backup-id "$BACKUP_ID"',
+            'backup durable restore --backup-id "$BACKUP_ID"',
+        ):
+            with self.subTest(document="user", retired_internal_command=text):
+                self.assertNotIn(text, user)
+
+        for text in (
+            "Legacy Scheduler Evidence",
+            "网站 Worker",
+            "禁止",
+            "不得把本目录",
+        ):
             with self.subTest(document="launchd", text=text):
                 self.assertIn(text, launchd)
 

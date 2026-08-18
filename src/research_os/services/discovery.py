@@ -202,8 +202,8 @@ def _acquire_channel_lock(
     """B-021 no-overlap lock: reclaim stale running runs, refuse a live one.
 
     A crashed run leaves a ``running`` discovery_runs row; rows older than
-    ``LOCK_STALE`` are reclaimed as failed so a restart can proceed, giving
-    launchd recovery after reboot without overlapping runs.
+    ``LOCK_STALE`` are reclaimed as failed so a supervised Worker restart can
+    proceed without overlapping runs.
     """
     connection = sqlite3.connect(db_path)
     try:
