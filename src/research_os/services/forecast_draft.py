@@ -210,7 +210,7 @@ def _forecast_meta(
 def _forecast_body(meta: dict[str, Any]) -> str:
     probability = meta["probability"]
     probability_line = (
-        f"{probability:.2f}" if isinstance(probability, (int, float)) else "N/A"
+        f"{probability:.2f}" if isinstance(probability, int | float) else "N/A"
     )
     range_line = ""
     if meta["outcome_type"] == "numeric_range":

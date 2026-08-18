@@ -910,31 +910,6 @@ def build_parser() -> argparse.ArgumentParser:
     ui.add_argument("--host", default="127.0.0.1")
     ui.add_argument("--port", type=int, default=8765)
 
-    jobs = subparsers.add_parser("jobs", help="run idempotent scheduler jobs")
-    job_commands = jobs.add_subparsers(dest="job_command", required=True)
-    job_list = job_commands.add_parser("list", help="list Job Run records")
-    job_list.add_argument("--project")
-    job_list.add_argument("--status", choices=("success", "failed"))
-    job_run = job_commands.add_parser("run", help="execute and record one job")
-    job_run.add_argument(
-        "name",
-        choices=(
-            "validate",
-            "indexes",
-            "metrics",
-            "source-process",
-            "refresh",
-            "discover",
-            "expire",
-            "daily-brief",
-            "forecast-alerts",
-            "backup-candidate",
-        ),
-    )
-    job_run.add_argument("--project")
-    job_run.add_argument("--target")
-    job_run.add_argument("--as-of")
-
     brief = subparsers.add_parser("brief", help="Daily Brief (B-022)")
     brief_commands = brief.add_subparsers(dest="brief_command", required=True)
     brief_daily = brief_commands.add_parser(
@@ -1848,37 +1823,6 @@ def main() -> int:
                 print(f"CREATED: {target.relative_to(args.root.resolve())}")
                 return 0
         except (FileExistsError, OSError, TransactionError, ValueError) as exc:
-            print(f"ERROR: {exc}")
-            return 2
-    if args.command == "jobs":
-        try:
-            if args.job_command == "list":
-                rows = runtime.job_rows(
-                    args.root.resolve(),
-                    project_id=args.project,
-                    status=args.status,
-                )
-                print("# Job Runs")
-                for row in rows:
-                    print(
-                        f"{row.object_id} {row.metadata['status']} "
-                        f"{row.metadata['job_name']}: {row.metadata['message']}"
-                    )
-                return 0
-            job_result = runtime.run_job(
-                args.root.resolve(),
-                args.name,
-                project_id=args.project,
-                target=args.target,
-                as_of=args.as_of,
-            )
-            print(
-                f"{job_result.status.upper()} {job_result.job_id}: "
-                f"{job_result.message}\n"
-                f"RECORD: {job_result.path.relative_to(args.root.resolve())}"
-            )
-            return 0 if job_result.status == "success" else 1
-        except (OSError, TransactionError, ValueError) as exc:
             print(f"ERROR: {exc}")
             return 2
     if args.command == "backup":

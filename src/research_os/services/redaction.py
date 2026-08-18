@@ -18,6 +18,11 @@ _SENSITIVE_QUERY_PARAM = re.compile(
 _BEARER_RE = re.compile(r"(?i)(\bBearer\s+)(\S+)")
 _AUTH_HEADER_RE = re.compile(r"(?i)((?:authorization|proxy-authorization):\s*)(\S+)")
 _COOKIE_HEADER_RE = re.compile(r"(?i)(cookie:\s*)([^\r\n]+)")
+_SENSITIVE_ASSIGNMENT_RE = re.compile(
+    r"(?i)(?<![?&])"
+    r"(\b(?:api_key|apikey|token|password|passwd|secret|credential)\s*=\s*)"
+    r"([^\s,;]+)"
+)
 
 
 def redact_secrets(text: str) -> str:
@@ -28,4 +33,5 @@ def redact_secrets(text: str) -> str:
     redacted = _BEARER_RE.sub(r"\g<1>" + REDACTED, redacted)
     redacted = _AUTH_HEADER_RE.sub(r"\g<1>" + REDACTED, redacted)
     redacted = _COOKIE_HEADER_RE.sub(r"\g<1>" + REDACTED, redacted)
+    redacted = _SENSITIVE_ASSIGNMENT_RE.sub(r"\g<1>" + REDACTED, redacted)
     return redacted

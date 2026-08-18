@@ -17,8 +17,8 @@ class ProductCapabilityTests(unittest.TestCase):
         cli_keys = cli_capability_keys()
         registry_keys = {item.cli_key for item in PRODUCT_CAPABILITIES}
 
-        self.assertEqual(96, len(cli_keys))
-        self.assertEqual(cli_keys, registry_keys)
+        self.assertEqual(94, len(cli_keys))
+        self.assertEqual({"jobs.list", "jobs.run"}, registry_keys - cli_keys)
         self.assertEqual(len(registry_keys), len(PRODUCT_CAPABILITIES))
         for item in PRODUCT_CAPABILITIES:
             self.assertTrue(item.owner)
@@ -105,6 +105,15 @@ class ProductCapabilityTests(unittest.TestCase):
                 "/decision/recommendations/change/commit",
                 "/operations/jobs/run/preview",
                 "/operations/jobs/run/commit",
+                "/operations/backups/{backup_kind}/preview",
+                "/operations/schedules/new/preview",
+                "/operations/schedules/new/commit",
+                "/operations/schedules/{schedule_id}/edit/preview",
+                "/operations/schedules/edit/commit",
+                "/operations/schedules/{schedule_id}/pause/preview",
+                "/operations/schedules/{schedule_id}/resume/preview",
+                "/operations/schedules/{schedule_id}/run-now/preview",
+                "/operations/schedules/action/commit",
                 "/pipeline/channels/{channel_id}/change/preview",
                 "/pipeline/channels/{channel_id}/change/commit",
                 "/pipeline/queue/batch/preview",

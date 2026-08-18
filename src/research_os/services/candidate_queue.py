@@ -39,7 +39,7 @@ def _load_json(value: Any) -> Any:
         return {}
     try:
         parsed = json.loads(value)
-        return parsed if isinstance(parsed, (dict, list)) else {}
+        return parsed if isinstance(parsed, dict | list) else {}
     except (TypeError, ValueError):
         return {}
 

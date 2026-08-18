@@ -38,6 +38,12 @@ from research_os.services.durable_backup import (
     load_durable_backup_receipt,
     restore_durable_backup,
 )
+from research_os.services.operations_db import (
+    apply_migrations as apply_operations_migrations,
+)
+from research_os.services.operations_db import (
+    operations_db_path,
+)
 
 
 class FakeBackupBackend(BackupBackend):
@@ -273,6 +279,7 @@ class DurableBackupTests(unittest.TestCase):
         root = base / "repo"
         root.mkdir()
         apply_migrations(candidate_db_path(root))
+        apply_operations_migrations(operations_db_path(root))
         connection = sqlite3.connect(candidate_db_path(root))
         try:
             connection.execute("PRAGMA journal_mode = WAL")
@@ -398,6 +405,95 @@ class DurableBackupTests(unittest.TestCase):
             root = Path(temp)
             with self.assertRaisesRegex(ValueError, "backup_id"):
                 durable_backup.durable_receipt_path(root, "../../outside")
+
+    def test_candidate_archive_contains_operations_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            root, _raw = self.make_root(base)
+            work = base / "work"
+            work.mkdir()
+            archive_path = durable_backup._write_candidate_archive(
+                root,
+                work,
+                backup_id="BKP-20260810T010203Z-aaaaaaaaaaaa",
+                created_at="2026-08-10T01:02:03Z",
+                timestamp=1_754_789_323,
+            )
+            with tarfile.open(archive_path) as archive:
+                names = set(archive.getnames())
+                inner = json.load(
+                    archive.extractfile(durable_backup.INNER_MANIFEST_NAME)
+                )
+                operations_manifest = json.load(
+                    archive.extractfile("operations/operations.db.manifest.json")
+                )
+            self.assertIn("operations/operations.db", names)
+            self.assertIn("operations/operations.db.manifest.json", names)
+            self.assertEqual(inner["operations"], operations_manifest)
+
+            durable_backup._verify_plaintext_archive(
+                archive_path,
+                "candidate",
+                backup_id="BKP-20260810T010203Z-aaaaaaaaaaaa",
+                created_at="2026-08-10T01:02:03Z",
+            )
+            receipt = DurableBackupReceipt(
+                backup_id="BKP-20260810T010203Z-aaaaaaaaaaaa",
+                created_at="2026-08-10T01:02:03Z",
+                status="verified",
+                sets=(),
+                remote_repository="example/private-research",
+                remote_release=DURABLE_BACKUP_RELEASE_TAG,
+            )
+            staging = base / "staging"
+            staging.mkdir()
+            with tarfile.open(archive_path) as archive:
+                members = durable_backup._validated_tar_members(archive)
+                inner = durable_backup._inner_manifest(archive, members)
+                candidate_sha256, candidate_schema_version = (
+                    durable_backup._restore_candidate_archive(
+                        archive, members, inner, receipt, staging
+                    )
+                )
+            self.assertRegex(candidate_sha256, r"^[0-9a-f]{64}$")
+            self.assertEqual(
+                inner["candidate"]["schema_version"], candidate_schema_version
+            )
+            restored_operations = staging / durable_backup.OPERATIONS_ARCHIVE_PATH
+            with sqlite3.connect(restored_operations) as connection:
+                self.assertEqual(
+                    "ok", connection.execute("PRAGMA integrity_check").fetchone()[0]
+                )
+
+    def test_operations_manifest_rejects_malformed_metadata(self) -> None:
+        valid = {
+            "sha256": "a" * 64,
+            "size_bytes": 1,
+            "schema_version": 1,
+            "created_at": "2026-08-10T01:02:03Z",
+        }
+        self.assertEqual(
+            valid,
+            durable_backup._validated_operations_manifest(
+                valid, created_at="2026-08-10T01:02:03Z"
+            ),
+        )
+        invalid_values = (
+            None,
+            {**valid, "extra": True},
+            {**valid, "sha256": "invalid"},
+            {**valid, "size_bytes": True},
+            {**valid, "schema_version": 0},
+            {**valid, "created_at": "2026-08-11T01:02:03Z"},
+        )
+        for value in invalid_values:
+            with (
+                self.subTest(value=value),
+                self.assertRaisesRegex(ValueError, "Operations manifest"),
+            ):
+                durable_backup._validated_operations_manifest(
+                    value, created_at="2026-08-10T01:02:03Z"
+                )
 
     @pytest.mark.local_integration
     def test_dry_run_preflights_without_local_or_remote_writes(self) -> None:
@@ -684,7 +780,14 @@ class DurableBackupTests(unittest.TestCase):
             )
 
             self.assertEqual("verified", restored.status)
+            self.assertTrue(restored.operations_sha256)
+            self.assertEqual(1, restored.operations_schema_version)
             restored_db = destination / "09_Automation/operational/candidates.db"
+            restored_operations = destination / "operations/operations.db"
+            with sqlite3.connect(restored_operations) as connection:
+                self.assertEqual(
+                    "ok", connection.execute("PRAGMA integrity_check").fetchone()[0]
+                )
             connection = sqlite3.connect(restored_db)
             try:
                 count = connection.execute("SELECT COUNT(*) FROM candidates").fetchone()

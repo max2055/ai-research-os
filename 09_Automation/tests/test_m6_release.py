@@ -58,7 +58,9 @@ class ReleaseReadinessTests(unittest.TestCase):
                 "src/research_os/services/candidate_db.py",
                 "src/research_os/services/mutation_audit.py",
                 "src/research_os/services/mutation_gateway.py",
+                "src/research_os/services/operations_db.py",
                 "src/research_os/services/product_capabilities.py",
+                "src/research_os/services/scheduler_worker.py",
                 "src/research_os/services/triage.py",
                 "src/research_os/services/web_candidate_mutations.py",
                 "src/research_os/services/web_identity.py",
@@ -69,9 +71,13 @@ class ReleaseReadinessTests(unittest.TestCase):
                 "src/research_os/services/web_operations_mutations.py",
                 "src/research_os/services/web_research_drafts.py",
                 "src/research_os/services/web_review_mutations.py",
+                "src/research_os/services/web_schedule_mutations.py",
                 "src/research_os/services/web_source_workflows.py",
+                "src/research_os/services/worker_supervisor.py",
                 "src/research_os/ui/app.py",
+                "src/research_os/ui/scheduler_views.py",
                 "09_Automation/tests/test_m6_security.py",
+                "09_Automation/tests/test_operations_db.py",
                 "09_Automation/tests/test_product_capabilities.py",
                 "09_Automation/tests/test_web_candidate_parity.py",
                 "09_Automation/tests/test_web_mutation.py",
@@ -82,7 +88,9 @@ class ReleaseReadinessTests(unittest.TestCase):
                 "09_Automation/tests/test_web_operations_parity.py",
                 "09_Automation/tests/test_web_research_drafts.py",
                 "09_Automation/tests/test_web_review_parity.py",
+                "09_Automation/tests/test_web_scheduler.py",
                 "09_Automation/tests/test_web_source_parity.py",
+                "09_Automation/tests/test_worker_supervisor.py",
             },
             set(SECURITY_PATHS),
         )
@@ -178,7 +186,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     @pytest.mark.local_integration
     def test_current_v03_has_only_the_five_time_and_human_blockers(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-13")
+        readiness = release_readiness_v03(root, as_of="2026-08-18")
         blockers = {check.key: check for check in readiness.blockers}
 
         self.assertFalse(readiness.ready)
@@ -197,7 +205,7 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertTrue(by_key["engineering.migration_recovery"].passed)
         self.assertTrue(by_key["engineering.recovery_boundaries"].passed)
         self.assertTrue(by_key["engineering.dashboard_security"].passed)
-        verification_path = "00_System/v0.3_Release_Gate_Verification_2026-08-13.md"
+        verification_path = "00_System/v0.3_Release_Gate_Verification_2026-08-18.md"
         self.assertIn(
             verification_path,
             by_key["engineering.quality_suite"].evidence_paths,

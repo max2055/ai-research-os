@@ -7,9 +7,9 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 from research_os.adapters.backup_remote import GitHubPrivateReleaseBackend
-from research_os.domain.models import ResearchObject
 from research_os.repositories.transaction import FileTransaction
 from research_os.services.backup import create_candidate_snapshot
 from research_os.services.brief import (
@@ -33,6 +33,13 @@ from research_os.services.metrics import (
     metrics_json,
     metrics_snapshot_path,
     research_metrics,
+)
+from research_os.services.operations_db import (
+    ScheduleRunRecord,
+    create_run,
+    finalize_run,
+    list_runs,
+    operations_db_path,
 )
 from research_os.services.redaction import redact_secrets
 from research_os.services.triage import expire_candidates, purge_candidates
@@ -63,6 +70,40 @@ class JobRunResult:
     status: str
     message: str
     path: Path
+
+
+@dataclass(frozen=True)
+class JobExecutionResult:
+    status: Literal["success", "failed"]
+    message: str
+
+
+def execute_job(
+    root: Path,
+    job_name: str,
+    *,
+    project_id: str | None = None,
+    target: str | None = None,
+    as_of: str,
+    durable_config: Path | None = None,
+) -> JobExecutionResult:
+    """Execute a job without creating a Markdown operational record."""
+    if job_name not in JOB_NAMES:
+        raise ValueError(f"unsupported job {job_name}")
+    try:
+        message = _execute_job(
+            Path(root).resolve(),
+            job_name,
+            project_id=project_id,
+            target=target,
+            as_of=as_of,
+            durable_config=durable_config,
+        )
+    except Exception as exc:
+        return JobExecutionResult(
+            "failed", redact_secrets(f"{type(exc).__name__}: {exc}")
+        )
+    return JobExecutionResult("success", redact_secrets(message))
 
 
 def load_durable_backup_request(
@@ -328,6 +369,11 @@ def run_job(
     started_at: datetime | None = None,
     durable_config: Path | None = None,
 ) -> JobRunResult:
+    """Run a manual job through the operations database.
+
+    ``path`` is retained as a compatibility field and points at the control
+    database; no new ``JOB-*.md`` file is produced.
+    """
     root = root.resolve()
     if job_name not in JOB_NAMES:
         raise ValueError(f"unsupported job {job_name}")
@@ -335,39 +381,37 @@ def run_job(
     if started.tzinfo is None:
         raise ValueError("started_at must include timezone")
     effective_as_of = as_of or started.date().isoformat()
-    job_id = _next_job_id(root, started)
-    project_ids = _project_ids_for_job(
+    compact = started.strftime("%Y%m%d%H%M%S")
+    run_id = f"RUN-{compact}-{started.microsecond:06d}"
+    db = operations_db_path(root)
+    create_run(
+        db,
+        run_id=run_id,
+        schedule_id=None,
+        job_name=job_name,
+        target=target,
+        project_id=project_id,
+        request_kind="manual",
+        as_of=effective_as_of,
+        queued_at=started,
+    )
+    execution = execute_job(
         root,
+        job_name,
         project_id=project_id,
         target=target,
+        as_of=effective_as_of,
+        durable_config=durable_config,
     )
-    try:
-        message = _execute_job(
-            root,
-            job_name,
-            project_id=project_id,
-            target=target,
-            as_of=effective_as_of,
-            durable_config=durable_config,
-        )
-        status = "success"
-    except Exception as exc:
-        status = "failed"
-        message = f"{type(exc).__name__}: {exc}"
-    message = redact_secrets(message)
-    finished = datetime.now(UTC)
-    if started_at is not None:
-        finished = started
-    path = _write_job_record(
-        root,
-        job_id=job_id,
-        job_name=job_name,
-        started_at=started,
-        finished_at=finished,
-        project_ids=project_ids,
-        target=target,
+    status = execution.status
+    message = execution.message
+    finished = started if started_at is not None else datetime.now(UTC)
+    finalize_run(
+        db,
+        run_id,
         status=status,
         message=message,
+        finished_at=finished,
     )
     objects, findings = validate_repository(root)
     if not any(finding.level == "error" for finding in findings):
@@ -377,7 +421,7 @@ def run_job(
                 root,
                 render_project_indexes(objects, item.object_id),
             )
-    return JobRunResult(job_id, status, message, path)
+    return JobRunResult(run_id, status, message, db)
 
 
 def job_rows(
@@ -385,18 +429,12 @@ def job_rows(
     *,
     project_id: str | None = None,
     status: str | None = None,
-) -> list[ResearchObject]:
-    objects, _ = validate_repository(root)
-    return sorted(
-        (
-            obj
-            for obj in objects
-            if obj.object_type == "job"
-            and (
-                project_id is None or project_id in obj.metadata.get("project_ids", [])
-            )
-            and (status is None or obj.metadata.get("status") == status)
-        ),
-        key=lambda obj: str(obj.metadata.get("started_at")),
-        reverse=True,
-    )
+) -> list[ScheduleRunRecord]:
+    """Return database-backed operational run history."""
+    rows = list_runs(operations_db_path(root), limit=1000)
+    return [
+        row
+        for row in rows
+        if (project_id is None or row.project_id == project_id)
+        and (status is None or row.status == status)
+    ]

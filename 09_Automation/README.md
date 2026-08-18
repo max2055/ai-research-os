@@ -21,7 +21,27 @@ product environment to be active. In an iCloud
 workspace, prefer a virtual environment outside the synced directory if macOS
 marks editable-install `.pth` files as hidden.
 
-## Unified command
+## Website-hosted operations
+
+唯一产品入口由网站托管：
+
+```bash
+python -m research_os.ui
+```
+
+网站进程启动时监督一个内置 Worker，网站停止时 Worker 同步退出。计划只在
+`/operations/schedules` 创建、编辑、暂停、恢复或立即运行；Jobs 和备份分别在
+`/operations/jobs` 与 `/operations/backups` 操作。运行配置、租约、heartbeat、运行历史和
+审计以 `09_Automation/operational/operations.db` 为权威，不再通过 Channel 或 Job
+Markdown 管理运行状态。研究 Markdown 仍是研究事实权威，Worker 不具备研究审批权限。
+
+## Maintenance CLI
+
+调度命令行已移除。定时任务、手动 Job、备份和 Worker 健康状态请使用网站的
+`/operations/schedules`、`/operations/jobs`、`/operations/backups` 与 `/health`。
+以下命令仅用于仓库维护、验证和恢复，不负责调度。
+
+## Internal compatibility commands
 
 M2 product commands:
 
@@ -73,19 +93,6 @@ Templates are `07_Templates/Event_Draft_Spec.json` and
 `07_Templates/Report_Draft_Spec.json`. Event/Report creation and Company
 proposal writes are dry-run by default. Generation never applies a Review
 Decision.
-
-M5 local Dashboard and scheduler:
-
-```bash
-research-os ui
-research-os jobs run validate
-research-os jobs run refresh --project PRJ-001
-research-os jobs run source-process --target <SRC-ID>
-research-os jobs list --status failed
-```
-
-Dashboard v1 is read-only and loopback-only. Scheduler jobs keep append-only
-Markdown success/failure records; repeated business effects are idempotent.
 
 Validate all canonical research objects:
 

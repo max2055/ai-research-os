@@ -13,6 +13,7 @@ from typing import Any
 
 from research_os.domain.models import ResearchObject
 from research_os.repositories.markdown import MarkdownDocument
+from research_os.services.operations_db import list_schedules, operations_db_path
 from research_os.services.validation import validate_repository
 
 
@@ -40,7 +41,21 @@ def channel_rows(root: Path) -> list[dict[str, Any]]:
     objects, findings = validate_repository(root)
     if any(finding.level == "error" for finding in findings):
         raise ValueError("repository validation must pass before channel ops")
-    return _channel_rows(objects)
+    rows = _channel_rows(objects)
+    db = operations_db_path(root)
+    if db.exists():
+        by_target = {
+            schedule.target: schedule
+            for schedule in list_schedules(db)
+            if schedule.target
+        }
+        for row in rows:
+            schedule = by_target.get(row["id"])
+            if schedule is not None:
+                row["enabled"] = schedule.enabled
+                row["schedule"] = schedule.interval_seconds
+                row["timezone"] = schedule.timezone
+    return rows
 
 
 def render_channel_list(rows: list[dict[str, Any]]) -> str:

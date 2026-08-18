@@ -25,6 +25,7 @@ from research_os.services.candidate_db import (
     apply_migrations,
     candidate_db_path,
 )
+from research_os.services.operations_db import list_runs, operations_db_path
 from test_cli import run_cli
 
 
@@ -202,7 +203,8 @@ raise SystemExit(2)
             self.assertEqual(0, dry_run.returncode, dry_run.stdout)
             self.assertFalse(destination.exists())
             job_folder = root / "05_Research" / "Operations" / "Jobs"
-            self.assertEqual([], list(job_folder.glob("*backup*")))
+            legacy_jobs = sorted(job_folder.glob("*.md"))
+            self.assertFalse(operations_db_path(root).exists())
 
             applied = run_cli(
                 root,
@@ -215,10 +217,11 @@ raise SystemExit(2)
             self.assertEqual(0, applied.returncode, applied.stdout)
             self.assertTrue(destination.is_file())
             self.assertIn("SUCCESS", applied.stdout)
-            self.assertEqual(
-                1,
-                len(list(job_folder.glob("*backup-candidate*"))),
-            )
+            self.assertEqual(legacy_jobs, sorted(job_folder.glob("*.md")))
+            runs = list_runs(operations_db_path(root))
+            self.assertEqual(1, len(runs))
+            self.assertEqual("backup-candidate", runs[0].job_name)
+            self.assertEqual("success", runs[0].status)
 
     @pytest.mark.local_integration
     def test_durable_create_dry_run_preflights_without_writes_or_job(self) -> None:
@@ -358,11 +361,14 @@ raise SystemExit(2)
                 ).read_text(encoding="utf-8"),
             )
 
-            job_paths = list(
-                (root / "05_Research" / "Operations" / "Jobs").glob("*backup-durable*")
-            )
-            self.assertEqual(1, len(job_paths))
-            persisted = job_paths[0].read_text(encoding="utf-8")
+            runs = [
+                run
+                for run in list_runs(operations_db_path(root))
+                if run.job_name == "backup-durable"
+            ]
+            self.assertEqual(1, len(runs))
+            persisted = runs[0].message or ""
+            self.assertEqual("success", runs[0].status)
             outputs = (
                 created.stdout + verified.stdout + dry_restore.stdout + restored.stdout
             )
@@ -476,11 +482,14 @@ raise SystemExit(2)
 
             self.assertEqual(1, failed.returncode, failed.stdout)
             self.assertIn("FAILED", failed.stdout)
-            job_paths = list(
-                (root / "05_Research" / "Operations" / "Jobs").glob("*backup-durable*")
-            )
-            self.assertEqual(1, len(job_paths))
-            persisted = job_paths[0].read_text(encoding="utf-8")
+            runs = [
+                run
+                for run in list_runs(operations_db_path(root))
+                if run.job_name == "backup-durable"
+            ]
+            self.assertEqual(1, len(runs))
+            persisted = runs[0].message or ""
+            self.assertEqual("failed", runs[0].status)
             for sensitive in (
                 recipient,
                 str(config),
@@ -510,19 +519,20 @@ raise SystemExit(2)
         readme = (root / "README.md").read_text(encoding="utf-8")
 
         for text in (
-            "brew install age gh jq",
+            "当前平台的包管理器",
             "age-keygen",
             "gh auth status",
             "research-os-durable-backups-v1",
             '"repository"',
             '"recipients"',
-            "recipient is a public encryption identity",
-            "identity is a private decryption key",
+            "A recipient is a public encryption identity",
+            "An identity is a private decryption key",
             "second independent identity",
             "offline",
+            "09_Automation/operational/durable_backup.json",
             "09_Automation/operational/backups/durable/latest-success.json",
-            'backup durable create --config "$BACKUP_CONFIG"',
-            'backup durable create --config "$BACKUP_CONFIG" --apply',
+            "/operations/backups",
+            "Candidate + operations snapshots",
             'backup durable verify-remote --backup-id "$BACKUP_ID"',
             'backup durable restore --backup-id "$BACKUP_ID"',
             '--identity "$AGE_IDENTITY"',
@@ -532,8 +542,8 @@ raise SystemExit(2)
                 self.assertIn(text, recovery)
 
         for text in (
-            'backup durable create --config "$BACKUP_CONFIG"',
-            'backup durable create --config "$BACKUP_CONFIG" --apply',
+            "/operations/backups",
+            "09_Automation/operational/durable_backup.json",
             'backup durable verify-remote --backup-id "$BACKUP_ID"',
             'backup durable restore --backup-id "$BACKUP_ID"',
             "BKP_DURABLE_MISSING",
@@ -546,19 +556,14 @@ raise SystemExit(2)
             with self.subTest(document="user", text=text):
                 self.assertIn(text, user)
 
-        for text in (
-            "does not run durable backup",
-            "at least once every 24 hours",
-            "BKP_DURABLE_STALE",
-            "P1",
-        ):
+        for text in ("Legacy launchd Rollback Artifact", "网站 Worker", "禁止"):
             with self.subTest(document="launchd", text=text):
                 self.assertIn(text, launchd)
 
-        self.assertIn(
-            'research-os backup durable create --config "$BACKUP_CONFIG"', readme
-        )
+        self.assertIn("/operations/backups", readme)
+        self.assertIn("operations.db", readme)
         self.assertIn("00_System/Recovery_Runbook.md", readme)
+        self.assertNotIn("brew install", recovery)
 
 
 if __name__ == "__main__":

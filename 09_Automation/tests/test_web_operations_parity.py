@@ -9,12 +9,12 @@ from urllib.parse import urlencode
 
 from fastapi.testclient import TestClient
 
-from research_os.services.mutation_gateway import MutationGateway
+from research_os.services.operations_db import get_run, operations_db_path
 from research_os.services.web_operations_mutations import (
+    enqueue_job_request,
     prepare_cadence_review,
     prepare_job_request,
 )
-from research_os.services.web_repository_mutations import commit_repository_mutation
 from research_os.ui.app import create_app
 from test_research_os_core import RepositoryValidationTests
 
@@ -35,13 +35,13 @@ class OperationsWebAdapterTests(unittest.TestCase):
                 actor="max",
                 spec_json=json.dumps({"job_name": "validate", "as_of": "2026-08-13"}),
             )
-            self.assertEqual("job.run", prepared.preview_input.operation)
-            self.assertEqual(
-                "operational_human", prepared.preview_input.summary["authority"]
+            self.assertEqual("validate", prepared.request.job_name)
+            self.assertEqual("max", prepared.actor)
+            self.assertFalse(
+                (root / "05_Research" / "Operations" / "Requests").exists()
             )
-            self.assertNotIn("03_Theses", str(prepared.plan.writes[0].path))
 
-    def test_job_request_uses_frozen_repository_mutation_before_runner(self) -> None:
+    def test_job_request_enqueues_database_run_before_worker(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = RepositoryValidationTests().make_root(temp)
             prepared = prepare_job_request(
@@ -49,36 +49,18 @@ class OperationsWebAdapterTests(unittest.TestCase):
                 actor="max",
                 spec_json=json.dumps({"job_name": "validate", "as_of": "2026-08-13"}),
             )
-            gateway = MutationGateway(b"s" * 64)
-            grant = gateway.issue(prepared.preview_input)
-            calls: list[str] = []
-
-            def execute(preview):
-                calls.append("request")
-                result = commit_repository_mutation(root, preview, prepared.plan)
-                self.assertEqual(grant.preview.mutation_id, result["mutation_id"])
-                calls.append("runner")
-                return {"mutation_id": preview.mutation_id, "status": "success"}
-
-            result = gateway.commit(
-                grant.token,
-                actor="max",
-                operation="job.run",
-                target_id="validate",
-                current_target_version=lambda _: prepared.preview_input.target_version,
-                execute=execute,
-            )
-            self.assertEqual("success", result["status"])
-            self.assertEqual(["request", "runner"], calls)
-            self.assertTrue((root / prepared.plan.writes[0].path).is_file())
-            db_path = root / "09_Automation/operational/candidates.db"
+            run_id = enqueue_job_request(root, prepared, now="2026-08-13T00:00:00Z")
+            run = get_run(operations_db_path(root), run_id)
+            self.assertIsNotNone(run)
+            self.assertEqual("queued", run.status)
+            db_path = operations_db_path(root)
             with sqlite3.connect(db_path) as db:
                 self.assertEqual(
                     1,
                     db.execute(
-                        "SELECT COUNT(*) FROM mutation_audit "
-                        "WHERE mutation_id = ? AND event_status = 'committed'",
-                        (grant.preview.mutation_id,),
+                        "SELECT COUNT(*) FROM service_events "
+                        "WHERE resource_id = ? AND action = 'run.enqueue'",
+                        (run_id,),
                     ).fetchone()[0],
                 )
 

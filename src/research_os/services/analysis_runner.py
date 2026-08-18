@@ -381,7 +381,7 @@ def render_run_draft(meta: dict[str, Any], body: str) -> str:
 def _yaml_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return str(value)
     if isinstance(value, dict):
         if not value:
