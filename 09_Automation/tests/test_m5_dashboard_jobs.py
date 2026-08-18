@@ -363,6 +363,10 @@ class DashboardTests(unittest.TestCase):
             self.assertIn("nav-group-title", overview.text)
             self.assertEqual(1, overview.text.count('aria-current="page"'))
 
+            styles = client.get("/static/styles.css").text
+            self.assertIn("@media (min-width: 761px) and (max-width: 900px)", styles)
+            self.assertIn(".nav-group { gap: 0.75rem; }", styles)
+
             home = client.get("/home")
             self.assertIn("今天从哪里开始", home.text)
             self.assertIn("看候选", home.text)
