@@ -900,7 +900,7 @@ class ReleaseReadinessTests(unittest.TestCase):
     @pytest.mark.local_integration
     def test_v03_quality_and_passed_decision_provenance_are_exact(self) -> None:
         root = Path(__file__).resolve().parents[2]
-        readiness = release_readiness_v03(root, as_of="2026-08-13")
+        readiness = release_readiness_v03(root, as_of="2026-08-18")
         by_key = {check.key: check for check in readiness.checks}
 
         self.assertTrue(by_key["engineering.quality_suite"].passed)
