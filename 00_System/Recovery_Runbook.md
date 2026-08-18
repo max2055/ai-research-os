@@ -1,12 +1,12 @@
 # AI Research OS 恢复手册
 
-版本：v1.1
-生效日期：2026-08-11
+版本：v1.2
+生效日期：2026-08-18
 
 ## 1. 恢复目标
 
 从 private Git repository 恢复 Markdown 事实源、规则、模板和自动化，从加密
-durable backup 恢复 Candidate SQLite snapshot 与 Source 原始资产，再重建全部派生
+durable backup 恢复 Candidate SQLite、operations SQLite 与 Source 原始资产，再重建全部派生
 索引。恢复必须先落到 disposable directory，不得用备份直接覆盖 live repository。
 
 ## 2. 备份边界
@@ -20,17 +20,18 @@ Git 跟踪：
 Git 默认不跟踪：
 
 - Python cache、测试 cache；
-- Candidate SQLite、临时导出和可重建派生数据库；
-- `09_Automation/operational/backup.local.json` 与 durable backup receipts；
+- Candidate SQLite、operations SQLite、临时导出和可重建派生数据库；
+- `09_Automation/operational/durable_backup.json` 与 durable backup receipts；
 - `.env`、token、private identities、密钥和证书；
 - `01_Inbox/_assets/` 中可能受许可或隐私约束的原始材料；
-- 用户级 `launchd` 安装状态。
+- 任何旧 OS scheduler 安装状态。
 
-Durable backup 分别创建 Candidate snapshot 与 Source asset inventory/archive，使用
-`age` 加密后，将 ciphertext 和非敏感 outer manifest 作为不可覆盖 asset 上传到
-private GitHub 的固定 prerelease `research-os-durable-backups-v1`。Git、secrets、
-private identities、local config 和 `launchd` 安装不在这两组 payload 中，必须分别
-恢复。
+Durable backup 保持两个远端加密集合。`candidate` 集合包含 Candidate SQLite snapshot、
+`operations.db` snapshot 及各自 manifest；`source_assets` 集合包含 Source asset
+inventory/archive。两组使用 `age` 加密后，将 ciphertext 和非敏感 outer manifest 作为
+不可覆盖 asset 上传到 private GitHub 的固定 prerelease
+`research-os-durable-backups-v1`。Git、secrets、private identities、local config 和旧 OS
+scheduler 状态不在 payload 中，必须分别恢复。
 
 ## 3. 从 Git 恢复
 
@@ -51,10 +52,9 @@ metadata-only 检查不能替代恢复后的 strict local Gate。
 
 ## 4. Durable backup 准备与密钥托管
 
-macOS operator 安装并检查所需工具：
+Operator 使用当前平台的包管理器安装 `age`、GitHub CLI 和 `jq`，然后检查：
 
 ```bash
-brew install age gh jq
 command -v age age-keygen gh jq
 age --version
 gh auth status
@@ -97,7 +97,8 @@ identity 保存在与本机和 GitHub account 分离的 offline custody 中，�
 recipient 加入配置。任一匹配 identity 都可解密；private identity 不得进入 Git、
 GitHub Release、backup config、Job、日志或截图。
 
-本地 ignored config 只接受 `repository` 与 `recipients`：
+固定的 ignored 服务端配置
+`09_Automation/operational/durable_backup.json` 只接受 `repository` 与 `recipients`：
 
 ```json
 {
@@ -114,21 +115,23 @@ receipt。
 
 ## 5. 创建与验证 durable backup
 
+在网站 `/operations/backups` 选择 Durable backup，预览并确认入队。浏览器不接收配置
+路径、recipient 或 token；网站 Worker 只读取上述固定服务端配置。运行完成后，在
+`/operations/jobs` 与 `/health` 检查结果。需要执行远端恢复校验时使用内部恢复命令：
+
 ```bash
-BACKUP_CONFIG=09_Automation/operational/backup.local.json
-research-os backup durable create --config "$BACKUP_CONFIG"
-research-os backup durable create --config "$BACKUP_CONFIG" --apply
+BACKUP_CONFIG=09_Automation/operational/durable_backup.json
 BACKUP_ID=$(jq -r .backup_id \
   09_Automation/operational/backups/durable/latest-success.json)
 research-os backup durable verify-remote --backup-id "$BACKUP_ID" \
   --config "$BACKUP_CONFIG"
 ```
 
-首条 create 是 dry-run preflight：检查 `age`、private repository、recipient、Candidate
-DB、Source inventory 和 remote name collision，不创建 local receipt、remote asset 或
-Job。`--apply` 为两组数据创建 snapshot/archive、验证 plaintext、加密、上传并核验
-remote metadata，成功后才推进 `latest-success.json` 并写不可变 `backup-durable`
-Job。已有 remote asset 不覆盖；partial upload 不得标成 latest success。
+Durable Job 会检查 `age`、private repository、recipient、两个 SQLite 数据库、Source
+inventory 和 remote name collision，再为两组数据创建 snapshot/archive、验证
+plaintext、加密、上传并核验 remote metadata。成功后才推进 `latest-success.json` 并将
+`backup-durable` run 标为 success。已有 remote asset 不覆盖；partial upload 不得标成
+latest success。
 
 `verify-remote` 下载 outer manifests 与 ciphertext 并复核 size/hash，不解密。正常
 Dashboard Health 只读 local receipt，不发起 remote request；operator 必须定期显式
@@ -140,7 +143,7 @@ Dashboard Health 只读 local receipt，不发起 remote request；operator 必�
 receipt 到预期 ignored 路径。再选择 absent 或 empty disposable destination：
 
 ```bash
-BACKUP_CONFIG=09_Automation/operational/backup.local.json
+BACKUP_CONFIG=09_Automation/operational/durable_backup.json
 AGE_IDENTITY=/Users/max/.config/ai-research-os/backup/age-identity.txt
 RESTORE_DESTINATION=09_Automation/operational/restores/$BACKUP_ID
 research-os backup durable verify-remote --backup-id "$BACKUP_ID" \
@@ -157,17 +160,20 @@ research-os backup durable restore --backup-id "$BACKUP_ID" \
 
 无 `--apply` 的 restore 只做 local safety preflight。Apply 会重新下载并核验 ciphertext，
 用指定 identity 解密，拒绝 traversal/link/device/duplicate members，并验证 Candidate
-SQLite integrity/schema/hash 及每个 Source asset inventory hash。它只写 disposable
-destination，不会直接覆盖 live Candidate DB 或 authoritative Source asset path。
+与 operations SQLite 的 integrity/schema/hash，以及每个 Source asset inventory hash。
+它只写 disposable destination，不会直接覆盖 live databases 或 authoritative Source
+asset path。
 
 验证 disposable restore 后，人工比较并恢复：
 
 1. 将 Candidate snapshot 放到 `09_Automation/operational/candidates.db` 前，确认 live
    path 不存在或已由 operator 明确保存；不得覆盖来源不明的数据库。
-2. 将 restored `01_Inbox/_assets/` 合并到 live asset tree；已存在且 hash 不同的文件
+2. 将 operations snapshot 放到 `09_Automation/operational/operations.db` 前，确认
+   integrity、schema version 和 manifest SHA-256；保留原数据库用于审计和回滚。
+3. 将 restored `01_Inbox/_assets/` 合并到 live asset tree；已存在且 hash 不同的文件
    必须停止并调查，不能覆盖。
-3. 恢复 secrets/local config，并重新安装经审核的 `launchd` plist。
-4. 运行完整 local Gate：
+4. 恢复 secrets/local config，启动 `python -m research_os.ui`；不得加载旧 OS scheduler。
+5. 运行完整 local Gate：
 
 ```bash
 research-os source verify-assets
@@ -180,8 +186,8 @@ ruff format --check src 09_Automation/tests
 mypy src/research_os
 ```
 
-验收还包括对象数量与最近 Metrics/release record 一致、loopback Dashboard 可启动，
-以及一个 discovery dry-run 不改变 Candidate DB 或 Job count。
+验收还包括对象数量与最近 Metrics/release record 一致、loopback 网站与 Worker 可启动、
+Worker heartbeat 新鲜、网站停止后 Worker PID 退出，以及停机期间 run count 不变。
 
 ## 7. 24-hour RPO 与 P1 响应
 
@@ -190,7 +196,7 @@ age 与 durable receipt age 分开显示；durable 状态为 `missing`、`failed
 或超过 24 小时成为 `stale` 时，分别产生 `BKP_DURABLE_MISSING`、
 `BKP_DURABLE_FAILED`、`BKP_DURABLE_INVALID`、`BKP_DURABLE_STALE`，全部为 P1。
 
-P1 处理：保留 receipt、Job 和日志；停止可能扩大数据损失的 apply；确认 private
+P1 处理：保留 receipt、数据库 run 和日志；停止可能扩大数据损失的 apply；确认 private
 repository/config/tool/DB/assets 后重新 dry-run 和 apply；显式 verify-remote；用至少一把
 matching identity 做 disposable restore。告警只能在新 verified receipt 生成后消除，
 不能通过删除失败记录或修改时间戳消除。
@@ -216,7 +222,8 @@ matching identity 做 disposable restore。告警只能在新 verified receipt �
 - Repository mode: local-first, private Git repository required
 - Default branch: `main`
 - Durable backend: private GitHub prerelease `research-os-durable-backups-v1`
-- Backup payload: Candidate snapshot + Source assets；Git/secrets/launchd 分开恢复
+- Backup payload: Candidate + operations snapshots in the candidate set, plus Source
+  assets；Git/secrets/旧 OS scheduler 状态分开恢复
 - v0.2 release: 18/18 Ready, human-approved and published as `v0.2.0` with attached
   wheel, sdist and SHA-256 manifest
 - v0.3 release: BLOCKED at 16/21 F-023 checks; the remaining checks are WP-530

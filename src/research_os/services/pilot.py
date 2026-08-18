@@ -16,6 +16,11 @@ from pathlib import Path
 from typing import Any
 
 from research_os.services import candidate_db
+from research_os.services.operations_db import (
+    ScheduleRunRecord,
+    list_runs,
+    operations_db_path,
+)
 from research_os.services.validation import validate_repository
 
 PILOT_DIR = Path("05_Research") / "Operations" / "Pilot"
@@ -48,20 +53,19 @@ def pilot_status(
     since_value = since or _pilot_start(root) or date.today().isoformat()
 
     jobs = [
-        obj
-        for obj in objects
-        if obj.object_type == "job"
-        and str(obj.metadata.get("started_at") or "").startswith(since_value)
+        run
+        for run in list_runs(operations_db_path(root), limit=10_000)
+        if (run.started_at or run.queued_at).startswith(since_value)
     ]
     job_failures = sorted(
         (
             {
-                "job_id": obj.object_id,
-                "job_name": str(obj.metadata.get("job_name") or ""),
-                "message": str(obj.metadata.get("message") or ""),
+                "job_id": run.run_id,
+                "job_name": run.job_name,
+                "message": run.message or "",
             }
-            for obj in jobs
-            if obj.metadata.get("status") == "failed"
+            for run in jobs
+            if run.status == "failed"
         ),
         key=lambda item: item["job_id"],
     )
@@ -127,10 +131,10 @@ def pilot_status(
     }
 
 
-def _count_by_name(jobs: list[Any]) -> dict[str, int]:
+def _count_by_name(jobs: list[ScheduleRunRecord]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for job in jobs:
-        name = str(job.metadata.get("job_name") or "unknown")
+        name = job.job_name or "unknown"
         counts[name] = counts.get(name, 0) + 1
     return dict(sorted(counts.items()))
 

@@ -41,6 +41,7 @@ from research_os.services.candidate_queue import (
     existing_source_urls,
 )
 from research_os.services.dedup import assign_clusters, normalize_title
+from research_os.services.operations_db import list_schedules, operations_db_path
 from research_os.services.redaction import redact_secrets
 from research_os.services.schedule import is_due
 from research_os.services.validation import validate_repository
@@ -273,7 +274,7 @@ def _sourced_urls(objects: list[Any], db_path: Path) -> set[str]:
 
 
 def _is_parse_failure(adapter: DiscoveryAdapter, exc: Exception) -> bool:
-    if isinstance(exc, (ElementTree.ParseError, json.JSONDecodeError)):
+    if isinstance(exc, ElementTree.ParseError | json.JSONDecodeError):
         return True
     if isinstance(adapter, GitHubReleaseDiscoveryAdapter):
         return (
@@ -571,10 +572,16 @@ def due_channels(
     schedule is never due (surfaced via ``discover check`` instead).
     """
     objects, _ = validate_repository(root)
+    operational = operations_db_path(root)
+    selected_db = (
+        operational
+        if operational.exists()
+        else (db_path or candidate_db.candidate_db_path(root))
+    )
     return due_channels_from_objects(
         objects,
         as_of=as_of,
-        db_path=db_path or candidate_db.candidate_db_path(root),
+        db_path=selected_db,
     )
 
 
@@ -585,6 +592,38 @@ def due_channels_from_objects(
     db_path: Path,
 ) -> list[dict[str, Any]]:
     """Pure-metadata schedule query over preloaded repository objects."""
+    if db_path.name == "operations.db" and db_path.exists():
+        from research_os.services.schedule_control import SchedulePolicy, due_decision
+
+        observed = as_of or _utc_now()
+        result: list[dict[str, Any]] = []
+        for operational_schedule in list_schedules(db_path, enabled=True):
+            if (
+                operational_schedule.job_name != "discover"
+                or not operational_schedule.target
+            ):
+                continue
+            next_at = operational_schedule.next_run_at or observed
+            decision = due_decision(
+                next_run_at=next_at,
+                now=observed,
+                policy=operational_schedule.missed_run_policy,
+                schedule=SchedulePolicy(
+                    operational_schedule.interval_seconds,
+                    operational_schedule.timezone,
+                ),
+            )
+            if decision.action != "not_due":
+                result.append(
+                    {
+                        "channel_id": operational_schedule.target,
+                        "schedule": operational_schedule.interval_seconds,
+                        "last_run": None,
+                        "next_run_at": next_at,
+                    }
+                )
+        return sorted(result, key=lambda item: item["channel_id"])
+
     last_runs: dict[str, str] = {}
     if db_path.exists():
         connection = sqlite3.connect(db_path)

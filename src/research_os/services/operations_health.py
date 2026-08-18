@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sqlite3
+from collections.abc import Mapping
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -17,7 +19,6 @@ from research_os.services.candidate_db import (
     candidate_db_path,
 )
 from research_os.services.cost_monitoring import monthly_cost_report
-from research_os.services.discovery import due_channels
 from research_os.services.durable_backup import (
     durable_latest_success_path,
     load_durable_backup_receipt,
@@ -29,6 +30,12 @@ from research_os.services.indexing import (
     render_project_indexes,
 )
 from research_os.services.ingestion import verify_source_assets
+from research_os.services.operations_db import (
+    list_runs,
+    list_schedules,
+    operations_db_path,
+    worker_state,
+)
 from research_os.services.projects import objects_for_project
 from research_os.services.recommendation import recommendation_freshness
 from research_os.services.validation import validate_repository
@@ -71,33 +78,37 @@ def operations_snapshot(
     objects, _ = _validated(root)
     scoped = objects_for_project(objects, project_id) if project_id else objects
 
-    due = due_channels(
-        root,
-        as_of=f"{as_of}T23:59:59Z",
-        db_path=candidate_db_path(root),
+    db = operations_db_path(root)
+    schedules = (
+        [
+            {
+                "schedule_id": item.schedule_id,
+                "job_name": item.job_name,
+                "target": item.target,
+                "enabled": item.enabled,
+                "status": "enabled" if item.enabled else "paused",
+                "next_due": item.next_run_at,
+            }
+            for item in list_schedules(db)
+        ]
+        if db.exists()
+        else []
     )
-    schedules = [
-        {
-            **item,
-            "status": "due",
-            "next_due": "due now",
-        }
-        for item in due
-    ]
-    jobs = [
-        {
-            **_row(obj),
-            "job_name": str(obj.metadata.get("job_name") or ""),
-            "started_at": str(obj.metadata.get("started_at") or ""),
-            "finished_at": str(obj.metadata.get("finished_at") or ""),
-            "message": str(obj.metadata.get("message") or ""),
-        }
-        for obj in sorted(
-            (item for item in scoped if item.object_type == "job"),
-            key=lambda item: str(item.metadata.get("started_at") or ""),
-            reverse=True,
-        )[:50]
-    ]
+    jobs = (
+        [
+            {
+                "id": item.run_id,
+                "status": item.status,
+                "job_name": item.job_name,
+                "started_at": item.started_at or item.queued_at,
+                "finished_at": item.finished_at or "",
+                "message": item.message or "",
+            }
+            for item in list_runs(db, limit=50)
+        ]
+        if db.exists()
+        else []
+    )
     actions = []
     for status in ("open", "in_progress"):
         for obj in action_rows(root, project_id=project_id, status=status):
@@ -203,22 +214,20 @@ def _timestamp(value: Any) -> datetime | None:
     return parsed.astimezone(UTC) if parsed.tzinfo is not None else None
 
 
-def _latest_durable_attempt(
-    objects: list[ResearchObject],
-) -> tuple[datetime, ResearchObject] | None:
-    attempts = []
-    for obj in objects:
-        if obj.object_type != "job" or obj.metadata.get("job_name") != "backup-durable":
+def _latest_durable_attempt(root: Path) -> tuple[datetime, str] | None:
+    db = operations_db_path(root)
+    if not db.exists():
+        return None
+    for run in list_runs(db, limit=200):
+        if run.job_name != "backup-durable":
             continue
-        started_at = _timestamp(obj.metadata.get("started_at"))
+        started_at = _timestamp(run.started_at or run.queued_at)
         if started_at is not None:
-            attempts.append((started_at, obj))
-    return max(attempts, key=lambda item: item[0]) if attempts else None
+            return started_at, run.status
+    return None
 
 
-def _durable_backup_status(
-    root: Path, now: datetime, objects: list[ResearchObject]
-) -> dict[str, Any]:
+def _durable_backup_status(root: Path, now: datetime) -> dict[str, Any]:
     resolved_root = root.resolve()
     receipt_path = durable_latest_success_path(resolved_root)
     relative = str(receipt_path.relative_to(resolved_root))
@@ -249,11 +258,11 @@ def _durable_backup_status(
             status = "invalid"
         else:
             status = "fresh" if age_hours <= 24 else "stale"
-        latest_attempt = _latest_durable_attempt(objects)
+        latest_attempt = _latest_durable_attempt(root)
         if (
             latest_attempt is not None
             and latest_attempt[0] > created_at
-            and latest_attempt[1].metadata.get("status") == "failed"
+            and latest_attempt[1] == "failed"
         ):
             status = "failed"
         return {
@@ -291,11 +300,89 @@ def _durable_backup_alert(status: str) -> dict[str, str] | None:
     }
 
 
+def operations_db_health(db: Path) -> dict[str, Any]:
+    if not db.is_file():
+        return {"status": "missing", "schema_version": None, "integrity": None}
+    try:
+        with sqlite3.connect(db) as connection:
+            integrity = str(connection.execute("PRAGMA integrity_check").fetchone()[0])
+            row = connection.execute(
+                "SELECT value FROM schema_meta WHERE key='schema_version'"
+            ).fetchone()
+        schema_version = int(row[0]) if row is not None else None
+        return {
+            "status": "ok" if integrity == "ok" and schema_version else "invalid",
+            "schema_version": schema_version,
+            "integrity": integrity,
+        }
+    except (OSError, sqlite3.Error, TypeError, ValueError):
+        return {"status": "invalid", "schema_version": None, "integrity": None}
+
+
+def worker_health(db: Path, *, now: datetime) -> dict[str, Any]:
+    state = worker_state(db) if db.exists() else None
+    if state is None:
+        return {
+            "status": "stopped",
+            "worker_id": None,
+            "pid": None,
+            "heartbeat_at": None,
+            "heartbeat_age_seconds": None,
+            "current_run": None,
+        }
+    heartbeat = _timestamp(state["heartbeat_at"])
+    age = (
+        max(0.0, (now.astimezone(UTC) - heartbeat).total_seconds())
+        if heartbeat
+        else None
+    )
+    raw_status = str(state["status"])
+    status = (
+        "stale" if raw_status == "ready" and (age is None or age > 15) else raw_status
+    )
+    current = next(
+        (
+            run
+            for run in list_runs(db, limit=200)
+            if run.status in {"claimed", "running"}
+        ),
+        None,
+    )
+    return {
+        "status": status,
+        "worker_id": str(state["worker_id"]),
+        "pid": state["pid"],
+        "heartbeat_at": state["heartbeat_at"],
+        "heartbeat_age_seconds": round(age, 2) if age is not None else None,
+        "current_run": current.run_id if current else None,
+    }
+
+
+def schedule_health(db: Path, *, now: datetime) -> dict[str, Any]:
+    if not db.exists():
+        return {"active": 0, "paused": 0, "due": 0, "last_failure": None}
+    schedules = list_schedules(db)
+    observed = now.astimezone(UTC).isoformat().replace("+00:00", "Z")
+    failures = [run for run in list_runs(db, limit=200) if run.status == "failed"]
+    return {
+        "active": sum(item.enabled for item in schedules),
+        "paused": sum(not item.enabled for item in schedules),
+        "due": sum(
+            item.enabled
+            and item.next_run_at is not None
+            and item.next_run_at <= observed
+            for item in schedules
+        ),
+        "last_failure": failures[0].run_id if failures else None,
+    }
+
+
 def health_snapshot(
     root: Path,
     *,
     project_id: str | None = None,
     now: str | None = None,
+    supervisor_snapshot: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return repository, store, Channel, backup, host and config health."""
     objects, findings = validate_repository(root)
@@ -342,9 +429,21 @@ def health_snapshot(
             "message": str(obj.metadata.get("message") or ""),
         }
         for obj in objects
-        if obj.object_type in {"job", "analysis_run"}
-        and obj.metadata.get("status") == "failed"
+        if obj.object_type == "analysis_run" and obj.metadata.get("status") == "failed"
     ]
+    operations_db = operations_db_path(root)
+    if operations_db.exists():
+        failed_runs.extend(
+            {
+                "id": run.run_id,
+                "title": run.job_name,
+                "status": run.status,
+                "type": "job",
+                "message": run.message or "",
+            }
+            for run in list_runs(operations_db, limit=200)
+            if run.status == "failed"
+        )
     disk = shutil.disk_usage(root)
     timezone = getattr(now_dt.tzinfo, "key", None) or str(now_dt.tzinfo)
     config = {
@@ -352,8 +451,43 @@ def health_snapshot(
         for key in _SECRET_KEYS
     }
     local_backup = _backup_status(root, now_dt)
-    durable_backup = _durable_backup_status(root, now_dt, objects)
+    durable_backup = _durable_backup_status(root, now_dt)
     durable_alert = _durable_backup_alert(str(durable_backup["status"]))
+    worker = worker_health(operations_db, now=now_dt)
+    worker.update(
+        {
+            "supervisor_running": bool(
+                supervisor_snapshot and supervisor_snapshot.get("running")
+            ),
+            "supervisor_ready": bool(
+                supervisor_snapshot and supervisor_snapshot.get("ready")
+            ),
+            "restart_count": int(
+                supervisor_snapshot.get("restart_count", 0)
+                if supervisor_snapshot
+                else 0
+            ),
+            "restart_exhausted": bool(
+                supervisor_snapshot and supervisor_snapshot.get("restart_exhausted")
+            ),
+        }
+    )
+    if worker["restart_exhausted"]:
+        worker["status"] = "failed"
+    worker_alert = (
+        {
+            "code": "WORKER_FAILED" if worker["status"] == "failed" else "WORKER_STALE",
+            "priority": "P1",
+            "status": str(worker["status"]),
+            "message": (
+                "scheduler worker restart budget is exhausted"
+                if worker["status"] == "failed"
+                else "scheduler worker heartbeat is stale"
+            ),
+        }
+        if worker["status"] in {"stale", "failed"}
+        else None
+    )
     cost_budget = os.environ.get("RESEARCH_OS_MODEL_COST_BUDGET")
     cost = monthly_cost_report(
         candidate_db_path(root),
@@ -391,10 +525,15 @@ def health_snapshot(
             "failures": asset_failures,
         },
         "candidate_db": candidate_db_health(candidate_db_path(root)),
+        "operations_db": operations_db_health(operations_db),
+        "worker": worker,
+        "schedules": schedule_health(operations_db, now=now_dt),
         "channels": channels,
         "failed_runs": failed_runs,
         "backup": {**local_backup, "durable": durable_backup},
-        "alerts": [durable_alert] if durable_alert is not None else [],
+        "alerts": [
+            alert for alert in (durable_alert, worker_alert) if alert is not None
+        ],
         "host": {
             "disk": {
                 "total_bytes": disk.total,

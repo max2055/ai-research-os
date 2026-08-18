@@ -32,6 +32,7 @@ from research_os.services.discovery import (
     run_discovery,
 )
 from research_os.services.jobs import run_job
+from research_os.services.operations_db import get_run, operations_db_path
 
 AUTOMATION = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(AUTOMATION))
@@ -468,7 +469,12 @@ class DiscoveryServiceTests(unittest.TestCase):
                 job = run_job(root, "discover", target="CHN-test")
 
             self.assertEqual("success", job.status)
-            self.assertEqual(before_jobs + 1, len(list(jobs_dir.glob("*.md"))))
+            self.assertEqual(before_jobs, len(list(jobs_dir.glob("*.md"))))
+            persisted = get_run(operations_db_path(root), job.job_id)
+            self.assertIsNotNone(persisted)
+            assert persisted is not None
+            self.assertEqual("success", persisted.status)
+            self.assertEqual("discover", persisted.job_name)
             connection = sqlite3.connect(candidate_db.candidate_db_path(root))
             try:
                 run_rows = connection.execute(

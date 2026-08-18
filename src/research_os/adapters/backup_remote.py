@@ -102,7 +102,7 @@ class GitHubReleaseBackend:
                 or not isinstance(size, int)
                 or isinstance(size, bool)
                 or size < 0
-                or not isinstance(asset_id, (str, int))
+                or not isinstance(asset_id, str | int)
             ):
                 raise RuntimeError("GitHub backup release asset is invalid")
             if name in assets:

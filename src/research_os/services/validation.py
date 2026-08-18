@@ -713,7 +713,7 @@ def validate_valuation_rec_semantics(
         _check_supersession(obj, by_id, findings, "VAL003")
         price = obj.metadata.get("market_price")
         shares = obj.metadata.get("shares")
-        if isinstance(price, (int, float)) and price < 0:
+        if isinstance(price, int | float) and price < 0:
             add(
                 findings,
                 "error",
@@ -721,7 +721,7 @@ def validate_valuation_rec_semantics(
                 obj,
                 "market_price must be non-negative",
             )
-        if isinstance(shares, (int, float)) and shares <= 0:
+        if isinstance(shares, int | float) and shares <= 0:
             add(
                 findings,
                 "error",

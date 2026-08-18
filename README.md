@@ -24,7 +24,7 @@ operational-hardening MVP 已合并，F-023 当前 16/21 checks 通过，仍未�
 
 当前状态读取顺序：
 
-1. 网站 System Health / Release 页面（待 F-028 补齐）；迁移期由内部 release evaluator 提供机器 Gate。
+1. 网站 System Health / Release 页面；内部 release evaluator 提供机器 Gate。
 2. 具名、带日期的人审文件：人工决定。
 3. `00_System/v0.3_AI_Industry_Intelligence_OS/09_Master_Backlog.md`：执行状态。
 4. README 与阶段路线图：摘要；带日期的 Audit/Acceptance 是时间点证据，不覆盖当前态。
@@ -85,10 +85,15 @@ python -m research_os.ui
 ```
 
 打开 `http://127.0.0.1:8765/home`。根据 RCP-v03-011，网站是唯一用户产品界面。
-F-027A 已完成 Candidate Web parity：研究者可在 Candidate 详情页完成 dismiss、restore 和
-promote 的“预览 → 明确确认 → 提交 → 结果页”流程；promote 只发布 preview 已冻结并签名
-约束的 Source/asset 内容。研究对象创建与人工审核、Thesis 变更、运维、备份、恢复和发布
-检查仍待后续 F-027/F-028 补齐；这些产品缺口不应通过要求研究者使用 CLI 来隐藏。
+网站启动时会启动并监督唯一一个内置 Worker；网站停止时 Worker 同步停止，停机期间
+不会执行定时任务。计划的创建、编辑、暂停、恢复和立即运行统一在
+`/operations/schedules` 完成，运行历史和审计以
+`09_Automation/operational/operations.db` 为权威。Channel Markdown 中的旧运行字段只在
+首次切换时导入，之后不再用于运行时排期；已有 `JOB-*.md` 仅作为历史记录保留。
+
+`/operations/jobs` 查看数据库运行记录，`/operations/backups` 发起 Candidate 或 durable
+备份，`/health` 查看 Worker heartbeat、当前运行、计划状态和备份告警。网站 Worker
+只能执行 operational Job，不能批准研究对象或修改 Thesis conclusion/confidence。
 
 开发/恢复兼容入口（非用户产品界面，不提供产品工作流）：
 
@@ -100,7 +105,7 @@ python3 09_Automation/research_os.py validate
 python3 09_Automation/research_os.py index --check
 ```
 
-这些命令只供开发、scheduler 兼容、诊断和 disaster recovery 使用；不再新增用户专属
+这些命令只供开发、诊断和 disaster recovery 使用；不再新增用户专属
 CLI workflow，并在 F-027～029 Web parity 与恢复 Gate 完成后移除产品 CLI entry point。
 
 内部完整校验必须使用 strict 模式；它会读取 Git 外的真实 Source assets：
@@ -135,20 +140,15 @@ WP-620 真实 Pilot、WP-530 自然 Resolution、两次 Weekly 加一次 Monthly
 Known Limitations 阅读确认和 F-024 人工发布批准。自动化不能代填真实 Source、
 Forecast outcome、Weekly/Monthly 运行或最终发布决定。
 
-迁移期内部 durable backup adapter 先预览，再显式 apply：
+Durable backup 从 `/operations/backups` 预览并确认。浏览器不接收配置路径、recipient
+或 token；Worker 只读取固定的 ignored 服务端配置
+`09_Automation/operational/durable_backup.json`。Candidate 加密集合同时包含 Candidate
+SQLite snapshot、`operations.db` snapshot 及其 manifest，Source assets 仍为第二个加密
+集合。密钥配置、24 小时 RPO、remote verify 与 disposable restore 步骤见
+`00_System/Recovery_Runbook.md`。
 
-```bash
-BACKUP_CONFIG=09_Automation/operational/backup.local.json
-research-os backup durable create --config "$BACKUP_CONFIG"
-research-os backup durable create --config "$BACKUP_CONFIG" --apply
-```
-
-该命令将 Candidate SQLite snapshot 与 Source assets 分成两组，经 `age` 加密后上传到
-配置的 private GitHub backup prerelease。密钥配置、24 小时 RPO、remote verify 与
-disposable restore 步骤见 `00_System/Recovery_Runbook.md`。
-
-旧的 `python3 09_Automation/research_os.py ...` 与 `research-os ...` 入口仅作为内部兼容层；
-它们不再定义产品 UX，删除时点由 RCP-v03-011 的 Web parity 与 recovery Gate 决定。
+调度相关的 `research-os jobs ...` 命令已移除，定时任务、手动 Job、备份与健康检查统一通过网站操作页完成。
+仓库校验、索引和恢复工具仍保留在 `research_os.cli`，仅供维护和 CI 使用；Worker 子进程入口是内部实现，不作为用户命令。
 仓库位于 iCloud 时，开发 venv 应放在同步目录外。
 
 首轮建设完成审计见：`00_System/Implementation_Audit.md`。

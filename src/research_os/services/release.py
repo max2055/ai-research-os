@@ -160,7 +160,9 @@ SECURITY_PATHS = (
     "src/research_os/services/candidate_db.py",
     "src/research_os/services/mutation_audit.py",
     "src/research_os/services/mutation_gateway.py",
+    "src/research_os/services/operations_db.py",
     "src/research_os/services/product_capabilities.py",
+    "src/research_os/services/scheduler_worker.py",
     "src/research_os/services/triage.py",
     "src/research_os/services/web_candidate_mutations.py",
     "src/research_os/services/web_identity.py",
@@ -171,9 +173,13 @@ SECURITY_PATHS = (
     "src/research_os/services/web_operations_mutations.py",
     "src/research_os/services/web_research_drafts.py",
     "src/research_os/services/web_review_mutations.py",
+    "src/research_os/services/web_schedule_mutations.py",
     "src/research_os/services/web_source_workflows.py",
+    "src/research_os/services/worker_supervisor.py",
     "src/research_os/ui/app.py",
+    "src/research_os/ui/scheduler_views.py",
     "09_Automation/tests/test_m6_security.py",
+    "09_Automation/tests/test_operations_db.py",
     "09_Automation/tests/test_product_capabilities.py",
     "09_Automation/tests/test_web_candidate_parity.py",
     "09_Automation/tests/test_web_mutation.py",
@@ -184,7 +190,9 @@ SECURITY_PATHS = (
     "09_Automation/tests/test_web_operations_parity.py",
     "09_Automation/tests/test_web_research_drafts.py",
     "09_Automation/tests/test_web_review_parity.py",
+    "09_Automation/tests/test_web_scheduler.py",
     "09_Automation/tests/test_web_source_parity.py",
+    "09_Automation/tests/test_worker_supervisor.py",
 )
 PERFORMANCE_OPERATIONS = frozenset(
     {
@@ -837,7 +845,7 @@ def _resolve_static_strings(
         return environment.get(node.id, _UNKNOWN_STATIC_STRING)
     if isinstance(node, ast.Starred):
         return _resolve_static_strings(node.value, environment)
-    if isinstance(node, (ast.List, ast.Set, ast.Tuple)):
+    if isinstance(node, ast.List | ast.Set | ast.Tuple):
         elements = _merge_static_string_values(
             *(_resolve_static_strings(element, environment) for element in node.elts)
         )
@@ -986,7 +994,7 @@ class _ModuleSurfaceScanner:
         ) or (
             isinstance(node, ast.AugAssign)
             and isinstance(node.target, ast.Name)
-            and isinstance(node.op, (ast.Add, ast.BitOr))
+            and isinstance(node.op, ast.Add | ast.BitOr)
         ):
             names = {node.target.id}
             value = node.value
@@ -1009,7 +1017,7 @@ class _ModuleSurfaceScanner:
             children = value if isinstance(value, list) else [value]
             for child in children:
                 if not isinstance(child, ast.AST) or isinstance(
-                    child, (ast.stmt, ast.ExceptHandler, ast.match_case)
+                    child, ast.stmt | ast.ExceptHandler | ast.match_case
                 ):
                     continue
                 self._scan_expression(child, environment)
@@ -1029,7 +1037,7 @@ class _ModuleSurfaceScanner:
     def _bound_names(target: ast.AST) -> set[str]:
         if isinstance(target, ast.Name):
             return {target.id}
-        if isinstance(target, (ast.List, ast.Tuple)):
+        if isinstance(target, ast.List | ast.Tuple):
             return {
                 name
                 for element in target.elts
@@ -1052,7 +1060,7 @@ class _ModuleSurfaceScanner:
     def _match_bound_names(pattern: ast.pattern) -> set[str]:
         names: set[str] = set()
         for descendant in ast.walk(pattern):
-            if isinstance(descendant, (ast.MatchAs, ast.MatchStar)):
+            if isinstance(descendant, ast.MatchAs | ast.MatchStar):
                 if descendant.name is not None:
                     names.add(descendant.name)
             elif (
@@ -1143,7 +1151,7 @@ class _ModuleSurfaceScanner:
             statement.target, ast.Name
         ):
             if statement.target.id in {"JOB_NAMES", "__all__"} and isinstance(
-                statement.op, (ast.Add, ast.BitOr)
+                statement.op, ast.Add | ast.BitOr
             ):
                 current[statement.target.id] = _merge_static_string_values(
                     current.get(statement.target.id, _UNKNOWN_STATIC_STRING),
@@ -1171,9 +1179,9 @@ class _ModuleSurfaceScanner:
             body_exit, _states = self._scan_statements(statement.body, current)
             else_exit, _states = self._scan_statements(statement.orelse, current)
             return _merge_string_environments(body_exit, else_exit)
-        if isinstance(statement, (ast.Try, ast.TryStar)):
+        if isinstance(statement, ast.Try | ast.TryStar):
             return self._scan_try(statement, current)
-        if isinstance(statement, (ast.For, ast.AsyncFor)):
+        if isinstance(statement, ast.For | ast.AsyncFor):
             loop_exit = self._scan_loop(statement.body, current, statement.target)
             else_exit, _states = self._scan_statements(statement.orelse, loop_exit)
             return _merge_string_environments(loop_exit, else_exit)
@@ -1191,7 +1199,7 @@ class _ModuleSurfaceScanner:
                 case_exit, _states = self._scan_statements(case.body, case_environment)
                 exits.append(case_exit)
             return _merge_string_environments(*exits)
-        if isinstance(statement, (ast.With, ast.AsyncWith)):
+        if isinstance(statement, ast.With | ast.AsyncWith):
             body_environment = dict(current)
             for item in statement.items:
                 if item.optional_vars is not None:
@@ -1200,11 +1208,11 @@ class _ModuleSurfaceScanner:
                     )
             body_exit, _states = self._scan_statements(statement.body, body_environment)
             return _merge_string_environments(current, body_exit)
-        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
             self._scan_nested_body(statement.body, current)
             current[statement.name] = _UNKNOWN_STATIC_STRING
             return current
-        if isinstance(statement, (ast.Import, ast.ImportFrom)):
+        if isinstance(statement, ast.Import | ast.ImportFrom):
             for alias in statement.names:
                 name = alias.asname or alias.name.split(".", 1)[0]
                 current[name] = _UNKNOWN_STATIC_STRING
@@ -2166,7 +2174,7 @@ def _mode_gate_evidence(
             )
         for score in scores.values():
             if (
-                not isinstance(score, (int, float))
+                not isinstance(score, int | float)
                 or isinstance(score, bool)
                 or not 0.0 <= float(score) <= 1.0
             ):

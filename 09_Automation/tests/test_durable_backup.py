@@ -38,6 +38,12 @@ from research_os.services.durable_backup import (
     load_durable_backup_receipt,
     restore_durable_backup,
 )
+from research_os.services.operations_db import (
+    apply_migrations as apply_operations_migrations,
+)
+from research_os.services.operations_db import (
+    operations_db_path,
+)
 
 
 class FakeBackupBackend(BackupBackend):
@@ -273,6 +279,7 @@ class DurableBackupTests(unittest.TestCase):
         root = base / "repo"
         root.mkdir()
         apply_migrations(candidate_db_path(root))
+        apply_operations_migrations(operations_db_path(root))
         connection = sqlite3.connect(candidate_db_path(root))
         try:
             connection.execute("PRAGMA journal_mode = WAL")
@@ -398,6 +405,31 @@ class DurableBackupTests(unittest.TestCase):
             root = Path(temp)
             with self.assertRaisesRegex(ValueError, "backup_id"):
                 durable_backup.durable_receipt_path(root, "../../outside")
+
+    def test_candidate_archive_contains_operations_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            root, _raw = self.make_root(base)
+            work = base / "work"
+            work.mkdir()
+            archive_path = durable_backup._write_candidate_archive(
+                root,
+                work,
+                backup_id="BKP-20260810T010203Z-aaaaaaaaaaaa",
+                created_at="2026-08-10T01:02:03Z",
+                timestamp=1_754_789_323,
+            )
+            with tarfile.open(archive_path) as archive:
+                names = set(archive.getnames())
+                inner = json.load(
+                    archive.extractfile(durable_backup.INNER_MANIFEST_NAME)
+                )
+                operations_manifest = json.load(
+                    archive.extractfile("operations/operations.db.manifest.json")
+                )
+            self.assertIn("operations/operations.db", names)
+            self.assertIn("operations/operations.db.manifest.json", names)
+            self.assertEqual(inner["operations"], operations_manifest)
 
     @pytest.mark.local_integration
     def test_dry_run_preflights_without_local_or_remote_writes(self) -> None:
@@ -684,7 +716,14 @@ class DurableBackupTests(unittest.TestCase):
             )
 
             self.assertEqual("verified", restored.status)
+            self.assertTrue(restored.operations_sha256)
+            self.assertEqual(1, restored.operations_schema_version)
             restored_db = destination / "09_Automation/operational/candidates.db"
+            restored_operations = destination / "operations/operations.db"
+            with sqlite3.connect(restored_operations) as connection:
+                self.assertEqual(
+                    "ok", connection.execute("PRAGMA integrity_check").fetchone()[0]
+                )
             connection = sqlite3.connect(restored_db)
             try:
                 count = connection.execute("SELECT COUNT(*) FROM candidates").fetchone()

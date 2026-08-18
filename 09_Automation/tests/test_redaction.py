@@ -13,6 +13,7 @@ from research_os.adapters.url import canonicalize_url
 from research_os.services import jobs as jobs_module
 from research_os.services.discovery import _candidate_records
 from research_os.services.jobs import run_job
+from research_os.services.operations_db import get_run, operations_db_path
 from research_os.services.redaction import REDACTED, redact_secrets
 
 AUTOMATION = Path(__file__).resolve().parents[1]
@@ -91,9 +92,11 @@ class RedactionTests(unittest.TestCase):
                 self.assertEqual("failed", result.status)
                 self.assertNotIn("SECRET123", result.message)
                 self.assertIn(REDACTED, result.message)
-                record_text = Path(result.path).read_text(encoding="utf-8")
-                self.assertNotIn("SECRET123", record_text)
-                self.assertIn(REDACTED, record_text)
+                persisted = get_run(operations_db_path(root), result.job_id)
+                self.assertIsNotNone(persisted)
+                assert persisted is not None
+                self.assertNotIn("SECRET123", persisted.message or "")
+                self.assertIn(REDACTED, persisted.message or "")
         finally:
             jobs_module._execute_job = original
 

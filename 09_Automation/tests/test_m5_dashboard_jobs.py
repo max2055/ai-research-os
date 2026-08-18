@@ -24,6 +24,7 @@ from research_os.services.indexing import (
     render_project_indexes,
 )
 from research_os.services.jobs import job_rows, run_job
+from research_os.services.operations_db import get_run, operations_db_path
 from research_os.services.operations_health import health_snapshot, operations_snapshot
 from research_os.services.read_model import (
     analysis_workspace_snapshot,
@@ -707,19 +708,26 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
 
     @pytest.mark.local_integration
     def test_operations_unifies_all_due_work(self) -> None:
-        snapshot = operations_snapshot(self.root, as_of="2026-08-09")
-        for key in (
-            "schedules",
-            "jobs",
-            "actions",
-            "reviews",
-            "forecasts",
-            "recommendations",
-        ):
-            self.assertIn(key, snapshot)
-        self.assertTrue(snapshot["jobs"])
-        with self.assertRaisesRegex(ValueError, "YYYY-MM-DD"):
-            operations_snapshot(self.root, as_of="09-08-2026")
+        with tempfile.TemporaryDirectory() as temp:
+            root = prepared_root(temp)
+            run_job(
+                root,
+                "validate",
+                started_at=datetime(2026, 8, 9, 0, 0, tzinfo=UTC),
+            )
+            snapshot = operations_snapshot(root, as_of="2026-08-09")
+            for key in (
+                "schedules",
+                "jobs",
+                "actions",
+                "reviews",
+                "forecasts",
+                "recommendations",
+            ):
+                self.assertIn(key, snapshot)
+            self.assertTrue(snapshot["jobs"])
+            with self.assertRaisesRegex(ValueError, "YYYY-MM-DD"):
+                operations_snapshot(root, as_of="09-08-2026")
 
     def test_health_covers_every_required_category_without_secret_values(self) -> None:
         sentinel = "do-not-render-this-secret"
@@ -744,6 +752,25 @@ class OperationsHealthSnapshotTests(unittest.TestCase):
         self.assertIn("free_bytes", snapshot["host"]["disk"])
         self.assertTrue(snapshot["host"]["timezone"])
         self.assertIn(snapshot["web_identity"]["status"], {"ready", "uninitialized"})
+
+    def test_health_reports_supervisor_restart_exhaustion(self) -> None:
+        snapshot = health_snapshot(
+            self.root,
+            supervisor_snapshot={
+                "running": False,
+                "ready": False,
+                "restart_count": 3,
+                "restart_exhausted": True,
+            },
+        )
+
+        self.assertEqual("failed", snapshot["worker"]["status"])
+        self.assertEqual(3, snapshot["worker"]["restart_count"])
+        self.assertTrue(snapshot["worker"]["restart_exhausted"])
+        self.assertIn(
+            ("WORKER_FAILED", "P1"),
+            [(item["code"], item["priority"]) for item in snapshot["alerts"]],
+        )
 
     def test_health_reports_ready_web_identity_without_secret(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -1026,10 +1053,19 @@ class SchedulerJobTests(unittest.TestCase):
                 [finding for finding in findings if finding.level == "error"]
             )
             jobs = [obj for obj in objects if obj.object_type == "job"]
-            self.assertEqual(4, len(jobs))
+            self.assertEqual([], jobs)
+            stored = get_run(operations_db_path(root), failed.job_id)
+            self.assertIsNotNone(stored)
+            assert stored is not None
+            self.assertEqual("failed", stored.status)
             self.assertEqual(
                 [failed.job_id],
-                [row.object_id for row in job_rows(root, status="failed")],
+                [row.run_id for row in job_rows(root, status="failed")],
+            )
+            snapshot = health_snapshot(root)
+            self.assertIn(
+                failed.job_id,
+                [row["id"] for row in snapshot["failed_runs"]],
             )
             health = TestClient(create_app(root)).get("/health")
             self.assertIn(failed.job_id, health.text)
@@ -1083,9 +1119,14 @@ class SchedulerJobTests(unittest.TestCase):
             self.assertNotIn(secret, result.message)
             self.assertNotIn("token=", result.message)
             self.assertEqual(
-                before_jobs + 1,
+                before_jobs,
                 len(list((root / "05_Research" / "Operations" / "Jobs").glob("*.md"))),
             )
+            stored = get_run(operations_db_path(root), result.job_id)
+            self.assertIsNotNone(stored)
+            assert stored is not None
+            self.assertEqual("failed", stored.status)
+            self.assertEqual(result.message, stored.message)
             connection = sqlite3.connect(candidate_db.candidate_db_path(root))
             try:
                 row = connection.execute(
@@ -1120,7 +1161,11 @@ class SchedulerJobTests(unittest.TestCase):
                 )
 
             self.assertEqual("success", result.status)
-            self.assertEqual(before_jobs + 1, len(list(jobs_dir.glob("*.md"))))
+            self.assertEqual(before_jobs, len(list(jobs_dir.glob("*.md"))))
+            stored = get_run(operations_db_path(root), result.job_id)
+            self.assertIsNotNone(stored)
+            assert stored is not None
+            self.assertEqual("success", stored.status)
             connection = sqlite3.connect(candidate_db.candidate_db_path(root))
             try:
                 run_rows = connection.execute(
@@ -1156,8 +1201,8 @@ class SchedulerJobTests(unittest.TestCase):
             )
 
             cli = run_cli(root, "jobs", "run", "validate")
-            self.assertEqual(0, cli.returncode, cli.stdout)
-            self.assertIn("SUCCESS JOB-", cli.stdout)
+            self.assertEqual(2, cli.returncode)
+            self.assertIn("invalid choice", cli.stderr)
 
 
 def _mode_fixture(mode_id: str = "MOD-ANL-value-chain-v1") -> str:

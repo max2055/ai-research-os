@@ -1,120 +1,55 @@
-# launchd Runbook（B-021）
+# Legacy launchd Rollback Artifact
 
-macOS `launchd` 调度 AI Research OS 的每日情报发现与 retention sweep。
-单机 scheduler，不引入分布式任务队列（Phase 2 §7）。
+状态：已退出生产，禁止与网站 Worker 并行运行。
 
-## 工作原理
+本目录中的 plist、`run_daily.sh` 和历史日志仅用于保留 B-021 的实现与运行证据。
+当前生产调度由 `python -m research_os.ui` 启动的网站进程托管，计划只在
+`/operations/schedules` 管理，运行状态与审计只写入 `operations.db`。
 
-```text
-launchd (StartInterval 6h, RunAtLoad)
-  → 09_Automation/launchd/run_daily.sh
-      → research-os discover due --as-of <now>     # 按 Channel schedule 算到期
-      → research-os jobs run discover --target CHN-…  # 逐 channel（per-channel lock）
-      → research-os jobs run expire                 # retention sweep（expire + purge）
-```
+## 强制边界
 
-每次 `jobs run` 都会写一条不可变的 Job Run 记录
-（`05_Research/Operations/Jobs/JOB-*.md`），失败也在记录里留痕。
+- 正常运行时，旧 LaunchAgent 必须保持 unloaded，且不得设置登录启动。
+- 网站运行时绝不能加载旧 LaunchAgent，也不能直接执行 `run_daily.sh`。
+- 不得把旧 Channel Markdown 的 `schedule`/`enabled` 字段重新作为运行权威。
+- 不得删除 plist、脚本、历史 `JOB-*.md` 或 `launchd/logs/*`；它们是迁移前证据。
+- 旧 scheduler 不认识 `operations.db` 的租约和队列，并行运行会造成重复发现、重复
+  retention 与不完整审计。
 
-## 无重叠（no-overlap）
+## 仅限灾难回滚
 
-- **per-channel lock**：`discover run --apply` 开始时在 `discovery_runs`
-  写一条 `running` 行；同一 Channel 已有 `running` 行则拒绝启动（§5.1）。
-  StartInterval 与 run 时间重叠时，第二个触发只会失败并记录，不会双跑。
-- wrapper 对单 channel 失败不中止（`|| echo FAILED`），整轮 sweep 继续。
+只有在网站 Worker 无法恢复、用户明确批准回到预切换架构，并且已经选择了完整的
+预切换快照时，才允许临时启用本目录内容。回滚必须按以下顺序执行：
 
-## 重启后恢复（restart recovery）
+1. 停止网站服务，并确认网站 Worker PID 已退出。
+2. 保存当前 `operations.db`、Candidate DB、Source assets 和 durable receipt，禁止覆盖。
+3. 在 disposable directory 恢复并验证预切换快照；确认旧 Job Markdown 与 Candidate DB
+   属于同一恢复点。
+4. 由 operator 审核 plist 中的绝对路径和环境，确认不会访问当前网站使用的数据目录。
+5. 仅在隔离的回滚目录中加载旧 LaunchAgent，并记录批准人、时间、快照 ID 和原因。
 
-- launchd `RunAtLoad=true`：机器重启后（LaunchAgent 已 load）自动补跑。
-- **stale lock 回收**：崩溃/被杀留下的 `running` 行超过 30 分钟
-  （`LOCK_STALE`）会在下一次运行被标记为 `failed` 并回收，通道不会被
-  永久锁死。
-
-## 安装
+旧命令仅供上述受控回滚使用：
 
 ```bash
-# 1. 校验 plist
 plutil -lint 09_Automation/launchd/com.aioresearchos.discovery.plist
-
-# 2. 安装到用户 LaunchAgents 并加载
 cp 09_Automation/launchd/com.aioresearchos.discovery.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.aioresearchos.discovery.plist
-
-# 3. 确认已加载
 launchctl list | grep aioresearchos
 ```
 
-加载后 `RunAtLoad` 立即触发一次，之后每 6 小时一次。
-
-## 卸载 / 暂停
+退出回滚时先卸载旧调度，再恢复当前数据库集合，最后启动网站：
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.aioresearchos.discovery.plist
 rm ~/Library/LaunchAgents/com.aioresearchos.discovery.plist
+python -m research_os.ui
 ```
 
-全局 pause 语义（§13）：卸载 launchd 即暂停；已有 Candidate 保留，不影响
-`candidates list`。
+## 历史证据
 
-## 手动运行（不经过 launchd）
+- plist：`09_Automation/launchd/com.aioresearchos.discovery.plist`
+- wrapper：`09_Automation/launchd/run_daily.sh`
+- 历史日志：`09_Automation/launchd/logs/*`
+- 历史 Job：`05_Research/Operations/Jobs/JOB-*.md`
 
-```bash
-# 单 channel
-research-os jobs run discover --target CHN-skhynix-ir
-
-# 只看当前到期的 channel（dry）
-research-os discover due
-
-# 手动 retention sweep（expire + purge，dry 先看）
-research-os jobs run expire
-research-os candidates expire --as-of 2026-11-06T00:00:00Z   # dry-run 预览
-research-os candidates purge                                   # dry-run 预览
-```
-
-## 日志
-
-- sweep 明细：`09_Automation/launchd/logs/sweep.log`
-- launchd stdout/stderr：`…/launchd/logs/launchd.stdout.log`、
-  `…/launchd.logs/launchd.stderr.log`
-- 每 job 结果：`05_Research/Operations/Jobs/JOB-*.md`
-
-## Retention（ADR §3 / B-020+B-021）
-
-- `new`/`triaged`：保留 30 天（per-channel `retention_days`）。
-- `dismissed`/`expired`：`jobs run expire` 先按 retention 标 `expired`，再
-  `candidates purge` 物理删除候选行，**保留 candidate_actions 审计行**
-  （schema v2 已去掉 FK）。
-- `promoted`：永久保留（promoted_source_id 永久链接）。
-
-## 备份与故障处理（§13）
-
-- Candidate DB（`09_Automation/operational/candidates.db`）为派生数据，
-  按 Recovery_Runbook 加密备份；可从 Channel 重跑重建，但重跑不保证重现已过期或
-  上游已删除的 Candidate。
-- The bundled discovery LaunchAgent does not run durable backup. `run_daily.sh` 只执行
-  due discovery 与 retention，避免把 ignored key/config 隐式注入现有 plist。
-- Operator 必须另行调度或手动执行 durable create --apply at least once every 24 hours：
-
-```bash
-BACKUP_CONFIG=09_Automation/operational/backup.local.json
-research-os backup durable create --config "$BACKUP_CONFIG"
-research-os backup durable create --config "$BACKUP_CONFIG" --apply
-```
-
-- `/health` 只读 local receipt，不联网。`missing`、`failed`、`invalid` 或超过 24 小时
-  的 `stale` durable 状态均为 P1；例如 `BKP_DURABLE_STALE`。收到告警后保留 Job 和
-  receipt，显式运行 `verify-remote`，并按 `00_System/Recovery_Runbook.md` 在 disposable
-  directory 验证 restore。不得通过删除失败 Job 或修改 receipt 时间消除告警。
-- 若为 durable backup 建立另一个 LaunchAgent，plist 只能引用 ignored config path，
-  不能嵌入 recipient、private identity、token 或 raw budget。先手动完成 dry-run/apply/
-  verify/restore，再启用调度；该额外 plist 不属于当前仓库基线。
-- 单 Channel 可 `channels disable`，不删除配置。
-- Adapter 失败不得创建 processed Source（promote 才写权威仓库）。
-- 许可变为 restricted 时停抓、保留合规记录。
-
-## 已知边界
-
-- `discover due` 对解析不了的 schedule 视为**不到期**（不自动跑无法排期的
-  channel），用 `channels check` 人工发现。
-- `jobs run expire` 是纯自动动作（actor=`system`）；promote 永远是人工
-  `--apply`（Agent 不自动提升，RCP-v03-004）。
+这些文件不定义当前产品行为。当前故障处理、备份和恢复流程见
+`00_System/Recovery_Runbook.md` 与网站 `/health`、`/operations/backups`。

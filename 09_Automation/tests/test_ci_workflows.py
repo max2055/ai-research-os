@@ -139,6 +139,39 @@ class HostedCiWorkflowTests(unittest.TestCase):
             self.workflow_text(),
         )
 
+    def test_production_docs_and_entrypoints_use_only_web_hosted_scheduler(
+        self,
+    ) -> None:
+        production_docs = (ROOT / "README.md", ROOT / "09_Automation" / "README.md")
+        forbidden = (
+            "launchctl",
+            "LaunchAgent",
+            "run_daily.sh",
+            "research-os jobs run",
+            "research-os discover due",
+            "05_Research/Operations/Jobs/JOB-",
+            "Markdown success/failure records",
+        )
+        for path in production_docs:
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path):
+                for value in forbidden:
+                    self.assertNotIn(value, text)
+                self.assertIn("python -m research_os.ui", text)
+                self.assertIn("/operations/schedules", text)
+                self.assertIn("operations.db", text)
+
+        entrypoints = (
+            ROOT / "src/research_os/ui/__main__.py",
+            ROOT / "src/research_os/services/worker_supervisor.py",
+            ROOT / "src/research_os/runtime/worker.py",
+        )
+        for path in entrypoints:
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path):
+                for value in ("launchctl", ".plist", "run_daily.sh"):
+                    self.assertNotIn(value, text)
+
 
 class CiDashboardSmokeTests(unittest.TestCase):
     def test_fixture_dashboard_routes_return_200(self) -> None:

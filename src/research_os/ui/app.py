@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import html
 import json
+import secrets
 import sqlite3
-from collections.abc import Callable, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping
+from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime, timedelta
 from email.parser import BytesParser
 from email.policy import default as email_policy
@@ -13,6 +15,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 from urllib.parse import parse_qs, urlencode
+from zoneinfo import available_timezones
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import (
@@ -62,6 +65,7 @@ from research_os.services.mutation_gateway import (
     PreviewGrant,
 )
 from research_os.services.ontology import render_impact
+from research_os.services.operations_db import apply_migrations, operations_db_path
 from research_os.services.operations_health import health_snapshot, operations_snapshot
 from research_os.services.pilot import pilot_status
 from research_os.services.projects import objects_for_project
@@ -75,6 +79,7 @@ from research_os.services.read_model import (
     sector_snapshot,
 )
 from research_os.services.review_cadence import current_next_review_date
+from research_os.services.schedule_migration import migrate_operational_history
 from research_os.services.triage import dismiss_candidate
 from research_os.services.validation import validate_repository
 from research_os.services.web_analysis_mutations import (
@@ -108,6 +113,8 @@ from research_os.services.web_identity import (
     load_web_identity,
 )
 from research_os.services.web_operations_mutations import (
+    commit_channel_change,
+    enqueue_job_request,
     prepare_cadence_review,
     prepare_channel_change,
     prepare_job_request,
@@ -132,6 +139,12 @@ from research_os.services.web_research_drafts import (
     prepare_report_creation,
 )
 from research_os.services.web_review_mutations import prepare_review_mutation
+from research_os.services.web_schedule_mutations import (
+    ScheduleInput,
+    create_schedule_from_input,
+    queue_manual_run,
+    update_schedule_from_input,
+)
 from research_os.services.web_source_workflows import (
     MAX_UPLOAD_BYTES,
     capture_adapter,
@@ -140,6 +153,8 @@ from research_os.services.web_source_workflows import (
     prepare_source_fetch,
     prepare_source_process,
 )
+from research_os.services.worker_supervisor import WorkerSupervisor
+from research_os.ui.scheduler_views import schedule_form, schedule_table
 
 HTMX_URL = "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
 _SESSION_COOKIE = "research_os_session"
@@ -302,7 +317,7 @@ async def _urlencoded_form(request: Request) -> dict[str, str]:
             body.decode("utf-8"),
             keep_blank_values=True,
             strict_parsing=True,
-            max_num_fields=5,
+            max_num_fields=40,
         )
     except (UnicodeDecodeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail="invalid mutation input") from exc
@@ -2083,16 +2098,17 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     )
     schedule_rows = [
         [
-            esc(row["channel_id"]),
-            esc(row["schedule"]),
-            esc(row["last_run"] or "never"),
-            badge(row["status"], warning=True),
+            f'<a href="/operations/schedules/{esc(row["schedule_id"])}">{esc(row["schedule_id"])}</a>',
+            esc(row["job_name"]),
+            esc(row["target"] or "global"),
+            esc(row["next_due"] or "not scheduled"),
+            badge(row["status"], warning=row["status"] != "enabled"),
         ]
         for row in snapshot["schedules"]
     ]
     job_rows_ = [
         [
-            esc(row["id"]),
+            f'<a href="/operations/runs/{esc(row["id"])}">{esc(row["id"])}</a>',
             esc(row["job_name"]),
             esc(row["started_at"]),
             badge(row["status"], warning=row["status"] == "failed"),
@@ -2138,9 +2154,12 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     content = f"""<section class="hero"><div>
 <div class="eyebrow">{esc(selected)}</div><h2>运营</h2>
 <p>统一读取调度、Jobs、Actions、研究评审与决策到期项；页面不执行任务。</p>
-</div><div><div class="eyebrow">待处理</div><h2>{esc(len(snapshot["schedules"]) + len(snapshot["actions"]) + len(snapshot["reviews"]) + len(snapshot["forecasts"]) + len(snapshot["recommendations"]))}</h2>
+</div><div><a class="button-link" href="/operations/schedules">管理计划</a>
+<a class="button-link" href="/operations/jobs">查看 Jobs</a>
+<a class="button-link" href="/operations/backups">备份</a></div></section>
+<section class="metrics"><div class="metric"><strong>{esc(len(snapshot["schedules"]) + len(snapshot["actions"]) + len(snapshot["reviews"]) + len(snapshot["forecasts"]) + len(snapshot["recommendations"]))}</strong><span>待处理</span>
 <p class="muted">截至 {esc(snapshot["as_of"])}</p></div></section>
-<section class="panel"><h3>调度</h3>{table(["Channel", "Schedule", "Last run", "状态"], schedule_rows)}</section>
+<section class="panel"><h3>调度</h3>{table(["Schedule", "Job", "Target", "Next run", "状态"], schedule_rows)}</section>
 <section class="panel"><h3>Jobs</h3>{table(["Job", "名称", "Started", "状态", "消息"], job_rows_)}</section>
 <section class="panel"><h3>Actions</h3>{table(["Action", "Owner", "Due", "时点"], action_rows_)}</section>
 <section class="panel"><h3>研究评审</h3>{table(["Project", "Cadence", "Next review"], review_rows)}</section>
@@ -2153,9 +2172,18 @@ def _operations_page(repo: DashboardRepository, project_id: str | None) -> str:
     return shell("运营", content, project_id=selected)
 
 
-def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
+def _health_page(
+    repo: DashboardRepository,
+    project_id: str | None,
+    *,
+    supervisor_snapshot: Mapping[str, Any] | None = None,
+) -> str:
     _, _, selected = repo.scoped(project_id)
-    snapshot = health_snapshot(repo.root, project_id=selected)
+    snapshot = health_snapshot(
+        repo.root,
+        project_id=selected,
+        supervisor_snapshot=supervisor_snapshot,
+    )
     validation = snapshot["validation"]
     finding_rows = [
         [
@@ -2176,6 +2204,9 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
         for row in snapshot["assets"]["failures"]
     ]
     db = snapshot["candidate_db"]
+    operations_db = snapshot["operations_db"]
+    worker = snapshot["worker"]
+    schedules = snapshot["schedules"]
     channel_rows_ = [
         [
             esc(row["channel_id"]),
@@ -2214,6 +2245,8 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
             snapshot["indexes"]["status"] != "ok",
             snapshot["assets"]["status"] != "ok",
             db["status"] != "ok",
+            operations_db["status"] != "ok",
+            worker["status"] in {"stale", "failed"},
             backup["status"] != "fresh",
             durable["status"] != "fresh",
             disk["status"] != "ok",
@@ -2232,6 +2265,11 @@ def _health_page(repo: DashboardRepository, project_id: str | None) -> str:
 <section class="panel"><h3>索引</h3><p>scope={esc(snapshot["indexes"]["scope"])} · {badge(snapshot["indexes"]["status"], warning=snapshot["indexes"]["status"] != "ok")}</p>{table(["Drift"], index_rows) if index_rows else "<p class='muted'>无索引漂移。</p>"}</section>
 <section class="panel"><h3>Source assets</h3>{table(["Source", "状态", "消息"], asset_rows) if asset_rows else "<p class='muted'>资产完整性通过。</p>"}</section>
 <section class="panel"><h3>Candidate DB</h3>{_kv_table([["状态", badge(db["status"], warning=db["status"] != "ok")], ["Integrity", esc(db["integrity"])], ["Schema", f"{esc(db['schema_version'])} / {esc(db['expected_schema_version'])}"], ["Size", esc(db["size_bytes"])], ["Modified", esc(db["modified_at"] or "—")]])}</section>
+<section class="grid">
+<div class="panel"><h3>Operations DB</h3>{_kv_table([["状态", badge(operations_db["status"], warning=operations_db["status"] != "ok")], ["Integrity", esc(operations_db["integrity"] or "—")], ["Schema", esc(operations_db["schema_version"] or "—")]])}</div>
+<div class="panel"><h3>Worker</h3>{_kv_table([["状态", badge(worker["status"], warning=worker["status"] in {"stale", "failed"})], ["PID", esc(worker["pid"] or "—")], ["Heartbeat", esc(worker["heartbeat_at"] or "—")], ["Age seconds", esc(worker["heartbeat_age_seconds"] if worker["heartbeat_age_seconds"] is not None else "—")], ["Current run", f'<a href="/operations/runs/{esc(worker["current_run"])}">{esc(worker["current_run"])}</a>' if worker["current_run"] else "—"], ["Restart count", esc(worker["restart_count"])], ["Restart exhausted", badge("yes" if worker["restart_exhausted"] else "no", danger=worker["restart_exhausted"])], ["History", '<a href="/operations/jobs">查看 Jobs</a>']])}</div>
+<div class="panel"><h3>Schedules</h3>{_kv_table([["Active", esc(schedules["active"])], ["Paused", esc(schedules["paused"])], ["Due", esc(schedules["due"])], ["Last failure", esc(schedules["last_failure"] or "—")]])}</div>
+</section>
 <section class="panel"><h3>Channels / License</h3>{table(["Channel", "Enabled", "Review", "License", "Robots checked"], channel_rows_)}</section>
 <section class="panel"><h3>失败任务与失败运行</h3>{table(["ID", "Type", "状态", "消息"], failed_rows)}</section>
 <section class="panel"><h3>P1 告警</h3>{table(["编码", "优先级", "状态", "消息"], alert_rows) if alert_rows else "<p class='muted'>无 P1 告警。</p>"}</section>
@@ -3519,7 +3557,9 @@ def _llm_page() -> str:
     return shell("模型配置", content)
 
 
-def create_app(root: Path) -> FastAPI:
+def create_app(
+    root: Path, worker_factory: Callable[[Path], Any] | None = None
+) -> FastAPI:
     repo = DashboardRepository(root)
     sessions = BrowserSessionRegistry()
     gateway_lock = Lock()
@@ -3527,16 +3567,35 @@ def create_app(root: Path) -> FastAPI:
     gateway: MutationGateway | None = None
     mutation_results: dict[str, dict[str, str]] = {}
     result_lock = Lock()
+    schedule_action_operations: dict[str, str] = {}
+    schedule_action_preview_lock = Lock()
     promote_plans: dict[str, PromotePlan] = {}
     promote_plan_lock = Lock()
     repository_plans: dict[str, RepositoryMutationPlan] = {}
     repository_plan_tokens: dict[str, str] = {}
     repository_plan_lock = Lock()
+    supervisor_factory = worker_factory or (lambda path: WorkerSupervisor(path))
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        apply_migrations(operations_db_path(repo.root))
+        migrate_operational_history(
+            repo.root, actor="system:migration", now=datetime.now(UTC).isoformat()
+        )
+        supervisor = supervisor_factory(repo.root)
+        app.state.worker_supervisor = supervisor
+        supervisor.start()
+        try:
+            yield
+        finally:
+            supervisor.stop()
+
     app = FastAPI(
         title="AI Research OS",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
+        lifespan=lifespan,
     )
 
     def mutation_gateway() -> tuple[WebIdentity, MutationGateway]:
@@ -4514,7 +4573,16 @@ def create_app(root: Path) -> FastAPI:
 
     @app.get("/health", response_class=HTMLResponse)
     def health(project: str | None = Query(default=None)) -> HTMLResponse:
-        return HTMLResponse(_health_page(repo, project))
+        supervisor = getattr(app.state, "worker_supervisor", None)
+        snapshot_method = getattr(supervisor, "snapshot", None)
+        supervisor_snapshot = snapshot_method() if callable(snapshot_method) else None
+        return HTMLResponse(
+            _health_page(
+                repo,
+                project,
+                supervisor_snapshot=supervisor_snapshot,
+            )
+        )
 
     @app.get("/health/release", response_class=HTMLResponse)
     def health_release() -> HTMLResponse:
@@ -4554,28 +4622,29 @@ def create_app(root: Path) -> FastAPI:
 
     @app.get("/operations/discovery/run", response_class=HTMLResponse)
     def operations_discovery_run_form(request: Request) -> HTMLResponse:
-        return decision_form_response(
+        options = "".join(
+            f'<option value="{esc(row["id"])}">{esc(row["name"])}</option>'
+            for row in channel_rows(repo.root)
+        )
+        return research_form_response(
             request,
-            title="Run Discovery",
-            eyebrow="Operational human",
-            action="/operations/discovery/run/preview",
-            back_path="/operations/discovery",
-            example={
-                "job_name": "discover",
-                "target": "CHN-",
-                "as_of": date.today().isoformat(),
-            },
+            lambda _repo, csrf: shell(
+                "Run Discovery",
+                f'''<section class="panel"><h2>运行 Discovery</h2>
+<form method="post" action="/operations/discovery/run/preview">
+<input type="hidden" name="csrf_token" value="{esc(csrf)}">
+<input type="hidden" name="job_name" value="discover">
+<input type="hidden" name="project_id" value="">
+<label>Channel <select name="target">{options}</select></label>
+<label>日期 <input name="as_of" type="date" value="{date.today().isoformat()}"></label>
+<button type="submit">预览</button></form></section>''',
+            ),
         )
 
     @app.post("/operations/discovery/run/preview", response_class=HTMLResponse)
     async def operations_discovery_run_preview(request: Request) -> HTMLResponse:
-        return await structured_preview_response(
-            request,
-            prepare=lambda actor, raw: prepare_job_request(
-                repo.root, actor=actor, spec_json=raw
-            ),
-            commit_path="/operations/discovery/run/commit",
-            label="Discovery",
+        return await _issue_job_preview(
+            request, commit_path="/operations/discovery/run/commit"
         )
 
     @app.post(
@@ -4586,13 +4655,40 @@ def create_app(root: Path) -> FastAPI:
     async def operations_discovery_run_commit(request: Request) -> RedirectResponse:
         return await operations_job_commit(request)
 
+    @app.get("/operations/backups", response_class=HTMLResponse)
     @app.get("/operations/backups/new", response_class=HTMLResponse)
-    def operations_backup_page() -> HTMLResponse:
-        return HTMLResponse(
-            shell(
+    def operations_backup_page(request: Request) -> HTMLResponse:
+        return research_form_response(
+            request,
+            lambda _repo, csrf: shell(
                 "Backups",
-                '<section class="hero"><div><div class="eyebrow">Operational</div><h2>Backup</h2><p>Candidate and durable backup operations remain explicit and auditable.</p></div></section><section class="panel"><a class="button-link" href="/operations/jobs/run">Run backup job</a></section>',
-            )
+                f'''<section class="hero"><div><div class="eyebrow">Operational</div>
+<h2>备份</h2><p>Candidate DB、operations.db 与 Source assets。</p></div></section>
+<section class="grid"><div class="panel"><h3>Candidate snapshot</h3>
+<form method="post" action="/operations/backups/candidate/preview">
+<input type="hidden" name="csrf_token" value="{esc(csrf)}"><button type="submit">预览</button></form></div>
+<div class="panel"><h3>Durable backup</h3>
+<form method="post" action="/operations/backups/durable/preview">
+<input type="hidden" name="csrf_token" value="{esc(csrf)}"><button type="submit">预览</button></form>
+<p class="muted">接收人和凭据仅从服务器配置解析，不由浏览器提交。</p></div></section>''',
+            ),
+        )
+
+    @app.post("/operations/backups/{backup_kind}/preview", response_class=HTMLResponse)
+    async def operations_backup_preview(
+        backup_kind: str, request: Request
+    ) -> HTMLResponse:
+        if backup_kind not in {"candidate", "durable"}:
+            raise HTTPException(status_code=404, detail="unknown backup kind")
+        return await _issue_job_preview(
+            request,
+            commit_path="/operations/jobs/run/commit",
+            raw_override={
+                "job_name": f"backup-{backup_kind}",
+                "target": "",
+                "project_id": "",
+                "as_of": date.today().isoformat(),
+            },
         )
 
     @app.get("/operations/recovery", response_class=HTMLResponse)
@@ -4629,129 +4725,196 @@ def create_app(root: Path) -> FastAPI:
         )
 
     @app.get("/operations/jobs", response_class=HTMLResponse)
-    def operations_jobs(request: Request) -> HTMLResponse:
+    def operations_jobs(
+        request: Request, page: int = Query(default=1, ge=1)
+    ) -> HTMLResponse:
         identity = load_web_identity(repo.root)
         if identity is None:
             return HTMLResponse(_read_only_setup_page("Operations Jobs", "/operations"))
-        rows = []
-        try:
-            from research_os.services.jobs import job_rows
+        from research_os.services.operations_db import list_runs
 
-            rows = [
-                [
-                    esc(obj.object_id),
-                    esc(obj.metadata.get("job_name")),
-                    esc(obj.metadata.get("status")),
-                    esc(obj.metadata.get("message")),
-                ]
-                for obj in job_rows(repo.root)[:50]
+        page_size = 50
+        runs = list_runs(
+            operations_db_path(repo.root),
+            limit=page_size + 1,
+            offset=(page - 1) * page_size,
+        )
+        has_next = len(runs) > page_size
+        rows = [
+            [
+                f'<a href="/operations/runs/{esc(run.run_id)}">{esc(run.run_id)}</a>',
+                esc(run.job_name),
+                esc(run.status),
+                esc(run.message),
             ]
-        except ValueError:
-            rows = []
+            for run in runs[:page_size]
+        ]
+        pagination = '<nav class="pagination" aria-label="Job pages">'
+        if page > 1:
+            pagination += f'<a href="/operations/jobs?page={page - 1}">上一页</a>'
+        if has_next:
+            pagination += f'<a href="/operations/jobs?page={page + 1}">下一页</a>'
+        pagination += "</nav>"
         return HTMLResponse(
             shell(
                 "Operations Jobs",
-                f'<section class="hero"><div><div class="eyebrow">Operational</div><h2>Jobs</h2></div></section><section class="panel">{table(["ID", "Job", "Status", "Message"], rows)}</section>',
+                f'<section class="hero"><div><div class="eyebrow">Operational</div><h2>Jobs</h2></div></section><section class="panel">{table(["ID", "Job", "Status", "Message"], rows)}{pagination}</section>',
             )
         )
 
     @app.get("/operations/jobs/run", response_class=HTMLResponse)
     def operations_job_form(request: Request) -> HTMLResponse:
-        return decision_form_response(
+        target_options, project_options, _ = _schedule_form_options()
+        targets = "".join(
+            f'<option value="{esc(value)}">{esc(label)}</option>'
+            for value, label in target_options
+        )
+        projects = "".join(
+            f'<option value="{esc(value)}">{esc(label)}</option>'
+            for value, label in project_options
+        )
+        return research_form_response(
             request,
-            title="运行 Operational Job",
-            eyebrow="Operational human",
-            action="/operations/jobs/run/preview",
-            back_path="/operations/jobs",
-            example={"job_name": "validate", "as_of": date.today().isoformat()},
+            lambda _repo, csrf: shell(
+                "运行 Operational Job",
+                f'''<section class="panel"><h2>运行 Job</h2>
+<form class="mutation-form" method="post" action="/operations/jobs/run/preview">
+<input type="hidden" name="csrf_token" value="{esc(csrf)}">
+<label>Job <select name="job_name"><option>validate</option><option>indexes</option>
+<option>metrics</option><option>source-process</option><option>refresh</option>
+<option>discover</option><option>expire</option>
+<option>purge</option><option>enrich</option><option>daily-brief</option>
+<option>forecast-alerts</option><option>backup-candidate</option>
+<option>backup-durable</option></select></label>
+<label>目标 <select name="target"><option value="">无</option>{targets}</select></label>
+<label>项目 <select name="project_id"><option value="">全局</option>{projects}</select></label>
+<label>日期 <input name="as_of" type="date" value="{date.today().isoformat()}" required></label>
+<button type="submit">预览</button></form></section>''',
+            ),
+        )
+
+    async def _issue_job_preview(
+        request: Request,
+        *,
+        commit_path: str,
+        raw_override: Mapping[str, Any] | None = None,
+    ) -> HTMLResponse:
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        identity, active_gateway = mutation_gateway()
+        if raw_override is not None:
+            if set(form) != {"csrf_token"}:
+                raise HTTPException(status_code=422, detail="invalid mutation input")
+            raw = dict(raw_override)
+        elif "spec_json" in form:
+            try:
+                raw = json.loads(form["spec_json"])
+            except json.JSONDecodeError as exc:
+                raise HTTPException(
+                    status_code=422, detail="invalid Job fields"
+                ) from exc
+            if not isinstance(raw, dict):
+                raise HTTPException(status_code=422, detail="invalid Job fields")
+        else:
+            raw = {key: value for key, value in form.items() if key != "csrf_token"}
+        try:
+            prepared = prepare_job_request(
+                repo.root,
+                actor=identity.researcher_id,
+                spec_json=json.dumps(raw),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="invalid Job fields") from exc
+        run_id = f"RUN-manual-{secrets.token_hex(16)}"
+        grant = active_gateway.issue(
+            MutationPreviewInput(
+                operation="job.enqueue",
+                actor=identity.researcher_id,
+                target_type="schedule_run",
+                target_id=run_id,
+                target_version="absent",
+                normalized_input=prepared.request.model_dump(),
+                summary={
+                    "job_name": prepared.request.job_name,
+                    "as_of": prepared.request.as_of,
+                },
+            )
+        )
+        _record_preview(repo.root, grant.preview)
+        return HTMLResponse(
+            shell(
+                "确认 Job",
+                f'''<section class="panel"><h2>确认加入 Worker 队列</h2>
+<p>{esc(prepared.request.job_name)} · {esc(prepared.request.as_of)}</p>
+<form method="post" action="{esc(commit_path)}">
+<input type="hidden" name="preview_token" value="{esc(grant.token)}">
+<input type="hidden" name="csrf_token" value="{esc(form["csrf_token"])}">
+<button type="submit">确认入队</button></form></section>''',
+            )
         )
 
     @app.post("/operations/jobs/run/preview", response_class=HTMLResponse)
     async def operations_job_preview(request: Request) -> HTMLResponse:
-        return await structured_preview_response(
-            request,
-            prepare=lambda actor, raw: prepare_job_request(
-                repo.root, actor=actor, spec_json=raw
-            ),
-            commit_path="/operations/jobs/run/commit",
-            label="Job",
+        return await _issue_job_preview(
+            request, commit_path="/operations/jobs/run/commit"
         )
 
     @app.post("/operations/jobs/run/commit", response_class=HTMLResponse)
     async def operations_job_commit(request: Request) -> RedirectResponse:
         form = await _urlencoded_form(request)
-        identity, active_gateway = mutation_gateway()
         _require_browser_boundary(request, form, sessions)
         if set(form) != {"preview_token", "csrf_token"}:
             raise HTTPException(status_code=422, detail="invalid mutation input")
-        with repository_plan_lock:
-            mutation_id = repository_plan_tokens.get(form["preview_token"])
-            plan = repository_plans.get(mutation_id or "")
-        if plan is None:
-            raise HTTPException(status_code=409, detail="mutation preview conflict")
-        payload = dict(plan.normalized_input)
+        identity, active_gateway = mutation_gateway()
+
+        def version(run_id: str) -> str:
+            from research_os.services.operations_db import get_run
+
+            return (
+                "absent"
+                if get_run(operations_db_path(repo.root), run_id) is None
+                else "present"
+            )
+
+        def execute(preview: MutationPreview) -> dict[str, str]:
+            prepared = prepare_job_request(
+                repo.root,
+                actor=preview.actor,
+                spec_json=json.dumps(dict(preview.normalized_input)),
+            )
+            run_id = enqueue_job_request(
+                repo.root,
+                prepared,
+                now=datetime.now(UTC).isoformat(),
+                run_id=preview.target_id,
+            )
+            return {
+                "mutation_id": preview.mutation_id,
+                "target_id": run_id,
+            }
+
         try:
-            from research_os.services.jobs import run_job
-
-            def execute_job(preview: MutationPreview) -> dict[str, str]:
-                # Persist the frozen operational request through the same audited
-                # repository transaction used by every other Web mutation before
-                # invoking the server-side job runner.
-                with repository_plan_lock:
-                    frozen_plan = repository_plans.get(preview.mutation_id)
-                if frozen_plan is None:
-                    raise TransactionError("operational request plan unavailable")
-                commit_repository_mutation(repo.root, preview, frozen_plan)
-                result = run_job(
-                    repo.root,
-                    str(payload["job_name"]),
-                    project_id=payload.get("project_id"),
-                    target=payload.get("target"),
-                    as_of=str(payload["as_of"]),
-                )
-                with result_lock:
-                    mutation_results[result.job_id] = {
-                        "mutation_id": result.job_id,
-                        "operation": "job.run",
-                        "target_id": result.job_id,
-                        "status": result.status,
-                        "message": result.message,
-                    }
-                return {
-                    "mutation_id": preview.mutation_id,
-                    "target_id": result.job_id,
-                    "operation": preview.operation,
-                    "status": result.status,
-                    "message": result.message,
-                }
-
             result = active_gateway.commit(
                 form["preview_token"],
                 actor=identity.researcher_id,
-                operation="job.run",
-                target_id=str(payload["job_name"]),
-                current_target_version=lambda _: repository_target_version(
-                    repo.root, plan
-                ),
-                execute=execute_job,
+                operation="job.enqueue",
+                current_target_version=version,
+                execute=execute,
             )
-        except Exception as exc:
-            raise HTTPException(
-                status_code=409, detail="operational job failed"
-            ) from exc
+        except MutationForbidden as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=403, detail="mutation forbidden") from exc
+        except MutationConflict as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=409, detail="Job preview conflict") from exc
         return RedirectResponse(
-            f"/research-mutations/{result['target_id']}", status_code=303
+            f"/operations/runs/{result['target_id']}", status_code=303
         )
 
     @app.post("/pipeline/queue/batch/preview", response_class=HTMLResponse)
     async def candidate_batch_preview(request: Request) -> HTMLResponse:
-        return await structured_preview_response(
-            request,
-            prepare=lambda actor, raw: prepare_job_request(
-                repo.root, actor=actor, spec_json=raw
-            ),
-            commit_path="/pipeline/queue/batch/commit",
-            label="Candidate batch",
+        return await _issue_job_preview(
+            request, commit_path="/pipeline/queue/batch/commit"
         )
 
     @app.post("/pipeline/queue/batch/commit", response_class=HTMLResponse)
@@ -4760,26 +4923,66 @@ def create_app(root: Path) -> FastAPI:
 
     @app.get("/pipeline/channels/{channel_id}/change", response_class=HTMLResponse)
     def channel_change_form(channel_id: str, request: Request) -> HTMLResponse:
-        return decision_form_response(
+        return research_form_response(
             request,
-            title=f"Channel Change · {channel_id}",
-            eyebrow="Operational human",
-            action=f"/pipeline/channels/{channel_id}/change/preview",
-            back_path="/pipeline/channels",
-            example={"channel_id": channel_id, "enabled": True},
+            lambda _repo, csrf: shell(
+                f"Channel Change · {channel_id}",
+                f'''<section class="panel"><h2>Channel 调度状态</h2>
+<form method="post" action="/pipeline/channels/{esc(channel_id)}/change/preview">
+<input type="hidden" name="channel_id" value="{esc(channel_id)}">
+<input type="hidden" name="csrf_token" value="{esc(csrf)}">
+<label>状态 <select name="enabled"><option value="true">启用</option>
+<option value="false">暂停</option></select></label><button type="submit">预览</button>
+</form></section>''',
+            ),
         )
 
     @app.post(
         "/pipeline/channels/{channel_id}/change/preview", response_class=HTMLResponse
     )
     async def channel_change_preview(channel_id: str, request: Request) -> HTMLResponse:
-        return await structured_preview_response(
-            request,
-            prepare=lambda actor, raw: prepare_channel_change(
-                repo.root, actor=actor, spec_json=raw
-            ),
-            commit_path=f"/pipeline/channels/{channel_id}/change/commit",
-            label="Channel",
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if form.get("channel_id") != channel_id:
+            raise HTTPException(status_code=409, detail="Channel target mismatch")
+        identity, active_gateway = mutation_gateway()
+        try:
+            prepared = prepare_channel_change(
+                repo.root,
+                actor=identity.researcher_id,
+                spec_json=json.dumps(
+                    {"channel_id": channel_id, "enabled": form.get("enabled")}
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail="invalid Channel fields"
+            ) from exc
+        grant = active_gateway.issue(
+            MutationPreviewInput(
+                operation="channel.schedule.set",
+                actor=identity.researcher_id,
+                target_type="source_channel",
+                target_id=prepared.channel_id,
+                target_version=str(prepared.expected_version),
+                normalized_input={
+                    "channel_id": prepared.channel_id,
+                    "enabled": prepared.enabled,
+                },
+                summary={"schedule_id": prepared.schedule_id},
+            )
+        )
+        _record_preview(repo.root, grant.preview)
+        return HTMLResponse(
+            shell(
+                "确认 Channel 状态",
+                f'''<section class="panel"><h2>确认调度状态变更</h2>
+<p>{esc(channel_id)} · {"启用" if prepared.enabled else "暂停"}</p>
+<form method="post" action="/pipeline/channels/{esc(channel_id)}/change/commit">
+<input type="hidden" name="preview_token" value="{esc(grant.token)}">
+<input type="hidden" name="csrf_token" value="{esc(form["csrf_token"])}">
+<button type="submit">确认</button></form></section>''',
+            )
         )
 
     @app.post(
@@ -4789,17 +4992,50 @@ def create_app(root: Path) -> FastAPI:
         channel_id: str, request: Request
     ) -> RedirectResponse:
         form = await _urlencoded_form(request)
-        with repository_plan_lock:
-            mutation_id = repository_plan_tokens.get(form.get("preview_token", ""))
-            plan = repository_plans.get(mutation_id or "")
-        if plan is None or plan.target_id != channel_id:
-            raise HTTPException(status_code=409, detail="mutation preview conflict")
-        return source_commit_response(
-            request,
-            form,
-            operation=plan.operation,
-            target_id=channel_id,
-        )
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        identity, active_gateway = mutation_gateway()
+
+        def version(target_id: str) -> str:
+            from research_os.services.operations_db import get_schedule
+
+            schedule_id = f"SCH-channel-{target_id.removeprefix('CHN-')}"
+            current = get_schedule(operations_db_path(repo.root), schedule_id)
+            return "missing" if current is None else str(current.version)
+
+        def execute(preview: MutationPreview) -> dict[str, str]:
+            prepared = prepare_channel_change(
+                repo.root,
+                actor=preview.actor,
+                spec_json=json.dumps(dict(preview.normalized_input)),
+            )
+            commit_channel_change(
+                repo.root, prepared, now=datetime.now(UTC).isoformat()
+            )
+            return {
+                "mutation_id": preview.mutation_id,
+                "target_id": preview.target_id,
+            }
+
+        try:
+            active_gateway.commit(
+                form["preview_token"],
+                actor=identity.researcher_id,
+                operation="channel.schedule.set",
+                target_id=channel_id,
+                current_target_version=version,
+                execute=execute,
+            )
+        except MutationForbidden as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=403, detail="mutation forbidden") from exc
+        except MutationConflict as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=409, detail="Channel version conflict"
+            ) from exc
+        return RedirectResponse("/pipeline/channels", status_code=303)
 
     @app.get("/sources", response_class=HTMLResponse)
     def sources() -> HTMLResponse:
@@ -6200,6 +6436,530 @@ action="/projects/{esc(project_id)}/advance/preview">
                     for item in findings
                 ],
             }
+        )
+
+    # Web-hosted scheduler control plane.  These routes deliberately keep the
+    # browser contract typed; operational JSON never becomes a user-editable
+    # textarea and all commits are one-use previews.
+    @app.get("/operations/schedules", response_class=HTMLResponse)
+    def operations_schedules() -> HTMLResponse:
+        from research_os.services.operations_db import list_schedules
+
+        rows = list_schedules(operations_db_path(repo.root))
+        return HTMLResponse(
+            shell(
+                "计划管理",
+                f'<section class="hero"><div><div class="eyebrow">Operational</div><h2>定时计划</h2></div><a class="button-link" href="/operations/schedules/new">新建计划</a></section><section class="panel">{schedule_table(rows)}</section>',
+            )
+        )
+
+    @app.get("/operations/schedules/new", response_class=HTMLResponse)
+    def operations_schedule_new(request: Request) -> HTMLResponse:
+        target_options, project_options, timezone_options = _schedule_form_options()
+        return research_form_response(
+            request,
+            lambda _repo, csrf: schedule_form(
+                action="/operations/schedules/new/preview",
+                csrf_token=csrf,
+                target_options=target_options,
+                project_options=project_options,
+                timezone_options=timezone_options,
+            ),
+        )
+
+    def _schedule_confirmation(token: str, csrf: str, *, edit: bool = False) -> str:
+        return shell(
+            "确认计划变更",
+            f'<section class="panel"><h2>确认定时计划变更</h2><p>计划配置已冻结，请确认后写入 operations.db。</p><form method="post" action="{("/operations/schedules/edit/commit" if edit else "/operations/schedules/new/commit")}"><input type="hidden" name="preview_token" value="{esc(token)}"><input type="hidden" name="csrf_token" value="{esc(csrf)}"><button type="submit">确认提交</button></form></section>',
+        )
+
+    def _validate_enabled_channel_target(target: str | None) -> None:
+        if not target or not target.startswith("CHN-"):
+            return
+        objects, findings = validate_repository(repo.root)
+        if any(item.level == "error" for item in findings):
+            raise HTTPException(status_code=409, detail="repository is invalid")
+        channel = next((item for item in objects if item.object_id == target), None)
+        if channel is None or channel.object_type != "source_channel":
+            raise HTTPException(status_code=422, detail="unknown Channel target")
+        if channel.metadata.get("review_status") != "reviewed":
+            raise HTTPException(
+                status_code=422, detail="Channel must be reviewed before enabling"
+            )
+        if channel.metadata.get("license_status") == "restricted":
+            raise HTTPException(
+                status_code=422, detail="restricted Channel cannot be enabled"
+            )
+
+    def _schedule_form_options(
+        *,
+        selected_target: str | None = None,
+        selected_project: str | None = None,
+        selected_timezone: str | None = None,
+    ) -> tuple[
+        list[tuple[str, str]],
+        list[tuple[str, str]],
+        list[tuple[str, str]],
+    ]:
+        objects, _ = validate_repository(repo.root)
+        targets = sorted(
+            (
+                item.object_id,
+                f"{item.object_id} · {item.metadata.get('title') or item.object_id}",
+            )
+            for item in objects
+            if item.object_type in {"source", "source_channel"}
+        )
+        projects = sorted(
+            (
+                item.object_id,
+                f"{item.object_id} · {item.metadata.get('title') or item.object_id}",
+            )
+            for item in objects
+            if item.object_type == "project"
+        )
+        if selected_target and selected_target not in {value for value, _ in targets}:
+            targets.append((selected_target, selected_target))
+        if selected_project and selected_project not in {
+            value for value, _ in projects
+        }:
+            projects.append((selected_project, selected_project))
+        timezones = sorted(available_timezones())
+        if selected_timezone and selected_timezone not in timezones:
+            timezones.append(selected_timezone)
+        return targets, projects, [(value, value) for value in sorted(timezones)]
+
+    def _validate_schedule_references(value: ScheduleInput) -> None:
+        objects, _ = validate_repository(repo.root)
+        by_id = {item.object_id: item for item in objects}
+        if value.target:
+            target = by_id.get(value.target)
+            expected_type = (
+                "source_channel" if value.job_name == "discover" else "source"
+            )
+            if target is None or target.object_type != expected_type:
+                raise HTTPException(status_code=422, detail="unknown schedule target")
+        if value.project_id:
+            project = by_id.get(value.project_id)
+            if project is None or project.object_type != "project":
+                raise HTTPException(status_code=422, detail="unknown Project")
+
+    async def _schedule_preview(
+        request: Request, *, schedule_id: str | None = None
+    ) -> HTMLResponse:
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        identity, active_gateway = mutation_gateway()
+        raw = {key: value for key, value in form.items() if key != "csrf_token"}
+        try:
+            value = ScheduleInput.model_validate(raw)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=422, detail="invalid schedule fields"
+            ) from exc
+        _validate_schedule_references(value)
+        if value.enabled:
+            _validate_enabled_channel_target(value.target)
+        current_version = "absent"
+        target_id = schedule_id or f"SCH-{secrets.token_hex(6)}"
+        operation = "schedule.create"
+        if schedule_id:
+            current = __import__(
+                "research_os.services.operations_db", fromlist=["get_schedule"]
+            ).get_schedule(operations_db_path(repo.root), schedule_id)
+            if current is None:
+                raise HTTPException(status_code=404, detail="schedule not found")
+            current_version = str(current.version)
+            operation = "schedule.edit"
+        grant = active_gateway.issue(
+            MutationPreviewInput(
+                operation=operation,
+                actor=identity.researcher_id,
+                target_type="schedule",
+                target_id=target_id,
+                target_version=current_version,
+                normalized_input=value.model_dump(),
+                summary={
+                    "job_name": value.job_name,
+                    "enabled": value.enabled,
+                    "interval_seconds": value.interval_seconds,
+                },
+            )
+        )
+        _record_preview(repo.root, grant.preview)
+        return HTMLResponse(
+            _schedule_confirmation(
+                grant.token, form["csrf_token"], edit=bool(schedule_id)
+            )
+        )
+
+    @app.post("/operations/schedules/new/preview", response_class=HTMLResponse)
+    async def operations_schedule_new_preview(request: Request) -> HTMLResponse:
+        return await _schedule_preview(request)
+
+    @app.post("/operations/schedules/new/commit", response_class=HTMLResponse)
+    async def operations_schedule_new_commit(request: Request) -> RedirectResponse:
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        identity, active_gateway = mutation_gateway()
+
+        def version(target_id: str) -> str:
+            from research_os.services.operations_db import get_schedule
+
+            current = get_schedule(operations_db_path(repo.root), target_id)
+            return "absent" if current is None else str(current.version)
+
+        def execute(preview: MutationPreview) -> dict[str, str]:
+            value = ScheduleInput.model_validate(preview.normalized_input)
+            record = create_schedule_from_input(
+                operations_db_path(repo.root),
+                value,
+                actor=preview.actor,
+                now=datetime.now(UTC).isoformat(),
+                schedule_id=preview.target_id,
+            )
+            return {
+                "mutation_id": preview.mutation_id,
+                "target_id": record.schedule_id,
+            }
+
+        try:
+            result = active_gateway.commit(
+                form["preview_token"],
+                actor=identity.researcher_id,
+                operation="schedule.create",
+                current_target_version=version,
+                execute=execute,
+            )
+        except MutationForbidden as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=403, detail="mutation forbidden") from exc
+        except MutationConflict as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=409, detail="schedule conflict") from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=409, detail="schedule commit conflict"
+            ) from exc
+        return RedirectResponse(
+            f"/operations/schedules/{result['target_id']}", status_code=303
+        )
+
+    @app.get("/operations/schedules/{schedule_id}", response_class=HTMLResponse)
+    def operations_schedule_detail(schedule_id: str) -> HTMLResponse:
+        from research_os.services.operations_db import get_schedule, latest_run
+
+        record = get_schedule(operations_db_path(repo.root), schedule_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="schedule not found")
+        run = latest_run(operations_db_path(repo.root), schedule_id)
+        return HTMLResponse(
+            shell(
+                "计划详情",
+                f'<section class="panel"><h2>{esc(record.name)}</h2><p>{esc(record.job_name)} · {"启用" if record.enabled else "已暂停"} · next {esc(record.next_run_at)}</p><p><a href="/operations/schedules/{schedule_id}/edit">编辑</a> <a href="/operations/schedules/{schedule_id}/run-now">立即运行</a> <a href="/operations/schedules/{schedule_id}/{"pause" if record.enabled else "resume"}">{"暂停" if record.enabled else "恢复"}</a></p><p>最近运行：{esc(run.status if run else "暂无")}</p></section>',
+            )
+        )
+
+    @app.get("/operations/schedules/{schedule_id}/edit", response_class=HTMLResponse)
+    def operations_schedule_edit(schedule_id: str, request: Request) -> HTMLResponse:
+        from research_os.services.operations_db import get_schedule
+
+        record = get_schedule(operations_db_path(repo.root), schedule_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="schedule not found")
+        unit = "hours" if record.interval_seconds % 3600 == 0 else "minutes"
+        value = {
+            "name": record.name,
+            "job_name": record.job_name,
+            "target": record.target or "",
+            "project_id": record.project_id or "",
+            "interval_value": record.interval_seconds
+            // (3600 if unit == "hours" else 60),
+            "interval_unit": unit,
+            "timezone": record.timezone,
+            "retry_limit": record.retry_limit,
+            "retry_backoff_seconds": record.retry_backoff_seconds,
+            "timeout_seconds": record.timeout_seconds,
+            "overlap_policy": record.overlap_policy,
+            "missed_run_policy": record.missed_run_policy,
+            "enabled": record.enabled,
+        }
+        target_options, project_options, timezone_options = _schedule_form_options(
+            selected_target=record.target,
+            selected_project=record.project_id,
+            selected_timezone=record.timezone,
+        )
+        return research_form_response(
+            request,
+            lambda _repo, csrf: schedule_form(
+                action=f"/operations/schedules/{schedule_id}/edit/preview",
+                csrf_token=csrf,
+                value=value,
+                schedule_id=schedule_id,
+                target_options=target_options,
+                project_options=project_options,
+                timezone_options=timezone_options,
+            ),
+        )
+
+    @app.post(
+        "/operations/schedules/{schedule_id}/edit/preview", response_class=HTMLResponse
+    )
+    async def operations_schedule_edit_preview(
+        schedule_id: str, request: Request
+    ) -> HTMLResponse:
+        return await _schedule_preview(request, schedule_id=schedule_id)
+
+    @app.post("/operations/schedules/edit/commit", response_class=HTMLResponse)
+    async def operations_schedule_edit_commit(request: Request) -> RedirectResponse:
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        identity, active_gateway = mutation_gateway()
+        from research_os.services.operations_db import get_schedule
+
+        def version(target_id: str) -> str:
+            current = get_schedule(operations_db_path(repo.root), target_id)
+            return "missing" if current is None else str(current.version)
+
+        def execute(preview: MutationPreview) -> dict[str, str]:
+            current = get_schedule(operations_db_path(repo.root), preview.target_id)
+            if current is None:
+                raise ValueError("schedule not found")
+            record = update_schedule_from_input(
+                operations_db_path(repo.root),
+                current,
+                ScheduleInput.model_validate(preview.normalized_input),
+                actor=preview.actor,
+                now=datetime.now(UTC).isoformat(),
+            )
+            return {
+                "mutation_id": preview.mutation_id,
+                "target_id": record.schedule_id,
+            }
+
+        try:
+            result = active_gateway.commit(
+                form["preview_token"],
+                actor=identity.researcher_id,
+                operation="schedule.edit",
+                current_target_version=version,
+                execute=execute,
+            )
+        except MutationForbidden as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=403, detail="mutation forbidden") from exc
+        except MutationConflict as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=409, detail="stale schedule version"
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=409, detail="schedule commit conflict"
+            ) from exc
+        return RedirectResponse(
+            f"/operations/schedules/{result['target_id']}", status_code=303
+        )
+
+    def _schedule_action_form(
+        schedule_id: str, request: Request, *, action: str
+    ) -> HTMLResponse:
+        from research_os.services.operations_db import get_schedule
+
+        record = get_schedule(operations_db_path(repo.root), schedule_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="schedule not found")
+        labels = {"pause": "暂停计划", "resume": "恢复计划", "run-now": "立即运行"}
+        if action not in labels:
+            raise HTTPException(status_code=404, detail="unknown schedule action")
+        return research_form_response(
+            request,
+            lambda _repo, csrf: shell(
+                labels[action],
+                f'<section class="panel"><h2>{labels[action]}</h2><form method="post" action="/operations/schedules/{schedule_id}/{action}/preview"><input type="hidden" name="csrf_token" value="{esc(csrf)}"><button type="submit">预览</button></form></section>',
+            ),
+        )
+
+    @app.get("/operations/schedules/{schedule_id}/pause", response_class=HTMLResponse)
+    def operations_schedule_pause_form(
+        schedule_id: str, request: Request
+    ) -> HTMLResponse:
+        return _schedule_action_form(schedule_id, request, action="pause")
+
+    @app.get("/operations/schedules/{schedule_id}/resume", response_class=HTMLResponse)
+    def operations_schedule_resume_form(
+        schedule_id: str, request: Request
+    ) -> HTMLResponse:
+        return _schedule_action_form(schedule_id, request, action="resume")
+
+    @app.get("/operations/schedules/{schedule_id}/run-now", response_class=HTMLResponse)
+    def operations_schedule_run_now_form(
+        schedule_id: str, request: Request
+    ) -> HTMLResponse:
+        return _schedule_action_form(schedule_id, request, action="run-now")
+
+    async def _schedule_action_preview(
+        schedule_id: str, request: Request, *, action: str
+    ) -> HTMLResponse:
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        identity, active_gateway = mutation_gateway()
+        from research_os.services.operations_db import get_schedule
+
+        record = get_schedule(operations_db_path(repo.root), schedule_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="schedule not found")
+        if action == "resume":
+            _validate_enabled_channel_target(record.target)
+        operation = f"schedule.{action}"
+        grant = active_gateway.issue(
+            MutationPreviewInput(
+                operation=operation,
+                actor=identity.researcher_id,
+                target_type="schedule",
+                target_id=schedule_id,
+                target_version=str(record.version),
+                normalized_input={"action": action},
+                summary={"enabled_before": record.enabled},
+            )
+        )
+        _record_preview(repo.root, grant.preview)
+        with schedule_action_preview_lock:
+            schedule_action_operations[grant.token] = operation
+        label = {"pause": "暂停", "resume": "恢复", "run-now": "立即运行"}[action]
+        return HTMLResponse(
+            shell(
+                f"确认{label}",
+                f'<section class="panel"><h2>确认{label}</h2><p>本次操作已冻结，请确认提交。</p><form method="post" action="/operations/schedules/action/commit"><input type="hidden" name="preview_token" value="{esc(grant.token)}"><input type="hidden" name="csrf_token" value="{esc(form["csrf_token"])}"><button type="submit">确认提交</button></form></section>',
+            )
+        )
+
+    @app.post(
+        "/operations/schedules/{schedule_id}/pause/preview",
+        response_class=HTMLResponse,
+    )
+    async def operations_schedule_pause_preview(
+        schedule_id: str, request: Request
+    ) -> HTMLResponse:
+        return await _schedule_action_preview(schedule_id, request, action="pause")
+
+    @app.post(
+        "/operations/schedules/{schedule_id}/resume/preview",
+        response_class=HTMLResponse,
+    )
+    async def operations_schedule_resume_preview(
+        schedule_id: str, request: Request
+    ) -> HTMLResponse:
+        return await _schedule_action_preview(schedule_id, request, action="resume")
+
+    @app.post(
+        "/operations/schedules/{schedule_id}/run-now/preview",
+        response_class=HTMLResponse,
+    )
+    async def operations_schedule_run_now_preview(
+        schedule_id: str, request: Request
+    ) -> HTMLResponse:
+        return await _schedule_action_preview(schedule_id, request, action="run-now")
+
+    @app.post("/operations/schedules/action/commit", response_class=RedirectResponse)
+    async def operations_schedule_action_commit(
+        request: Request,
+    ) -> RedirectResponse:
+        form = await _urlencoded_form(request)
+        _require_browser_boundary(request, form, sessions)
+        if set(form) != {"preview_token", "csrf_token"}:
+            raise HTTPException(status_code=422, detail="invalid mutation input")
+        identity, active_gateway = mutation_gateway()
+        token = form["preview_token"]
+        with schedule_action_preview_lock:
+            operation = schedule_action_operations.get(token)
+        if operation is None:
+            raise HTTPException(status_code=409, detail="unknown schedule preview")
+        from research_os.services.operations_db import (
+            get_schedule,
+            set_schedule_enabled,
+        )
+
+        def version(target_id: str) -> str:
+            current = get_schedule(operations_db_path(repo.root), target_id)
+            return "missing" if current is None else str(current.version)
+
+        def execute(preview: MutationPreview) -> dict[str, str]:
+            record = get_schedule(operations_db_path(repo.root), preview.target_id)
+            if record is None:
+                raise ValueError("schedule not found")
+            action = str(preview.normalized_input["action"])
+            if action == "run-now":
+                run_id = queue_manual_run(
+                    operations_db_path(repo.root),
+                    schedule=record,
+                    actor=preview.actor,
+                    now=datetime.now(UTC).isoformat(),
+                )
+                return {
+                    "mutation_id": preview.mutation_id,
+                    "target_id": preview.target_id,
+                    "run_id": run_id,
+                }
+            enabled = action == "resume"
+            if enabled:
+                _validate_enabled_channel_target(record.target)
+            set_schedule_enabled(
+                operations_db_path(repo.root),
+                preview.target_id,
+                enabled=enabled,
+                expected_version=record.version,
+                actor=preview.actor,
+                now=datetime.now(UTC).isoformat(),
+            )
+            return {
+                "mutation_id": preview.mutation_id,
+                "target_id": preview.target_id,
+            }
+
+        try:
+            result = active_gateway.commit(
+                token,
+                actor=identity.researcher_id,
+                operation=operation,
+                current_target_version=version,
+                execute=execute,
+            )
+        except MutationForbidden as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(status_code=403, detail="mutation forbidden") from exc
+        except MutationConflict as exc:
+            _record_rejection(repo.root, exc)
+            raise HTTPException(
+                status_code=409, detail="stale schedule version"
+            ) from exc
+        finally:
+            with schedule_action_preview_lock:
+                schedule_action_operations.pop(token, None)
+        if "run_id" in result:
+            return RedirectResponse(
+                f"/operations/runs/{result['run_id']}", status_code=303
+            )
+        return RedirectResponse(
+            f"/operations/schedules/{result['target_id']}", status_code=303
+        )
+
+    @app.get("/operations/runs/{run_id}", response_class=HTMLResponse)
+    def operations_run_detail(run_id: str) -> HTMLResponse:
+        from research_os.services.operations_db import get_run
+
+        run = get_run(operations_db_path(repo.root), run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail="run not found")
+        return HTMLResponse(
+            shell(
+                "运行详情",
+                f'<section class="panel"><h2>{esc(run.run_id)}</h2><p>{esc(run.job_name)} · {esc(run.status)}</p><p>{esc(run.message)}</p></section>',
+            )
         )
 
     return app

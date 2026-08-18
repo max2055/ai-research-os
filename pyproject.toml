@@ -15,6 +15,7 @@ dependencies = [
   "pypdf>=5,<7",
   "ruamel.yaml>=0.18,<0.19",
   "typer>=0.15,<1",
+  "apscheduler>=3.11,<4",
 ]
 
 [project.optional-dependencies]

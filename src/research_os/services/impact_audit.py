@@ -509,7 +509,7 @@ def _anchors_valid(
     source_id: str,
     anchors: Any,
 ) -> bool:
-    if not isinstance(anchors, Sequence) or isinstance(anchors, (str, bytes)):
+    if not isinstance(anchors, Sequence) or isinstance(anchors, str | bytes):
         return False
     if not anchors:
         return False
@@ -819,7 +819,7 @@ def _float_or_none(value: Any) -> float | None:
 def _plain(value: Any) -> Any:
     if isinstance(value, Mapping):
         return {str(key): _plain(child) for key, child in value.items()}
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         return [_plain(child) for child in value]
     if hasattr(value, "isoformat"):
         return value.isoformat()

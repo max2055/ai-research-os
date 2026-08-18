@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import signal
+import sqlite3
 import stat
 import subprocess
 import tarfile
@@ -22,6 +23,7 @@ from research_os.services.backup import (
     verify_candidate_snapshot,
 )
 from research_os.services.candidate_db import candidate_db_health, candidate_db_path
+from research_os.services.operations_db import operations_db_path
 
 BackupSet = Literal["candidate", "source_assets"]
 
@@ -32,6 +34,8 @@ CANDIDATE_ARCHIVE_PATH = "09_Automation/operational/candidates.db"
 CANDIDATE_MANIFEST_ARCHIVE_PATH = (
     "09_Automation/operational/candidates.db.manifest.json"
 )
+OPERATIONS_ARCHIVE_PATH = "operations/operations.db"
+OPERATIONS_MANIFEST_ARCHIVE_PATH = "operations/operations.db.manifest.json"
 _BACKUP_SETS: tuple[BackupSet, ...] = ("candidate", "source_assets")
 _AUTHORITATIVE_TOP_LEVEL = frozenset(
     {
@@ -142,6 +146,8 @@ class DurableRestoreResult:
     candidate_sha256: str
     candidate_schema_version: int
     source_asset_count: int
+    operations_sha256: str = ""
+    operations_schema_version: int = 0
 
 
 def _sha256(path: Path) -> str:
@@ -438,12 +444,44 @@ def _write_candidate_archive(
     if verified.get("status") != "ok":
         raise DurableBackupError("Candidate snapshot verification failed")
 
+    live_operations = operations_db_path(root)
+    if not live_operations.is_file():
+        raise DurableBackupError("Operations DB preflight failed")
+    operations_snapshot = work / "operations-snapshot" / "operations.db"
+    operations_snapshot.parent.mkdir(parents=True, exist_ok=True)
+    source_connection = sqlite3.connect(live_operations)
+    destination_connection = sqlite3.connect(operations_snapshot)
+    try:
+        source_connection.backup(destination_connection)
+    finally:
+        destination_connection.close()
+        source_connection.close()
+    with sqlite3.connect(operations_snapshot) as check:
+        if check.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+            raise DurableBackupError("Operations DB snapshot verification failed")
+        row = check.execute(
+            "SELECT value FROM schema_meta WHERE key='schema_version'"
+        ).fetchone()
+    if row is None:
+        raise DurableBackupError("Operations DB schema verification failed")
+    operations_manifest = {
+        "sha256": _sha256(operations_snapshot),
+        "size_bytes": operations_snapshot.stat().st_size,
+        "schema_version": int(row[0]),
+        "created_at": created_at,
+    }
+    operations_manifest_path = operations_snapshot.with_suffix(".db.manifest.json")
+    operations_manifest_path.write_text(
+        json.dumps(operations_manifest, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
     inner = {
         "format_version": 1,
         "backup_id": backup_id,
         "backup_set": "candidate",
         "created_at": created_at,
         "candidate": manifest,
+        "operations": operations_manifest,
     }
     archive_path = work / f"{backup_id}-candidate.tar"
     with tarfile.open(archive_path, "x") as archive:
@@ -458,6 +496,13 @@ def _write_candidate_archive(
             archive,
             CANDIDATE_MANIFEST_ARCHIVE_PATH,
             manifest_path,
+            timestamp,
+        )
+        _add_file(archive, OPERATIONS_ARCHIVE_PATH, operations_snapshot, timestamp)
+        _add_file(
+            archive,
+            OPERATIONS_MANIFEST_ARCHIVE_PATH,
+            operations_manifest_path,
             timestamp,
         )
     archive_path.chmod(0o600)
@@ -504,6 +549,46 @@ def _archive_member_sha256(archive: tarfile.TarFile, member: tarfile.TarInfo) ->
     return digest.hexdigest()
 
 
+def _validated_operations_manifest(
+    value: object, *, created_at: str
+) -> dict[str, object]:
+    if not isinstance(value, dict) or set(value) != {
+        "sha256",
+        "size_bytes",
+        "schema_version",
+        "created_at",
+    }:
+        raise ValueError("Operations manifest is invalid")
+    sha256 = value.get("sha256")
+    size_bytes = value.get("size_bytes")
+    schema_version = value.get("schema_version")
+    if (
+        not isinstance(sha256, str)
+        or re.fullmatch(r"[0-9a-f]{64}", sha256) is None
+        or not isinstance(size_bytes, int)
+        or isinstance(size_bytes, bool)
+        or size_bytes < 1
+        or not isinstance(schema_version, int)
+        or isinstance(schema_version, bool)
+        or schema_version < 1
+        or value.get("created_at") != created_at
+    ):
+        raise ValueError("Operations manifest is invalid")
+    return value
+
+
+def _archived_json(
+    archive: tarfile.TarFile, member: tarfile.TarInfo, *, label: str
+) -> object:
+    stream = archive.extractfile(member)
+    if stream is None:
+        raise ValueError(f"{label} is unreadable")
+    try:
+        return json.loads(stream.read().decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{label} is invalid") from exc
+
+
 def _verify_plaintext_archive(
     archive_path: Path,
     backup_set: BackupSet,
@@ -529,6 +614,8 @@ def _verify_plaintext_archive(
                     INNER_MANIFEST_NAME,
                     CANDIDATE_ARCHIVE_PATH,
                     CANDIDATE_MANIFEST_ARCHIVE_PATH,
+                    OPERATIONS_ARCHIVE_PATH,
+                    OPERATIONS_MANIFEST_ARCHIVE_PATH,
                 }
                 if set(members) != expected or any(
                     not member.isfile() for member in members.values()
@@ -563,6 +650,25 @@ def _verify_plaintext_archive(
                 if archived_manifest != candidate:
                     raise ValueError(
                         "Candidate snapshot manifest does not match inner manifest"
+                    )
+                operations = _validated_operations_manifest(
+                    inner.get("operations"), created_at=created_at
+                )
+                operations_member = members[OPERATIONS_ARCHIVE_PATH]
+                if operations_member.size != operations.get(
+                    "size_bytes"
+                ) or _archive_member_sha256(
+                    archive, operations_member
+                ) != operations.get("sha256"):
+                    raise ValueError("Operations archive hash does not match manifest")
+                archived_operations_manifest = _archived_json(
+                    archive,
+                    members[OPERATIONS_MANIFEST_ARCHIVE_PATH],
+                    label="Operations snapshot manifest",
+                )
+                if archived_operations_manifest != operations:
+                    raise ValueError(
+                        "Operations snapshot manifest does not match inner manifest"
                     )
                 return
 
@@ -1075,13 +1181,20 @@ def _restore_candidate_archive(
         INNER_MANIFEST_NAME,
         CANDIDATE_ARCHIVE_PATH,
         CANDIDATE_MANIFEST_ARCHIVE_PATH,
+        OPERATIONS_ARCHIVE_PATH,
+        OPERATIONS_MANIFEST_ARCHIVE_PATH,
     }
     if set(members) != expected or any(not item.isfile() for item in members.values()):
         raise ValueError("Candidate archive member set is invalid")
     candidate_manifest = inner.get("candidate")
     if not isinstance(candidate_manifest, dict):
         raise ValueError("Candidate inner manifest is invalid")
-    for name in (CANDIDATE_ARCHIVE_PATH, CANDIDATE_MANIFEST_ARCHIVE_PATH):
+    for name in (
+        CANDIDATE_ARCHIVE_PATH,
+        CANDIDATE_MANIFEST_ARCHIVE_PATH,
+        OPERATIONS_ARCHIVE_PATH,
+        OPERATIONS_MANIFEST_ARCHIVE_PATH,
+    ):
         _extract_regular_member(archive, members[name], staging / name)
     snapshot = staging / CANDIDATE_ARCHIVE_PATH
     manifest_path = staging / CANDIDATE_MANIFEST_ARCHIVE_PATH
@@ -1098,6 +1211,33 @@ def _restore_candidate_archive(
     schema_version = verified.get("schema_version")
     if not isinstance(sha256, str) or not isinstance(schema_version, int):
         raise ValueError("Candidate snapshot verification is incomplete")
+    operations_manifest = _validated_operations_manifest(
+        inner.get("operations"), created_at=receipt.created_at
+    )
+    operations_manifest_path = staging / OPERATIONS_MANIFEST_ARCHIVE_PATH
+    try:
+        on_disk_operations_manifest: object = json.loads(
+            operations_manifest_path.read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("Operations snapshot manifest is invalid") from exc
+    if on_disk_operations_manifest != operations_manifest:
+        raise ValueError("Operations snapshot manifest does not match inner manifest")
+    operations_snapshot = staging / OPERATIONS_ARCHIVE_PATH
+    if operations_snapshot.stat().st_size != operations_manifest.get(
+        "size_bytes"
+    ) or _sha256(operations_snapshot) != operations_manifest.get("sha256"):
+        raise ValueError("Operations snapshot hash does not match manifest")
+    with sqlite3.connect(operations_snapshot) as connection:
+        if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+            raise ValueError("Operations snapshot integrity check failed")
+        operations_row = connection.execute(
+            "SELECT value FROM schema_meta WHERE key='schema_version'"
+        ).fetchone()
+    if operations_row is None or int(operations_row[0]) != operations_manifest.get(
+        "schema_version"
+    ):
+        raise ValueError("Operations snapshot schema check failed")
     return sha256, schema_version
 
 
@@ -1183,6 +1323,8 @@ def restore_durable_backup(
     candidate_sha256 = ""
     candidate_schema_version = 0
     source_asset_count = 0
+    operations_sha256 = ""
+    operations_schema_version = 0
     try:
         for backup_set in _BACKUP_SETS:
             encrypted = by_set[backup_set]
@@ -1201,6 +1343,15 @@ def restore_durable_backup(
                                 archive, members, inner, receipt, staging
                             )
                         )
+                        operations_path = staging / OPERATIONS_ARCHIVE_PATH
+                        operations_sha256 = _sha256(operations_path)
+                        with sqlite3.connect(operations_path) as connection:
+                            operations_schema_version = int(
+                                connection.execute(
+                                    "SELECT value FROM schema_meta "
+                                    "WHERE key='schema_version'"
+                                ).fetchone()[0]
+                            )
                     else:
                         source_asset_count = _restore_source_archive(
                             archive, members, inner, receipt, staging
@@ -1219,6 +1370,8 @@ def restore_durable_backup(
             candidate_sha256=candidate_sha256,
             candidate_schema_version=candidate_schema_version,
             source_asset_count=source_asset_count,
+            operations_sha256=operations_sha256,
+            operations_schema_version=operations_schema_version,
         )
     finally:
         signal_guard.restore()

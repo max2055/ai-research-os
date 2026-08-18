@@ -25,7 +25,7 @@ def _forbidden_field(value: Any, path: str = "packet") -> str | None:
             found = _forbidden_field(child, child_path)
             if found:
                 return found
-    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+    elif isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         for index, child in enumerate(value):
             found = _forbidden_field(child, f"{path}[{index}]")
             if found:
